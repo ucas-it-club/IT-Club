@@ -17,17 +17,21 @@
 /* Break out of the 6xl column so the brackets can open to the screen edges. */
 .bh {
   /* The brackets are cut from a 384px logo: ~150px wide is their sharp limit. */
-  --arm: clamp(3rem, 13vw, 9.4rem);
+  --arm: clamp(2.5rem, 13vw, 9.4rem);
   /* Header height plus main's top padding: the stage fills what is left. */
   --bh-top: 6rem;
-  width: 100vw;
-  margin-inline: calc(50% - 50vw);
+  /* 100vw counts a classic scrollbar; --sbw (set by BracketHero) takes it back
+     out so the stage stays centred on the visible page. */
+  width: calc(100vw - var(--sbw, 0px));
+  margin-inline: calc(50% - 50vw + var(--sbw, 0px) / 2);
   overflow-x: clip;
 }
 
 .bh-stage {
   position: relative;
   display: grid;
+  /* One column that never grows past the screen, even if a child would. */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   min-height: calc(100svh - var(--bh-top));
   padding-inline: clamp(1rem, 3vw, 2rem);
@@ -87,7 +91,7 @@
   justify-content: center;
   gap: 0 0.3em;
   width: min-content;
-  font-size: clamp(2.2rem, 9vw, 3.5rem);
+  font-size: clamp(1.9rem, 9vw, 3.5rem);
   font-weight: 900;
   line-height: 1.15;
   color: var(--foreground);

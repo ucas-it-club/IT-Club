@@ -137,10 +137,19 @@ export function BracketHero() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const still = reduced || weakDevice();
+    const html = document.documentElement;
+    const sbw = () => html.style.setProperty("--sbw", `${window.innerWidth - html.clientWidth}px`);
+    // A ResizeObserver, not a resize listener: the scrollbar also comes and goes
+    // when the opening locks scrolling, which fires no resize event.
+    sbw();
+    const ro = new ResizeObserver(sbw);
+    ro.observe(html);
 
     setMode(still ? "static" : "live");
     // No opening will run, so the loading screen should not wait for one.
     if (still) window.__bootDone?.();
+
+    return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
