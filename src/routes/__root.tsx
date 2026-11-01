@@ -26,6 +26,7 @@ import {
 import { safeUrl } from "../lib/club/model";
 import { loadClubData } from "../lib/club/ssr-data";
 import { ClubSite, Missing } from "@/components/club/ClubSite";
+import { BootScreen } from "@/components/club/BootScreen";
 
 function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
@@ -152,6 +153,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <BootScreen />
         {children}
         <Scripts />
       </body>

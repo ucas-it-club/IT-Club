@@ -176,9 +176,12 @@ function Shell({ children }: { children: ReactNode }) {
   const { lang, loading } = useClub();
   const page = pageOf(useLocation().pathname);
   const isAdmin = page.split("/")[0] === "admin";
+  useEffect(() => {
+    if (!loading && !window.__bootWaitHero) window.__bootDone?.();
+  }, [loading]);
   return (
     <div dir={lang === "ar" ? "rtl" : "ltr"} className="club-site relative isolate min-h-screen">
-      {!isAdmin && <FloatingBackground entrancePulse={!loading} />}
+      {!isAdmin && <FloatingBackground />}
       <a href="#club-main" className="sr-only focus:not-sr-only">
         {lang === "ar" ? "انتقل للمحتوى" : "Skip to content"}
       </a>

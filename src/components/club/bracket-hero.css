@@ -1,0 +1,278 @@
+/* Home hero: the club name between the logo's brackets. Same tokens and Cairo
+   as the rest of the site. Modes are set by BracketHero: pending (server
+   render), live (sticky scroll story), static (reduced motion / weak device). */
+
+.club-site {
+  /* Brand hues as text: the raw logo green fails contrast on the light ground. */
+  --bh-ink-1: var(--brand-blue);
+  --bh-ink-2: oklch(0.52 0.12 200);
+  --bh-ink-3: oklch(0.54 0.15 138);
+}
+.dark .club-site {
+  --bh-ink-1: var(--primary);
+  --bh-ink-2: oklch(0.76 0.11 195);
+  --bh-ink-3: var(--accent);
+}
+
+/* Break out of the 6xl column so the brackets can open to the screen edges. */
+.bh {
+  /* The brackets are cut from a 384px logo: ~150px wide is their sharp limit. */
+  --arm: clamp(3rem, 13vw, 9.4rem);
+  /* Header height plus main's top padding: the stage fills what is left. */
+  --bh-top: 6rem;
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  overflow-x: clip;
+}
+
+.bh-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: calc(100svh - var(--bh-top));
+  padding-inline: clamp(1rem, 3vw, 2rem);
+}
+.bh[data-mode="live"] .bh-track {
+  height: 420svh;
+}
+.bh[data-mode="live"] .bh-stage {
+  position: sticky;
+  top: var(--bh-top);
+  height: calc(100svh - var(--bh-top));
+  min-height: 0;
+}
+.bh-stage > * {
+  grid-area: 1 / 1;
+}
+
+/* ---------- Name between the brackets ---------- */
+
+.bh-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.75rem, 3vw, 3rem);
+}
+.bh-arm {
+  position: relative;
+  flex: none;
+  width: var(--arm);
+}
+.bh-bracket {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Each dot keeps the offset it has in the logo, relative to its bracket. */
+.bh-dot {
+  position: absolute;
+  height: auto;
+}
+.bh-arm-left .bh-dot {
+  left: 9.3%;
+  top: 86%;
+  width: 43.7%;
+}
+.bh-arm-right .bh-dot {
+  left: 43.2%;
+  top: -13.8%;
+  width: 45.3%;
+}
+
+/* Sized to its words, so the brackets hug the name: stacked on phones, one
+   line from tablet up, like content inside a tag. */
+.bh-name {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 0.3em;
+  width: min-content;
+  font-size: clamp(2.2rem, 9vw, 3.5rem);
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--foreground);
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .bh-name {
+    /* Cap height sits high in the line box; drop it onto the brackets' centre.
+       `top`, not a transform, because GSAP owns this element's transform. */
+    position: relative;
+    top: 0.17em;
+    flex-wrap: nowrap;
+    width: max-content;
+    font-size: clamp(3rem, 6.2vw, 6.25rem);
+  }
+}
+.bh-mask {
+  display: inline-block;
+  overflow: hidden;
+  /* Room for Arabic ascenders and descenders inside the mask. */
+  padding-block: 0.12em;
+  margin-block: -0.12em;
+}
+.bh-word {
+  display: inline-block;
+}
+
+/* ---------- Panels ---------- */
+
+.bh-panel {
+  /* Clear of the brackets once they sit at the screen edges. */
+  max-width: min(44rem, calc(100% - 2 * var(--arm) - 2rem));
+  text-align: center;
+}
+@media (max-width: 639px) {
+  /* The brackets park in the top corners here, so the panels use the full width. */
+  .bh[data-mode="live"] .bh-panel {
+    max-width: 100%;
+  }
+}
+/* With JavaScript (the head script marks <html class="js"> before first paint),
+   the entrance brings the brackets and name in, so they wait hidden instead of
+   painting in place and jumping. Without JavaScript they simply show. */
+.js .bh[data-mode="pending"] :is(.bh-arm, .bh-name) {
+  opacity: 0;
+}
+.bh[data-mode="pending"] .bh-panel {
+  display: none;
+}
+.bh[data-mode="live"] .bh-panel {
+  opacity: 0;
+  visibility: hidden;
+}
+.bh[data-mode="static"] .bh-stage {
+  gap: 5rem;
+  padding-block: 2rem 4rem;
+}
+.bh[data-mode="static"] .bh-stage > * {
+  grid-area: auto;
+}
+
+.bh-title {
+  font-size: clamp(2rem, 5.5vw, 4.25rem);
+  font-weight: 900;
+  line-height: 1.2;
+  color: var(--foreground);
+  text-wrap: balance;
+}
+.bh-text {
+  max-width: 34rem;
+  margin: 1rem auto 0;
+  font-size: 1.15rem;
+  line-height: 1.9;
+  color: var(--foreground);
+}
+.bh-majors {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+.bh-majors li {
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--primary);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.bh-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.bh-facts dt {
+  font-size: clamp(2.5rem, 8vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--bh-ink-1);
+  font-variant-numeric: tabular-nums;
+}
+.bh-facts dd {
+  margin-top: 0.4rem;
+  font-weight: 800;
+  color: var(--muted-foreground);
+}
+.bh-reg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  font-weight: 800;
+  color: var(--muted-foreground);
+}
+.bh-reg.is-open {
+  color: var(--bh-ink-3);
+}
+.bh-reg.is-open::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: bh-live 2.2s ease-out infinite;
+}
+@keyframes bh-live {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0.6rem transparent;
+  }
+}
+
+.bh-motto {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 0.45em;
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  font-weight: 900;
+  line-height: 1.35;
+}
+.bh-motto-0 {
+  color: var(--bh-ink-1);
+}
+.bh-motto-1 {
+  color: var(--bh-ink-2);
+}
+.bh-motto-2 {
+  color: var(--bh-ink-3);
+}
+.bh-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+/* ---------- Scroll cue ---------- */
+
+.bh-cue {
+  align-self: end;
+  margin-bottom: 1.5rem;
+  color: var(--muted-foreground);
+  animation: bh-cue 1.8s ease-in-out infinite;
+}
+.bh[data-mode="static"] .bh-cue {
+  display: none;
+}
+@keyframes bh-cue {
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bh-reg.is-open::before,
+  .bh-cue {
+    animation: none;
+  }
+}
+

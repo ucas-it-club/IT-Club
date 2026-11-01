@@ -123,53 +123,6 @@
   padding-inline: 1.25rem;
   border-radius: 1rem;
 }
-.club-grid-pulse {
-  position: absolute;
-  z-index: 1;
-  left: 50%;
-  top: 50%;
-  /* Fixed box, centred by margin, grown with transform. The old keyframes
-     animated width/height, so every frame relaid out the page and repainted a
-     ring carrying four blurred shadows — the entrance ran at ~5fps. Scale and
-     opacity stay on the compositor. */
-  width: 100vmax;
-  height: 100vmax;
-  margin: -50vmax 0 0 -50vmax;
-  border: 2px solid #ebf5fb;
-  border-radius: 50%;
-  box-shadow:
-    0 0 3px 1px rgb(235 245 251 / 100%),
-    inset 0 0 3px 1px rgb(235 245 251 / 95%),
-    0 0 16px 6px rgb(235 245 251 / 55%),
-    0 0 40px 12px rgb(235 245 251 / 20%);
-  will-change: transform, opacity;
-  animation: club-grid-reveal 2.8s ease-out both;
-}
-.club-grid-pulse-second {
-  animation-delay: 0.18s;
-}
-@keyframes club-grid-reveal {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  8% {
-    opacity: 1;
-  }
-  65% {
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .club-grid-pulse {
-    display: none;
-    animation: none;
-  }
-}
 
 .club-social-card {
   animation: club-social-float 6s ease-in-out infinite;

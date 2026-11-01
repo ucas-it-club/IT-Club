@@ -1,6 +1,12 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+/* Loading screen and home hero. Here, not imported by their components: the
+   hero lives in a lazy chunk, so its CSS would otherwise arrive after the
+   server-rendered page has already painted unstyled. */
+@import "./components/club/boot-screen.css";
+@import "./components/club/hero-opening.css";
+@import "./components/club/bracket-hero.css";
 
 @custom-variant dark (&:is(.dark *));
 

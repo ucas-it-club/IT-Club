@@ -30,6 +30,7 @@ import { plainRichText, splitRichText } from "@/lib/club/rich-text";
 import { eventDisplayStatus } from "@/lib/club/event-timing";
 import { siteName } from "@/lib/club/seo";
 import { BrandButton } from "./BrandButton";
+import { BracketHero } from "./BracketHero";
 import { ClubLink, ContentGrid, Empty, Heading, linkClass } from "./ClubContent";
 import { ContentImage } from "./ContentImage";
 import { CountUp } from "./CountUp";
@@ -49,51 +50,7 @@ export function HomePage() {
 
   return (
     <>
-      <HeroSection className="mx-auto max-w-4xl text-center">
-        <div className="club-hero-mark mx-auto w-fit">
-          <img
-            src={logo}
-            alt="UCAS IT CLUB"
-            width={124}
-            height={160}
-            className="club-hero-logo h-24 w-auto object-contain sm:h-28"
-          />
-        </div>
-        <h1 className="club-hero-name mt-4 font-bold text-primary">
-          {ar ? "النادي التكنولوجي" : "UCAS IT Club"}{" "}
-          <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
-            {ar ? "الكلية الجامعية للعلوم التطبيقية" : "University College of Applied Sciences"}
-          </span>
-        </h1>
-        <p className="club-hero-slogan mt-4 text-4xl font-black leading-tight sm:text-6xl text-gradient-brand">
-          {ar ? "نتعلم نبتكر نتقدم" : "Learn, innovate, advance"}
-        </p>
-        <p className="mx-auto mt-3 max-w-2xl text-lg leading-loose text-muted-foreground">
-          {ar
-            ? "مجتمع طلابي يجمع المهتمين بالتقنية. تعرّف على فريق النادي وفعالياته، وكن جزءًا من التجربة."
-            : "A student community for technology enthusiasts. Meet the team and take part in club activities."}
-        </p>
-      </HeroSection>
-
-      <div className="mt-8 mb-14 grid grid-cols-3 gap-3">
-        {(
-          [
-            [Users, data.members.length, ar ? "الأعضاء" : "Members"],
-            [Eye, visitorCount, ar ? "الزيارات" : "Visits"],
-            [CalendarDays, past.length, ar ? "فعاليات منفذة" : "Past events"],
-          ] as const
-        ).map(([Icon, value, label], index) => (
-          <Reveal key={label} delay={index * 90}>
-            <div className="club-card h-full rounded-3xl border border-border bg-card p-5 text-center shadow-card">
-              <Icon className="mx-auto text-primary" />
-              <strong className="my-2 block text-3xl font-black sm:text-4xl">
-                <CountUp value={value} />
-              </strong>
-              <span className="text-sm font-bold text-muted-foreground">{label}</span>
-            </div>
-          </Reveal>
-        ))}
-      </div>
+      <BracketHero />
 
       <section className="mt-16">
         <Reveal>
