@@ -292,9 +292,14 @@ export async function loadNews(): Promise<Content[]> {
   }));
 }
 
-export async function createMediaAccount(username: string, password: string) {
+export async function createAdminAccount(
+  username: string,
+  password: string,
+  role: "editor" | "media_editor",
+  name: string,
+) {
   const { data, error } = await supabase().functions.invoke("media-accounts", {
-    body: { username, password },
+    body: { username, password, role, name },
   });
   check(error);
   if (!data?.created) throw new Error(data?.error || "Account creation failed");

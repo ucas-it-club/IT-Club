@@ -7,7 +7,7 @@ const cors = {
 const reply = (status: number, body: Record<string, unknown>) =>
   Response.json(body, { status, headers: { ...cors, "Cache-Control": "no-store" } });
 
-/** Only an authenticated general administrator can provision the two named accounts. */
+/** Only a verified general administrator can create accounts and select an allowed role. */
 export async function handleMediaAccount(req: Request, config: Config, http: typeof fetch = fetch) {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return reply(405, { error: "Method not allowed" });
@@ -31,17 +31,23 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
     const text = await req.text();
     if (text.length > 4096) return reply(413, { error: "Request too large" });
     const body = JSON.parse(text);
+    const role = body.role === undefined ? "media_editor" : body.role;
+    const username = typeof body.username === "string" ? body.username.trim().toLowerCase() : "";
+    const name = typeof body.name === "string" ? body.name.trim() : username;
     if (
-      !["media_girl", "media_boy"].includes(body.username) ||
+      !/^[a-z][a-z0-9_]{2,31}$/.test(username) ||
+      !["editor", "media_editor"].includes(role) ||
+      name.length < 2 ||
+      name.length > 200 ||
       typeof body.password !== "string" ||
       body.password.length < 14 ||
       body.password.length > 128
     )
       return reply(400, {
-        error: "Choose a named media account and a password of 14–128 characters",
+        error: "Invalid username, name, account type or password length",
       });
     if (!config.secret) return reply(503, { error: "Account provisioning is not configured" });
-    const email = `${body.username}@accounts.itclub.invalid`;
+    const email = `${username}@accounts.itclub.invalid`;
     const privileged = {
       apikey: config.secret,
       authorization: `Bearer ${config.secret}`,
@@ -54,7 +60,9 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
         email,
         password: body.password,
         email_confirm: true,
-        app_metadata: { provisioned_for: "media_committee" },
+        app_metadata: {
+          provisioned_for: role === "media_editor" ? "media_committee" : "club_administration",
+        },
       }),
     });
     if (!created.ok)
@@ -64,11 +72,11 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
     const account = await created.json();
     if (typeof account.id !== "string")
       return reply(502, { error: "Account creation was not confirmed" });
-    // The role is fixed server-side, never taken from the request or user metadata.
+    // Only the verified administrator can choose a role; the server rejects elevated or unknown types.
     const granted = await http(`${config.url}/rest/v1/club_admins`, {
       method: "POST",
       headers: privileged,
-      body: JSON.stringify({ id: account.id, name: body.username, email, role: "media_editor" }),
+      body: JSON.stringify({ id: account.id, name, email, role }),
     });
     if (!granted.ok) {
       // A created identity without an assignment has no website administrative rights.
@@ -79,7 +87,7 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
         id: account.id,
       });
     }
-    return reply(201, { created: true, username: body.username, id: account.id });
+    return reply(201, { created: true, username, id: account.id });
   } catch {
     return reply(502, {
       error: "Account creation could not be confirmed. Check the account list before retrying.",
