@@ -30,7 +30,8 @@ before(async () => {
     if (
       file.includes("visits") ||
       file.includes("visit_guard") ||
-      file.includes("media_news_access")
+      file.includes("media_news_access") ||
+      file.includes("partnerships_committee_access")
     )
       continue;
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));

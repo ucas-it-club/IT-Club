@@ -18,7 +18,7 @@ import {
 } from "@/lib/club/supabase";
 import { DeleteButton } from "./DeleteButton";
 
-type AccountRole = "editor" | "media_editor";
+type AccountRole = "editor" | "media_editor" | "partnerships_editor";
 type AdminRow = { id: string; name: string; email: string; role: string };
 type Props = {
   ar: boolean;
@@ -47,7 +47,8 @@ function RoleSelect({
         value={value}
         disabled={disabled}
         onValueChange={(value) => {
-          if (value === "editor" || value === "media_editor") onChange(value);
+          if (value === "editor" || value === "media_editor" || value === "partnerships_editor")
+            onChange(value);
         }}
         dir={ar ? "rtl" : "ltr"}
       >
@@ -58,6 +59,9 @@ function RoleSelect({
           <SelectGroup>
             <SelectItem value="editor">{ar ? "محرر عام" : "General editor"}</SelectItem>
             <SelectItem value="media_editor">{ar ? "لجنة الإعلام" : "Media committee"}</SelectItem>
+            <SelectItem value="partnerships_editor">
+              {ar ? "لجنة الشراكات" : "Partnerships committee"}
+            </SelectItem>
           </SelectGroup>
         </SelectContent>
       </Select>
@@ -123,8 +127,8 @@ export function AdminUsersEditor({ ar, currentUserId, onLoadError, run }: Props)
         <h2 className="text-2xl font-bold">{ar ? "إدارة الحسابات" : "Account management"}</h2>
         <p className="text-muted-foreground">
           {ar
-            ? "أضف الحساب وحدد نوعه من القائمة. لجنة الإعلام تدير الأخبار وتنشرها مباشرة، والمحرر العام يدير الأقسام الأخرى حسب صلاحياته."
-            : "Add an account and choose its role. Media committee accounts manage and publish news directly; general editors manage the other authorized sections."}
+            ? "أضف الحساب وحدد نوعه من القائمة. لجنة الإعلام تدير الأخبار وتنشرها مباشرة، وحساب لجنة الشراكات يدير الشراكات فقط، والمحرر العام يحتفظ بصلاحياته الحالية."
+            : "Add an account and choose its role. Media committee accounts manage and publish news directly; partnerships accounts manage partnerships only, and general editors retain their existing access."}
         </p>
       </div>
       <form
@@ -211,7 +215,13 @@ export function AdminUsersEditor({ ar, currentUserId, onLoadError, run }: Props)
               <div className="flex flex-wrap items-end gap-3">
                 <RoleSelect
                   ar={ar}
-                  value={admin.role === "media_editor" ? "media_editor" : "editor"}
+                  value={
+                    admin.role === "partnerships_editor"
+                      ? "partnerships_editor"
+                      : admin.role === "media_editor"
+                        ? "media_editor"
+                        : "editor"
+                  }
                   onChange={(value) => void changeRole(admin, value)}
                   disabled={admin.id === currentUserId || changingId !== null}
                   label={ar ? `نوع حساب ${admin.name}` : `Role for ${admin.name}`}

@@ -117,3 +117,28 @@ test("existing website clients can still create their named media accounts durin
   assert.equal(result.status, 201);
   assert.equal(JSON.parse(calls[3].init.body).role, "media_editor");
 });
+
+test("the administrator can create an account explicitly assigned to partnerships", async () => {
+  const calls = [];
+  const result = await handleMediaAccount(
+    request({
+      username: "partnerships_team",
+      name: "Partnerships team",
+      role: "partnerships_editor",
+      password: "long-private-password",
+    }),
+    config,
+    async (url, init) => {
+      calls.push({ url, init });
+      return calls.length === 1
+        ? response({ id: "owner" })
+        : calls.length === 2
+          ? response([{ role: "super_admin" }])
+          : calls.length === 3
+            ? response({ id: "new-user" })
+            : response(null, 201);
+    },
+  );
+  assert.equal(result.status, 201);
+  assert.equal(JSON.parse(calls[3].init.body).role, "partnerships_editor");
+});
