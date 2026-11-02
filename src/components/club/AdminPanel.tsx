@@ -11,6 +11,8 @@ import { ImageCropper } from "./ImageCropper";
 import { DeleteButton } from "./admin/DeleteButton";
 import { SettingsEditor } from "./admin/SettingsEditor";
 import { AdminUsersEditor } from "./admin/AdminUsersEditor";
+import { NewsWorkspace } from "./admin/NewsWorkspace";
+import { canManageNews } from "@/lib/club/admin-access";
 import {
   loadAdminDateOrder,
   sortAdminContentByDate,
@@ -55,6 +57,7 @@ import {
   SelectTrigger,
   SelectValue,
   SelectContent,
+  SelectGroup,
   SelectItem,
 } from "@/components/ui/select";
 import {
@@ -73,6 +76,7 @@ import {
 const blank: Omit<Content, "id"> = { title: "", title_en: "", description: "", description_en: "" };
 
 export function AdminPanel() {
+  const queryClient = useQueryClient();
   const { lang, setupRequired } = useClub();
   const ar = lang === "ar";
   const [user, setUser] = useState<User | null>(null);
@@ -88,6 +92,7 @@ export function AdminPanel() {
     const stopAuth = observeAuth((current) => {
       if (currentUserId === (current?.id ?? null)) return;
       currentUserId = current?.id ?? null;
+      queryClient.removeQueries({ queryKey: ["club-media"] });
       stopRole();
       setUser(current);
       setRole("");
@@ -117,7 +122,7 @@ export function AdminPanel() {
       stopAuth();
       stopRole();
     };
-  }, []);
+  }, [queryClient]);
 
   async function login(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -174,8 +179,10 @@ export function AdminPanel() {
       >
         <h1 className="text-3xl font-black">{ar ? "تسجيل دخول الإدارة" : "Admin sign-in"}</h1>
         <label className="block">
-          <span className="mb-2 block">{ar ? "البريد الإلكتروني" : "Email"}</span>
-          <Input name="email" type="email" autoComplete="username" required />
+          <span className="mb-2 block">
+            {ar ? "اسم المستخدم أو البريد الإلكتروني" : "Username or email"}
+          </span>
+          <Input name="email" type="text" autoComplete="username" dir="ltr" required />
         </label>
         <label className="block">
           <span className="mb-2 block">{ar ? "كلمة المرور" : "Password"}</span>
@@ -188,7 +195,7 @@ export function AdminPanel() {
       </form>
     );
 
-  if (!["editor", "super_admin"].includes(role))
+  if (!["editor", "super_admin", "media_editor"].includes(role))
     return (
       <div>
         <p role="alert">
@@ -202,6 +209,7 @@ export function AdminPanel() {
       </div>
     );
 
+  if (role === "media_editor") return <NewsWorkspace key={user.id} standalone />;
   return <AdminWorkspace key={user.id + role} role={role} user={user} />;
 }
 
@@ -293,7 +301,9 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
   const tabs = [
     ["dashboard", ar ? "نظرة عامة" : "Overview"],
     ["media", ar ? "مكتبة الصور" : "Media library"],
-    ...collections.map((x) => [x, labels[x][ar ? 0 : 1]]),
+    ...collections
+      .filter((x) => x !== "news" || canManageNews(role))
+      .map((x) => [x, labels[x][ar ? 0 : 1]]),
     ["joinRequests", ar ? "طلبات الانضمام" : "Applications"],
     ["contactMessages", ar ? "الرسائل" : "Messages"],
     ...(role === "super_admin"
@@ -367,10 +377,10 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
         ))}
       </nav>
       <div className="rounded-[2rem] border border-border bg-card p-4 sm:p-6">
-        {(activeCollection === "events" || activeCollection === "news") &&
+        {activeCollection === "events" &&
           (() => {
             const kind = activeCollection;
-            const isNews = kind === "news";
+            const isNews = false;
             const byDate = dateOrder[kind];
             return (
               <section
@@ -459,7 +469,9 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
             </p>
           </div>
         )}
+        {activeCollection === "news" && canManageNews(role) && <NewsWorkspace />}
         {activeCollection &&
+          activeCollection !== "news" &&
           (editing !== undefined ? (
             <ContentEditor
               key={tab + (editing?.id || "new")}
@@ -550,7 +562,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
                   )}
                 </label>
               )}
-              {(activeCollection === "events" || activeCollection === "news") && (
+              {activeCollection === "events" && (
                 <label className="mb-6 block">
                   <span className="mb-2 block text-sm font-bold">
                     {activeCollection === "events"
@@ -590,11 +602,9 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
                 )}
                 {(activeCollection === "events"
                   ? eventItems
-                  : activeCollection === "news"
-                    ? newsItems
-                    : activeCollection === "members"
-                      ? memberItems
-                      : data[activeCollection]
+                  : activeCollection === "members"
+                    ? memberItems
+                    : data[activeCollection]
                 ).map((item) => (
                   <article
                     key={item.id}
@@ -673,7 +683,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
   );
 }
 
-function ContentEditor({
+export function ContentEditor({
   kind,
   item,
   onCancel,
@@ -705,9 +715,7 @@ function ContentEditor({
   const [driveImageUrls, setDriveImageUrls] = useState(item?.driveImageUrls || []);
   const [driveImageLink, setDriveImageLink] = useState("");
   const isArticle = kind === "events" || kind === "news";
-  const [articleKind, setArticleKind] = useState<"events" | "news">(
-    kind === "news" ? "news" : "events",
-  );
+  const [articleKind] = useState<"events" | "news">(kind === "news" ? "news" : "events");
   const targetKind: ContentCollection = isArticle ? articleKind : kind;
   const [showFinalPreview, setShowFinalPreview] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>(() => {
@@ -730,6 +738,9 @@ function ContentEditor({
 
   const [gender, setGender] = useState(item?.gender === "female" ? "female" : "male");
   const [status, setStatus] = useState(item?.status || "upcoming");
+  const [publicationStatus, setPublicationStatus] = useState<"draft" | "published">(
+    item?.publicationStatus || "draft",
+  );
   const [eventRegistration, setEventRegistration] = useState(
     item?.eventRegistration || defaultEventRegistration,
   );
@@ -778,6 +789,7 @@ function ContentEditor({
     };
 
     if (isArticle) value.driveImageUrls = driveImageUrls;
+    if (targetKind === "news") value.publicationStatus = publicationStatus;
 
     if (kind === "members") {
       value.role = values["role"] || "";
@@ -878,12 +890,11 @@ function ContentEditor({
         await ensureEventSheet(savedId, value.title);
       }
 
-      if (item?.id) {
+      if (item?.id && targetKind !== "news") {
         queryClient.setQueryData<Awaited<ReturnType<typeof loadPublic>>>(clubPublicKey, (old) => {
           if (!old) return old;
           const updated = { ...item, ...value };
           if (value.displayOrder === undefined) delete updated.displayOrder;
-          if (targetKind === "news") delete updated.status;
           const nextData = { ...old.data };
           nextData[kind] = old.data[kind].filter((c) => c.id !== item.id);
           nextData[targetKind] = [updated, ...nextData[targetKind].filter((c) => c.id !== item.id)];
@@ -1057,30 +1068,6 @@ function ContentEditor({
           </BrandButton>
         )}
       </div>
-      {isArticle && (
-        <label className="block">
-          <span className="mb-2 block">{ar ? "نوع المحتوى" : "Content type"}</span>
-          <Select
-            value={articleKind}
-            dir={ar ? "rtl" : "ltr"}
-            onValueChange={(value) => {
-              if (value === "events" || value === "news") {
-                setArticleKind(value);
-                setDraft((current) => ({ ...current, articleKind: value }));
-                setDirty(true);
-              }
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="events">{ar ? "فعالية" : "Event"}</SelectItem>
-              <SelectItem value="news">{ar ? "خبر" : "News"}</SelectItem>
-            </SelectContent>
-          </Select>
-        </label>
-      )}
       <div className="grid gap-5 sm:grid-cols-2">
         {(
           [
@@ -1617,9 +1604,48 @@ function ContentEditor({
         </section>
       )}
       {error && <p role="alert">{error}</p>}
+      {kind === "news" && (
+        <label className="block">
+          <span className="mb-2 block">{ar ? "حالة النشر" : "Publication status"}</span>
+          <Select
+            value={publicationStatus}
+            onValueChange={(value) => {
+              if (value === "draft" || value === "published") {
+                setPublicationStatus(value);
+                setDirty(true);
+              }
+            }}
+            dir={ar ? "rtl" : "ltr"}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="draft">
+                  {ar ? "مسودة — غير ظاهرة للزوار" : "Draft — private"}
+                </SelectItem>
+                <SelectItem value="published">
+                  {ar ? "منشور — ظاهر للزوار" : "Published — public"}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </label>
+      )}
       <div className="flex flex-wrap gap-3">
         <BrandButton type="submit" disabled={busy || !!file || !!cropSource}>
-          {busy ? (ar ? "جارٍ الحفظ…" : "Saving…") : ar ? "حفظ ونشر" : "Save and publish"}
+          {busy
+            ? ar
+              ? "جارٍ الحفظ…"
+              : "Saving…"
+            : kind === "news" && publicationStatus === "draft"
+              ? ar
+                ? "حفظ المسودة"
+                : "Save draft"
+              : ar
+                ? "حفظ ونشر"
+                : "Save and publish"}
         </BrandButton>
         <BrandButton type="button" variant="outline" disabled={busy} onClick={onCancel}>
           {ar ? "إلغاء" : "Cancel"}
