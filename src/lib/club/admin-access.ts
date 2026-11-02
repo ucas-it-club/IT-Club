@@ -3,5 +3,5 @@ export const canManageNews = (role: string) => role === "media_editor" || role =
 
 export function loginEmail(identifier: string) {
   const value = identifier.trim().toLowerCase();
-  return /^(media_girl|media_boy)$/.test(value) ? `${value}@accounts.itclub.invalid` : value;
+  return /^[a-z][a-z0-9_]{2,31}$/.test(value) ? `${value}@accounts.itclub.invalid` : value;
 }

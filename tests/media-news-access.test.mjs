@@ -191,3 +191,27 @@ test("revocation takes effect on the next request without waiting for a new JWT"
     0,
   );
 });
+
+test("a general administrator can change an existing account type and news access follows the assignment immediately", async () => {
+  await as(owner);
+  assert.equal(
+    (
+      await db.query("update club_admins set role='media_editor' where id=$1 returning id", [
+        editor,
+      ])
+    ).rows.length,
+    1,
+  );
+  await as(editor);
+  assert.equal(
+    (await db.query("select club_private.can_manage_news() as allowed")).rows[0].allowed,
+    true,
+  );
+  await as(owner);
+  await db.query("update club_admins set role='editor' where id=$1", [editor]);
+  await as(editor);
+  assert.equal(
+    (await db.query("select club_private.can_manage_news() as allowed")).rows[0].allowed,
+    false,
+  );
+});

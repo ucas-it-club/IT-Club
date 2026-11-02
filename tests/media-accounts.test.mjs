@@ -27,10 +27,15 @@ test("provisioning rejects visitors and non-super users before creating identiti
   assert.equal(denied.status, 403);
   assert.equal(calls, 2);
 });
-test("provisioning fixes the role and username server-side and never returns the password", async () => {
+test("the administrator can create a media account with the selected type without returning its password", async () => {
   const calls = [];
   const result = await handleMediaAccount(
-    request({ username: "media_boy", password: "long-private-password", role: "super_admin" }),
+    request({
+      username: "media_boy",
+      password: "long-private-password",
+      role: "media_editor",
+      name: "Media team",
+    }),
     config,
     async (url, init) => {
       calls.push({ url, init });
@@ -45,16 +50,70 @@ test("provisioning fixes the role and username server-side and never returns the
   );
   assert.equal(result.status, 201);
   assert.equal(JSON.parse(calls[3].init.body).role, "media_editor");
+  assert.equal(JSON.parse(calls[3].init.body).name, "Media team");
   assert.equal(JSON.parse(calls[2].init.body).email, "media_boy@accounts.itclub.invalid");
   assert.equal((await result.text()).includes("long-private-password"), false);
 });
-test("unknown usernames cannot be provisioned", async () => {
-  let n = 0;
+test("invalid usernames and elevated account types are rejected before creating identities", async () => {
+  for (const body of [
+    { username: "../admin", role: "editor" },
+    { username: "new_editor", role: "super_admin" },
+    { username: "new_editor", role: "owner" },
+    { username: "new_editor", role: null },
+  ]) {
+    let n = 0;
+    const result = await handleMediaAccount(
+      request({ ...body, password: "long-private-password" }),
+      config,
+      async () => (++n === 1 ? response({ id: "owner" }) : response([{ role: "super_admin" }])),
+    );
+    assert.equal(result.status, 400);
+    assert.equal(n, 2);
+  }
+});
+
+test("the administrator can create a general editor using a normal username", async () => {
+  const calls = [];
   const result = await handleMediaAccount(
-    request({ username: "admin", password: "long-private-password" }),
+    request({
+      username: "general_editor",
+      name: "General editor",
+      role: "editor",
+      password: "long-private-password",
+    }),
     config,
-    async () => (++n === 1 ? response({ id: "owner" }) : response([{ role: "super_admin" }])),
+    async (url, init) => {
+      calls.push({ url, init });
+      return calls.length === 1
+        ? response({ id: "owner" })
+        : calls.length === 2
+          ? response([{ role: "super_admin" }])
+          : calls.length === 3
+            ? response({ id: "new-user" })
+            : response(null, 201);
+    },
   );
-  assert.equal(result.status, 400);
-  assert.equal(n, 2);
+  assert.equal(result.status, 201);
+  assert.equal(JSON.parse(calls[3].init.body).role, "editor");
+  assert.equal(JSON.parse(calls[2].init.body).email, "general_editor@accounts.itclub.invalid");
+});
+
+test("existing website clients can still create their named media accounts during rollout", async () => {
+  const calls = [];
+  const result = await handleMediaAccount(
+    request({ username: "media_girl", password: "long-private-password" }),
+    config,
+    async (url, init) => {
+      calls.push({ url, init });
+      return calls.length === 1
+        ? response({ id: "owner" })
+        : calls.length === 2
+          ? response([{ role: "super_admin" }])
+          : calls.length === 3
+            ? response({ id: "new-user" })
+            : response(null, 201);
+    },
+  );
+  assert.equal(result.status, 201);
+  assert.equal(JSON.parse(calls[3].init.body).role, "media_editor");
 });
