@@ -319,14 +319,11 @@ export async function saveAdmin(
 }
 
 export async function removeAdmin(id: string) {
-  const { error } = await supabase()
-    .from("club_admins")
-    .delete()
-    .eq("id", id)
-    .select("id")
-    .single();
-
+  const { data, error } = await supabase().functions.invoke("media-accounts", {
+    body: { action: "delete", id },
+  });
   check(error);
+  if (!data?.deleted || data.id !== id) throw new Error(data?.error || "Account deletion failed");
   changed();
 }
 

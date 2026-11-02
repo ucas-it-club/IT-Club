@@ -7,7 +7,7 @@ const cors = {
 const reply = (status: number, body: Record<string, unknown>) =>
   Response.json(body, { status, headers: { ...cors, "Cache-Control": "no-store" } });
 
-/** Only a verified general administrator can create accounts and select an allowed role. */
+/** Only a verified general administrator can create or delete editor accounts. */
 export async function handleMediaAccount(req: Request, config: Config, http: typeof fetch = fetch) {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return reply(405, { error: "Method not allowed" });
@@ -31,6 +31,50 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
     const text = await req.text();
     if (text.length > 4096) return reply(413, { error: "Request too large" });
     const body = JSON.parse(text);
+    if (!body || typeof body !== "object" || Array.isArray(body))
+      return reply(400, { error: "Invalid request" });
+    if (body.action === "delete") {
+      if (
+        typeof body.id !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.id)
+      )
+        return reply(400, { error: "Invalid account ID" });
+      if (body.id === user.id) return reply(403, { error: "Cannot delete your own account" });
+      if (!config.secret) return reply(503, { error: "Account deletion is not configured" });
+      const privileged = {
+        apikey: config.secret,
+        authorization: `Bearer ${config.secret}`,
+        "content-type": "application/json",
+      };
+      const targetResponse = await http(
+        `${config.url}/rest/v1/club_admins?select=role&id=eq.${encodeURIComponent(body.id)}`,
+        { headers: privileged },
+      );
+      if (!targetResponse.ok) return reply(502, { error: "Account lookup failed" });
+      const targets = await targetResponse.json();
+      if (!Array.isArray(targets)) return reply(502, { error: "Account lookup failed" });
+      if (targets.length !== 1) return reply(404, { error: "Editor account not found" });
+      if (!["editor", "media_editor", "partnerships_editor"].includes(targets[0]?.role))
+        return reply(403, { error: "Only editor accounts can be deleted" });
+      // Delete the identity first. The club_admins foreign key cascades in the same
+      // transaction, so a failed Auth deletion leaves the account visible for retry.
+      const deleted = await http(
+        `${config.url}/auth/v1/admin/users/${encodeURIComponent(body.id)}`,
+        {
+          method: "DELETE",
+          headers: privileged,
+          body: JSON.stringify({ should_soft_delete: false }),
+        },
+      );
+      if (!deleted.ok)
+        return reply(502, {
+          error:
+            "Account could not be deleted. Check linked media or storage ownership before retrying.",
+        });
+      return reply(200, { deleted: true, id: body.id });
+    }
+    if (body.action !== undefined && body.action !== "create")
+      return reply(400, { error: "Unknown account action" });
     const role = body.role === undefined ? "media_editor" : body.role;
     const username = typeof body.username === "string" ? body.username.trim().toLowerCase() : "";
     const name = typeof body.name === "string" ? body.name.trim() : username;
@@ -90,7 +134,7 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
     return reply(201, { created: true, username, id: account.id });
   } catch {
     return reply(502, {
-      error: "Account creation could not be confirmed. Check the account list before retrying.",
+      error: "Account operation could not be confirmed. Check the account list before retrying.",
     });
   }
 }
