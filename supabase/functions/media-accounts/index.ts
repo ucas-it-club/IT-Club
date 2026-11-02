@@ -36,7 +36,7 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
     const name = typeof body.name === "string" ? body.name.trim() : username;
     if (
       !/^[a-z][a-z0-9_]{2,31}$/.test(username) ||
-      !["editor", "media_editor"].includes(role) ||
+      !["editor", "media_editor", "partnerships_editor"].includes(role) ||
       name.length < 2 ||
       name.length > 200 ||
       typeof body.password !== "string" ||
@@ -61,7 +61,12 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
         password: body.password,
         email_confirm: true,
         app_metadata: {
-          provisioned_for: role === "media_editor" ? "media_committee" : "club_administration",
+          provisioned_for:
+            role === "media_editor"
+              ? "media_committee"
+              : role === "partnerships_editor"
+                ? "partnerships_committee"
+                : "club_administration",
         },
       }),
     });
