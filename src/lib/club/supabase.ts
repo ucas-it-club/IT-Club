@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient, type User } from "@supabase/supabase
 import { url, key, configured, SetupRequiredError } from "./public-api";
 import { prepareImage } from "./images";
 import { contentSchema, type Content, type ContentCollection, type Settings } from "./model";
+import { loginEmail } from "./admin-access";
 
 export { url, key, configured, SetupRequiredError } from "./public-api";
 
@@ -130,7 +131,8 @@ export async function saveContent(
   if (kind !== originalKind && ![kind, originalKind].every((x) => x === "events" || x === "news")) {
     throw new Error("Invalid content type change");
   }
-  contentSchema.parse(value);
+  const { publicationStatus, ...content } = value;
+  contentSchema.parse(content);
 
   if (id && kind !== originalKind) {
     const moved = await supabase().rpc("club_move_article", {
@@ -148,7 +150,8 @@ export async function saveContent(
 
   const table = contentTables[kind];
   const values = {
-    data: value,
+    data: content,
+    ...(kind === "news" ? { publication_status: publicationStatus ?? "draft" } : {}),
     ...(slug === undefined ? {} : { slug }),
   };
   const query = id
@@ -204,7 +207,10 @@ export function observeAuth(next: (user: User | null) => void) {
 }
 
 export async function signIn(email: string, password: string) {
-  const { error } = await supabase().auth.signInWithPassword({ email, password });
+  const { error } = await supabase().auth.signInWithPassword({
+    email: loginEmail(email),
+    password,
+  });
   check(error);
 }
 
@@ -275,10 +281,33 @@ export async function loadAdmins() {
   return (await rows("club_admins")) as AdminRow[];
 }
 
-export async function saveAdmin(id: string, name: string, email: string) {
-  const { error } = await supabase()
-    .from("club_admins")
-    .upsert({ id, name, email, role: "editor" });
+export async function loadNews(): Promise<Content[]> {
+  return (await rows("club_news", "updated_at")).map((row) => ({
+    ...(row["data"] as Omit<Content, "id">),
+    id: String(row["id"]),
+    slug: String(row["slug"] || ""),
+    publicationStatus: row["publication_status"] === "published" ? "published" : "draft",
+    createdAt: String(row["created_at"]),
+    updatedAt: String(row["updated_at"]),
+  }));
+}
+
+export async function createMediaAccount(username: string, password: string) {
+  const { data, error } = await supabase().functions.invoke("media-accounts", {
+    body: { username, password },
+  });
+  check(error);
+  if (!data?.created) throw new Error(data?.error || "Account creation failed");
+  changed();
+}
+
+export async function saveAdmin(
+  id: string,
+  name: string,
+  email: string,
+  role: "editor" | "media_editor" = "editor",
+) {
+  const { error } = await supabase().from("club_admins").upsert({ id, name, email, role });
 
   check(error);
   changed();
@@ -308,12 +337,16 @@ export type MediaAsset = {
 };
 
 export async function loadMedia(): Promise<MediaAsset[]> {
+  const { data: auth, error: authError } = await supabase().auth.getUser();
+  check(authError);
+  const role = auth.user ? await loadRole(auth.user.id) : "";
+  const newsOnly = role === "media_editor";
   const [assets, memberLinks, eventLinks, newsLinks, partnerLinks] = await Promise.all([
     rows("club_media", "created_at"),
-    rows("club_member_media", "member_id", "media_id"),
-    rows("club_event_media", "event_id", "media_id"),
+    newsOnly ? Promise.resolve([]) : rows("club_member_media", "member_id", "media_id"),
+    newsOnly ? Promise.resolve([]) : rows("club_event_media", "event_id", "media_id"),
     rows("club_news_media", "news_id", "media_id"),
-    rows("club_partner_media", "partner_id", "media_id"),
+    newsOnly ? Promise.resolve([]) : rows("club_partner_media", "partner_id", "media_id"),
   ]);
   const links = [
     ...memberLinks.map((link) => ({ mediaId: link["media_id"], ownerId: link["member_id"] })),
