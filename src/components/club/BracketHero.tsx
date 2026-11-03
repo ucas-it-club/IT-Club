@@ -369,15 +369,7 @@ export function BracketHero() {
                 </div>
               ))}
             </dl>
-            <p className={`bh-reg ${open ? "is-open" : ""}`}>
-              {open
-                ? ar
-                  ? "التسجيل مفتوح"
-                  : "Registration open"
-                : ar
-                  ? "التسجيل مغلق حاليًا"
-                  : "Registration closed"}
-            </p>
+            {open && <p className="bh-reg is-open">{ar ? "التسجيل مفتوح" : "Registration open"}</p>}
           </div>
 
           <div className="bh-panel bh-join" dir={ar ? "rtl" : "ltr"}>
