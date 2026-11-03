@@ -10,7 +10,7 @@
 .dark .ev-chronicle {
   --ev-link: var(--primary);
 }
-.ev-chronicle a {
+:where(.ev-chronicle) a {
   color: inherit;
   text-decoration: none;
 }
