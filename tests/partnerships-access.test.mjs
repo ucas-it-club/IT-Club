@@ -35,7 +35,7 @@ before(async () => {
       file.includes("visit_guard") ||
       file.includes("partnerships_committee_access") ||
       file.includes("communications_role") ||
-      file.includes("events_committee_role")
+      file.includes("events_committee_role") || file.includes("legacy_event_reader")
     )
       continue;
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
@@ -56,6 +56,7 @@ before(async () => {
   await db.exec(
     readFileSync("supabase/migrations/20261103123130_events_committee_role.sql", "utf8"),
   );
+  await db.exec(readFileSync("supabase/migrations/20261103183333_legacy_event_reader.sql","utf8"));
   for (const [id, role] of [
     [owner, "super_admin"],
     [partner, "partnerships_editor"],
@@ -469,4 +470,21 @@ test("event uploads can be linked, renamed and deleted after unlinking, while ot
   );
   await as(owner);
   await db.query("delete from club_admins where id=$1",[outsider]);
+});
+
+test("legacy Google event reads resolve current events and cannot write them",async()=>{
+ await as(owner);
+ const data={title:"Legacy read event",title_en:"Legacy read event",description:"Test description",description_en:"Test description",images:[],date:"2099-01-01",status:"upcoming"};
+ const row=(await db.query("insert into club_events(data) values($1) returning id",[JSON.stringify(data)])).rows[0];
+ await as(null);
+ const found=await db.query("select id,data from club_content where id=$1 and kind='events' limit 1",[row.id]);
+ assert.equal(found.rows[0].data.title,data.title);
+ await assert.rejects(()=>db.query("update club_content set data=$1 where id=$2",[JSON.stringify(data),row.id]));
+ await as(owner);
+ await assert.rejects(()=>db.query("delete from club_content where id=$1",[row.id]));
+ await db.query("update club_events set data=$1 where id=$2",[JSON.stringify({...data,title:"Updated live"}),row.id]);
+ await as(null);
+ assert.equal((await db.query("select data from club_content where id=$1",[row.id])).rows[0].data.title,"Updated live");
+ await as(owner);
+ await db.query("delete from club_events where id=$1",[row.id]);
 });
