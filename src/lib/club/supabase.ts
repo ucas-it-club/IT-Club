@@ -295,7 +295,8 @@ export async function loadNews(): Promise<Content[]> {
 export async function createAdminAccount(
   email: string,
   password: string,
-  role: "editor" | "media_editor" | "partnerships_editor" | "communications_editor",
+  role:
+    "editor" | "media_editor" | "partnerships_editor" | "communications_editor" | "events_editor",
   name: string,
 ) {
   const { data, error } = await supabase().functions.invoke("media-accounts", {
@@ -310,7 +311,12 @@ export async function saveAdmin(
   id: string,
   name: string,
   email: string,
-  role: "editor" | "media_editor" | "partnerships_editor" | "communications_editor" = "editor",
+  role:
+    | "editor"
+    | "media_editor"
+    | "partnerships_editor"
+    | "communications_editor"
+    | "events_editor" = "editor",
 ) {
   const { error } = await supabase().from("club_admins").upsert({ id, name, email, role });
 
@@ -344,13 +350,18 @@ export async function loadMedia(): Promise<MediaAsset[]> {
   const role = auth.user ? await loadRole(auth.user.id) : "";
   const newsOnly = role === "media_editor";
   const partnersOnly = role === "partnerships_editor";
-  const scoped = newsOnly || partnersOnly || role === "communications_editor";
+  const eventsOnly = role === "events_editor";
+  const scoped = newsOnly || partnersOnly || eventsOnly || role === "communications_editor";
   const [assets, memberLinks, eventLinks, newsLinks, partnerLinks] = await Promise.all([
     rows("club_media", "created_at"),
     scoped ? Promise.resolve([]) : rows("club_member_media", "member_id", "media_id"),
-    scoped ? Promise.resolve([]) : rows("club_event_media", "event_id", "media_id"),
-    partnersOnly ? Promise.resolve([]) : rows("club_news_media", "news_id", "media_id"),
-    newsOnly ? Promise.resolve([]) : rows("club_partner_media", "partner_id", "media_id"),
+    scoped && !eventsOnly ? Promise.resolve([]) : rows("club_event_media", "event_id", "media_id"),
+    partnersOnly || eventsOnly
+      ? Promise.resolve([])
+      : rows("club_news_media", "news_id", "media_id"),
+    newsOnly || eventsOnly
+      ? Promise.resolve([])
+      : rows("club_partner_media", "partner_id", "media_id"),
   ]);
   const links = [
     ...memberLinks.map((link) => ({ mediaId: link["media_id"], ownerId: link["member_id"] })),

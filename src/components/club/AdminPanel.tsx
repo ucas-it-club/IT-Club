@@ -209,6 +209,7 @@ export function AdminPanel() {
       "media_editor",
       "partnerships_editor",
       "communications_editor",
+      "events_editor",
     ].includes(role)
   )
     return (
@@ -234,6 +235,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
   const queryClient = useQueryClient();
   const partnershipsOnly = role === "partnerships_editor";
   const communications = role === "communications_editor";
+  const eventsOnly = role === "events_editor";
 
   async function deleteContent(kind: ContentCollection, id: string) {
     await removeContent(kind, id);
@@ -245,7 +247,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
   }
 
   const [tab, setTab] = useState(
-    communications ? "news" : partnershipsOnly ? "partners" : "dashboard",
+    eventsOnly ? "events" : communications ? "news" : partnershipsOnly ? "partners" : "dashboard",
   );
   const [memberSearch, setMemberSearch] = useState("");
   const [articleSearch, setArticleSearch] = useState({ events: "", news: "" });
@@ -317,49 +319,58 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
     }
   }
 
-  const tabs = communications
+  const tabs = eventsOnly
     ? [
-        ["news", ar ? "الأخبار" : "News"],
-        ["partners", ar ? "الشراكات" : "Partnerships"],
-        ["media", ar ? "مكتبة الصور" : "Media library"],
+        ["events", ar ? "الفعاليات" : "Events"],
+        ["media", ar ? "صور الفعاليات" : "Event media"],
       ]
-    : partnershipsOnly
+    : communications
       ? [
+          ["news", ar ? "الأخبار" : "News"],
           ["partners", ar ? "الشراكات" : "Partnerships"],
-          ["media", ar ? "صور الشراكات" : "Partnership media"],
-        ]
-      : [
-          ["dashboard", ar ? "نظرة عامة" : "Overview"],
           ["media", ar ? "مكتبة الصور" : "Media library"],
-          ...collections
-            .filter((x) => x !== "news" || canManageNews(role))
-            .map((x) => [x, labels[x][ar ? 0 : 1]]),
-          ["joinRequests", ar ? "طلبات الانضمام" : "Applications"],
-          ["contactMessages", ar ? "الرسائل" : "Messages"],
-          ...(role === "super_admin"
-            ? [
-                ["settings", ar ? "إعدادات الموقع" : "Site settings"],
-                ["admins", ar ? "المحررون" : "Editors"],
-              ]
-            : []),
-        ];
+        ]
+      : partnershipsOnly
+        ? [
+            ["partners", ar ? "الشراكات" : "Partnerships"],
+            ["media", ar ? "صور الشراكات" : "Partnership media"],
+          ]
+        : [
+            ["dashboard", ar ? "نظرة عامة" : "Overview"],
+            ["media", ar ? "مكتبة الصور" : "Media library"],
+            ...collections
+              .filter((x) => x !== "news" || canManageNews(role))
+              .map((x) => [x, labels[x][ar ? 0 : 1]]),
+            ["joinRequests", ar ? "طلبات الانضمام" : "Applications"],
+            ["contactMessages", ar ? "الرسائل" : "Messages"],
+            ...(role === "super_admin"
+              ? [
+                  ["settings", ar ? "إعدادات الموقع" : "Site settings"],
+                  ["admins", ar ? "المحررون" : "Editors"],
+                ]
+              : []),
+          ];
 
   return (
     <>
       <div className="club-admin-banner mb-5 flex flex-wrap items-center justify-between gap-4 rounded-[2rem] bg-brand-gradient p-6 text-white sm:p-8">
         <div>
           <h1 className="text-3xl font-black">
-            {communications
+            {eventsOnly
               ? ar
-                ? "العلاقات العامة والإعلام"
-                : "Public relations and media"
-              : partnershipsOnly
+                ? "لجنة الفعاليات"
+                : "Events committee"
+              : communications
                 ? ar
-                  ? "لوحة لجنة الشراكات"
-                  : "Partnerships committee"
-                : ar
-                  ? "لوحة إدارة النادي"
-                  : "Club administration"}
+                  ? "العلاقات العامة والإعلام"
+                  : "Public relations and media"
+                : partnershipsOnly
+                  ? ar
+                    ? "لوحة لجنة الشراكات"
+                    : "Partnerships committee"
+                  : ar
+                    ? "لوحة إدارة النادي"
+                    : "Club administration"}
           </h1>
           <p className="mt-2 break-all text-sm text-white/85">
             {user.email} ·{" "}
@@ -367,17 +378,21 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
               ? ar
                 ? "مدير عام"
                 : "Super admin"
-              : communications
+              : eventsOnly
                 ? ar
-                  ? "العلاقات العامة والإعلام"
-                  : "Public relations and media"
-                : partnershipsOnly
+                  ? "لجنة الفعاليات"
+                  : "Events committee"
+                : communications
                   ? ar
-                    ? "لجنة الشراكات"
-                    : "Partnerships committee"
-                  : ar
-                    ? "محرر"
-                    : "Editor"}
+                    ? "العلاقات العامة والإعلام"
+                    : "Public relations and media"
+                  : partnershipsOnly
+                    ? ar
+                      ? "لجنة الشراكات"
+                      : "Partnerships committee"
+                    : ar
+                      ? "محرر"
+                      : "Editor"}
           </p>
         </div>
         <BrandButton
@@ -400,9 +415,11 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           { count: data.partners.length, label: ar ? "الشراكات" : "Partners", Icon: Handshake },
         ]
           .filter((item) =>
-            communications
-              ? item.Icon === Handshake || item.Icon === Newspaper
-              : !partnershipsOnly || item.Icon === Handshake,
+            eventsOnly
+              ? item.Icon === CalendarDays
+              : communications
+                ? item.Icon === Handshake || item.Icon === Newspaper
+                : !partnershipsOnly || item.Icon === Handshake,
           )
           .map(({ count, label, Icon }) => (
             <div key={label} className="rounded-3xl border border-border bg-card p-5 sm:p-6">
@@ -534,6 +551,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           activeCollection !== "news" &&
           (editing !== undefined ? (
             <ContentEditor
+              manageEventSheets={!eventsOnly}
               key={tab + (editing?.id || "new")}
               kind={activeCollection}
               item={editing}
@@ -744,12 +762,14 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
 }
 
 export function ContentEditor({
+  manageEventSheets = true,
   kind,
   item,
   onCancel,
   onSaved,
   onDirtyChange,
 }: {
+  manageEventSheets?: boolean;
   kind: ContentCollection;
   item: Content | null;
   onCancel: () => void;
@@ -946,7 +966,12 @@ export function ContentEditor({
     try {
       const savedId = await saveContent(targetKind, value, item?.id, kind, typedSlug || null);
 
-      if (targetKind === "events" && status === "upcoming" && eventRegistration.enabled) {
+      if (
+        manageEventSheets &&
+        targetKind === "events" &&
+        status === "upcoming" &&
+        eventRegistration.enabled
+      ) {
         await ensureEventSheet(savedId, value.title);
       }
 
@@ -1435,6 +1460,7 @@ export function ContentEditor({
             </Select>
           </label>
           <EventRegistrationAdmin
+            manageSheets={manageEventSheets}
             eventId={item?.id}
             value={eventRegistration}
             onChange={(next) => {

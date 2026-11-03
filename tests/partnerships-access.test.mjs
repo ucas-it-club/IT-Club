@@ -34,14 +34,17 @@ before(async () => {
       file.includes("visits") ||
       file.includes("visit_guard") ||
       file.includes("partnerships_committee_access") ||
-      file.includes("communications_role")
+      file.includes("communications_role") ||
+      file.includes("events_committee_role")
     )
       continue;
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
   }
   const migrated = migrations.find(
     (file) =>
-      file.includes("partnerships_committee_access") || file.includes("communications_role"),
+      file.includes("partnerships_committee_access") ||
+      file.includes("communications_role") ||
+      file.includes("events_committee_role"),
   );
   await db.exec(
     readFileSync(
@@ -50,6 +53,9 @@ before(async () => {
     ),
   );
   await db.exec(readFileSync("supabase/migrations/20261103114340_communications_role.sql", "utf8"));
+  await db.exec(
+    readFileSync("supabase/migrations/20261103123130_events_committee_role.sql", "utf8"),
+  );
   for (const [id, role] of [
     [owner, "super_admin"],
     [partner, "partnerships_editor"],
@@ -68,6 +74,79 @@ before(async () => {
   }
 });
 after(async () => db?.close());
+
+test("events committee manages event content and registration settings without unrelated access", async () => {
+  await as(owner);
+  await db.query("insert into club_admins values($1,'Events',$2,'events_editor')", [
+    outsider,
+    "events@example.com",
+  ]);
+  await as(outsider);
+  const eventData = {
+    ...payload,
+    date: "2026-11-03",
+    status: "upcoming",
+    eventRegistration: {
+      enabled: true,
+      nameEnabled: true,
+      phoneEnabled: true,
+      attendanceEnabled: true,
+    },
+  };
+  const saved = (
+    await db.query("insert into club_events(data) values($1) returning id", [
+      JSON.stringify(eventData),
+    ])
+  ).rows[0];
+  assert.equal(
+    (
+      await db.query("update club_events set data=$1 where id=$2 returning id", [
+        JSON.stringify({
+          ...eventData,
+          eventRegistration: { ...eventData.eventRegistration, enabled: false },
+        }),
+        saved.id,
+      ])
+    ).rows.length,
+    1,
+  );
+  await assert.rejects(() =>
+    db.query("insert into club_news(data) values($1)", [
+      JSON.stringify({ ...payload, date: "2026-11-03" }),
+    ]),
+  );
+  await assert.rejects(() =>
+    db.query("insert into club_partners(data) values($1)", [JSON.stringify(payload)]),
+  );
+  await assert.rejects(() =>
+    db.query("insert into club_members(data) values($1)", [
+      JSON.stringify({ ...payload, committee: "relations", isFounder: false }),
+    ]),
+  );
+  assert.equal((await db.query("select * from club_submissions")).rows.length, 0);
+  assert.equal(
+    (
+      await db.query("update club_admins set role='super_admin' where id=$1 returning id", [
+        outsider,
+      ])
+    ).rows.length,
+    0,
+  );
+  assert.equal((await db.query("update club_settings set data='{}' returning id")).rows.length, 0);
+  assert.equal(
+    (await db.query("delete from club_events where id=$1 returning id", [saved.id])).rows.length,
+    1,
+  );
+  await as(owner);
+  await db.query("update club_admins set role='media_editor' where id=$1", [outsider]);
+  await as(outsider);
+  assert.equal(
+    (await db.query("select club_private.can_manage_events() as allowed")).rows[0].allowed,
+    false,
+  );
+  await as(owner);
+  await db.query("delete from club_admins where id=$1", [outsider]);
+});
 
 test("communications accounts manage news and partners but cannot access unrelated administration", async () => {
   await as(owner);
@@ -330,4 +409,64 @@ test("only the general administrator can assign the partnerships role and revoca
   await assert.rejects(() =>
     db.query("insert into club_partners(data) values($1)", [JSON.stringify(payload)]),
   );
+});
+
+test("event uploads can be linked, renamed and deleted after unlinking, while other committee assets stay protected", async () => {
+  await as(owner);
+  await db.query("insert into club_admins values($1,'Events',$2,'events_editor')",[outsider,'events@example.com']);
+  const ownPath = outsider + "/00000000-0000-4000-8000-000000000020.webp";
+  const otherPath = media + "/00000000-0000-4000-8000-000000000021.webp";
+  const url = (p) =>
+    "https://jxweaxenswbjpxxjmihb.supabase.co/storage/v1/object/public/club-media/" + p;
+  await db.exec("reset role");
+  await db.query("insert into storage.objects(bucket_id,name) values('club-media',$1)", [
+    otherPath,
+  ]);
+  const other = (
+    await db.query(
+      "insert into club_media(name,path,size,mime,created_by) values('Other image',$1,100,'image/webp',$2) returning id",
+      [otherPath, media],
+    )
+  ).rows[0].id;
+  await as(outsider);
+  await assert.rejects(() =>
+    db.query("insert into storage.objects(bucket_id,name) values('club-media',$1)", [otherPath]),
+  );
+  await db.query("insert into storage.objects(bucket_id,name) values('club-media',$1)", [ownPath]);
+  const asset = (
+    await db.query(
+      "insert into club_media(name,path,size,mime,created_by) values('Logo',$1,100,'image/webp',$2) returning id",
+      [ownPath, outsider],
+    )
+  ).rows[0].id;
+  assert.equal((await db.query("select id from club_media where id=$1", [other])).rows.length, 0);
+  await assert.rejects(() =>
+    db.query("insert into club_events(data) values($1)", [
+      JSON.stringify({ ...payload, date:"2026-11-03",status:"past", images: [url(otherPath)] }),
+    ]),
+  );
+  const record = (
+    await db.query("insert into club_events(data) values($1) returning id", [
+      JSON.stringify({ ...payload, date:"2026-11-03",status:"past", images: [url(ownPath)] }),
+    ])
+  ).rows[0].id;
+  await db.query("update club_media set name='Renamed logo' where id=$1", [asset]);
+  assert.equal(
+    (await db.query("select name from club_media where id=$1", [asset])).rows[0].name,
+    "Renamed logo",
+  );
+  await assert.rejects(() => db.query("select club_prepare_media_delete($1)", [asset]));
+  await assert.rejects(() => db.query("select club_prepare_media_delete($1)", [other]));
+  await db.query("update club_events set data=$1 where id=$2", [JSON.stringify({...payload,date:"2026-11-03",status:"past"}), record]);
+  assert.equal(
+    (await db.query("select club_prepare_media_delete($1) as path", [asset])).rows[0].path,
+    ownPath,
+  );
+  await db.query("delete from storage.objects where bucket_id='club-media' and name=$1", [ownPath]);
+  assert.equal(
+    (await db.query("delete from club_media where id=$1 returning id", [asset])).rows.length,
+    1,
+  );
+  await as(owner);
+  await db.query("delete from club_admins where id=$1",[outsider]);
 });

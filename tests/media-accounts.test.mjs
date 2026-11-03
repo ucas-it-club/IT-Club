@@ -28,7 +28,14 @@ function deletionHttp({ callerRole = "super_admin", targetRole = "editor", statu
 }
 
 test("deletion removes the Auth identity so the assignment cascades, for every editor type", async () => {
-  for (const targetRole of ["editor", "media_editor", "partnerships_editor", "communications_editor"]) {
+  for (const targetRole of [
+    "editor",
+    "media_editor",
+    "partnerships_editor",
+    "communications_editor",
+    "events_editor",
+    "events_editor",
+  ]) {
     const mock = deletionHttp({ targetRole });
     const result = await handleMediaAccount(
       request({ action: "delete", id: editorId }),
@@ -55,6 +62,7 @@ test("deletion rejects unauthorized callers, self deletion, protected and missin
     { callerRole: "media_editor", id: editorId, status: 403, count: 2 },
     { callerRole: "partnerships_editor", id: editorId, status: 403, count: 2 },
     { callerRole: "communications_editor", id: editorId, status: 403, count: 2 },
+    { callerRole: "events_editor", id: editorId, status: 403, count: 2 },
     { id: ownerId, status: 403, count: 2 },
     { id: "invalid", status: 400, count: 2 },
     { id: editorId, targetRole: "super_admin", status: 403, count: 3 },
@@ -275,4 +283,29 @@ test("the administrator can create an account assigned to public relations and m
   );
   assert.equal(result.status, 201);
   assert.equal(JSON.parse(calls[3].init.body).role, "communications_editor");
+});
+
+test("the administrator can create an account assigned to events committee", async () => {
+  const calls = [];
+  const result = await handleMediaAccount(
+    request({
+      email: "partners@example.com",
+      name: "Partnerships team",
+      role: "events_editor",
+      password: "long-private-password",
+    }),
+    config,
+    async (url, init) => {
+      calls.push({ url, init });
+      return calls.length === 1
+        ? response({ id: "owner" })
+        : calls.length === 2
+          ? response([{ role: "super_admin" }])
+          : calls.length === 3
+            ? response({ id: "new-user" })
+            : response(null, 201);
+    },
+  );
+  assert.equal(result.status, 201);
+  assert.equal(JSON.parse(calls[3].init.body).role, "events_editor");
 });
