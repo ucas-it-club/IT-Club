@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import cairoArabic from "../assets/fonts/cairo-arabic.woff2?url";
@@ -131,7 +131,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   // The address is the language, on the server and in the browser alike.
   const lang = langOf(useLocation().pathname);
-  const theme = readTheme();
+  // Read once: inline scripts add classes to <html> and the toggle edits it directly,
+  // so a changed prop on a later render would wipe them (and bring the loader back).
+  const [theme] = useState(readTheme);
 
   return (
     <html
