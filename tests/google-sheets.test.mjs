@@ -392,8 +392,14 @@ test("an upcoming event remains open before its local end time", () => {
   assert.equal(post(eventSignup()).ok, true);
 });
 
-test("only a validated super admin can create or inspect event tabs", () => {
-  for (const options of [{ authenticated: false }, { adminRole: "editor" }]) {
+test("only validated event administrators can create or inspect event tabs", () => {
+  for (const options of [
+    { authenticated: false },
+    { adminRole: "editor" },
+    { adminRole: "media_editor" },
+    { adminRole: "communications_editor" },
+    { adminRole: "partnerships_editor" },
+  ]) {
     const { post } = eventHarness({}, options);
     assert.equal(linkEvent(post).code, "UNAUTHORIZED");
     assert.equal(
@@ -425,4 +431,14 @@ test("contact deployments reject every event action", () => {
   for (const action of ["eventRegister", "eventSheetStatus", "ensureEventSheet"]) {
     assert.equal(post({ action, eventId, requestId: id(910), data: {} }).code, "INVALID_INPUT");
   }
+});
+
+test("events committee may create event tabs without controlling membership registration", () => {
+  const { post } = eventHarness({}, { adminRole: "events_editor" });
+  assert.equal(linkEvent(post).ok, true);
+  assert.equal(post({ action: "eventSheetStatus", accessToken: adminToken, eventId }).ok, true);
+  assert.equal(
+    post({ action: "configure", accessToken: adminToken, enabled: true, limit: 50 }).code,
+    "UNAUTHORIZED",
+  );
 });

@@ -235,3 +235,11 @@ test("event registration errors have clear Arabic and English messages", () => {
     /No sheet is linked/,
   );
 });
+
+test("creating a tab cannot report success for an unlinked event", async () => {
+  const h = harness(() => json({ ok: true, sheet: { linked: false } }));
+  await assert.rejects(
+    () => h.api.ensureEventSheet(eventId, "Workshop"),
+    (e) => e.message === "EVENT_SHEET_MISSING",
+  );
+});

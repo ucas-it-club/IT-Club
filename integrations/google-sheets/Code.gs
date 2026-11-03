@@ -335,7 +335,7 @@ function validateEvent_(data, config) {
   if (config.attendanceEnabled && attendance !== "yes") fail_("INVALID_INPUT");
   return [name, code, phone, attendance === "yes" ? "نعم" : ""];
 }
-function requireAdmin_(token) {
+function requireAdmin_(token, allowEvents) {
   if (typeof token !== "string" || token.length < 20 || token.length > 10000) fail_("UNAUTHORIZED");
   const key = PropertiesService.getScriptProperties().getProperty("SUPABASE_PUBLISHABLE_KEY");
   if (!key) fail_("NOT_CONFIGURED");
@@ -354,7 +354,7 @@ function requireAdmin_(token) {
   );
   if (result.getResponseCode() !== 200) fail_("UNAUTHORIZED");
   const rows = JSON.parse(result.getContentText());
-  if (!rows.length || rows[0].role !== "super_admin") fail_("UNAUTHORIZED");
+  if (!rows.length || (rows[0].role !== "super_admin" && !(allowEvents && rows[0].role === "events_editor"))) fail_("UNAUTHORIZED");
 }
 /** POST JSON as text/plain. action: contact, join, or configure. */
 function doPost(event) {
@@ -382,11 +382,11 @@ function doPost(event) {
     )
       fail_("INVALID_INPUT");
     if (body.action === "eventSheetStatus") {
-      requireAdmin_(body.accessToken);
+      requireAdmin_(body.accessToken, true);
       return response_({ ok: true, sheet: eventSheetInfo_(body.eventId) });
     }
     if (body.action === "ensureEventSheet" || body.action === "configureEventSheet") {
-      requireAdmin_(body.accessToken);
+      requireAdmin_(body.accessToken, true);
       if (!validUuid_(body.eventId)) fail_("INVALID_INPUT");
       const item = eventFromSupabase_(body.eventId);
       return response_(
