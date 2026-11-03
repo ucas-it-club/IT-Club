@@ -209,7 +209,9 @@ export function BracketHero() {
               )
               .to(parts, { xPercent: 0, yPercent: 0, duration: 1.1, ease: "expo.inOut" }, 0.55);
           }
-          intro.from(".bh-word", { yPercent: 115, duration: 1.1, stagger: 0.08 }, 1.05);
+          // Once the brackets have all but parted (they settle at 1.65), so the name
+          // never rises underneath them while they still cross the middle.
+          intro.from(".bh-word", { yPercent: 115, duration: 1.1, stagger: 0.08 }, 1.5);
         }
         intro.from(".bh-cue", { opacity: 0, y: -8, duration: 0.8 }, opening ? 3 : 1.6);
 
@@ -335,7 +337,11 @@ export function BracketHero() {
             else t.to(lines[prev], { ...above, duration: 0.4, stagger: 0.03, ease: "power2.in" });
             t.set(box[prev], { visibility: "hidden" })
               .set(box[next], { visibility: "visible", opacity: 1 })
-              .set(".bh-actions", { autoAlpha: next === "motto" ? 0 : 1 });
+              // The motto alone sits centred between the brackets: no room kept for the buttons.
+              .set(
+                ".bh-actions",
+                next === "motto" ? { display: "none" } : { clearProps: "display" },
+              );
             if (next === "name")
               t.fromTo(
                 ".bh-word",

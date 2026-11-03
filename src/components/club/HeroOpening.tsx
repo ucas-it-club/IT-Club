@@ -144,7 +144,8 @@ export function HeroOpening() {
         ".bh-word",
         { yPercent: 115 },
         { yPercent: 0, duration: 1, stagger: 0.08, ease: "expo.out" },
-        2.25,
+        // After the pieces have nearly landed (1.7 + 1.1), not while they cross the name.
+        2.6,
       );
     })();
 

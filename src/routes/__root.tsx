@@ -146,10 +146,11 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         {/* Covers visitors whose preference predates the cookie: apply their
             stored theme before first paint and seed the cookie so the next
-            document is server-rendered with it. */}
+            document is server-rendered with it. It first notes the theme this
+            document was rendered with, so hydration starts from the same one. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){document.documentElement.classList.add('js');try{var theme=localStorage.getItem('ucas-theme');if(!theme)return;var dark=theme==='dark';document.documentElement.classList.toggle('dark',dark);document.documentElement.style.colorScheme=dark?'dark':'light';document.cookie='ucas-theme='+(dark?'dark':'light')+'; path=/; max-age=31536000; samesite=lax';}catch(e){}})();`,
+            __html: `(function(){document.documentElement.classList.add('js');window.__ssrTheme=/(^|; )ucas-theme=dark/.test(document.cookie)?'dark':'light';try{var theme=localStorage.getItem('ucas-theme');if(!theme)return;var dark=theme==='dark';document.documentElement.classList.toggle('dark',dark);document.documentElement.style.colorScheme=dark?'dark':'light';document.cookie='ucas-theme='+(dark?'dark':'light')+'; path=/; max-age=31536000; samesite=lax';}catch(e){}})();`,
           }}
         />
         <HeadContent />
