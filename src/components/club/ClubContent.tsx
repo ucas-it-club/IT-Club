@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, CalendarDays, ExternalLink } from "lucide-react";
+import { CalendarDays, ExternalLink } from "lucide-react";
 import InformationDrawer from "@/components/ui/information-drawer";
 import logo from "@/assets/ucas-logo.webp";
 import { hrefOf, itemPage } from "@/lib/club/paths";
@@ -94,7 +94,7 @@ export function ContentCard({
   const status = kind === "events" ? eventDisplayStatus(item) : undefined;
 
   return (
-    <article className="club-card flex h-full flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-card">
+    <article className="club-card relative flex h-full flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-card">
       <div className="relative aspect-video w-full overflow-hidden">
         {!partner ? (
           <ContentImage
@@ -144,12 +144,25 @@ export function ContentCard({
             {item.date}
           </time>
         )}
-        <h2 className="mt-2 text-xl font-extrabold">{title}</h2>
-        <p
-          className={`mt-3 text-base leading-relaxed text-muted-foreground ${compact ? "line-clamp-2" : "line-clamp-3"}`}
-        >
-          {plainRichText(local(item, "description", lang))}
-        </p>
+        <h2 className="mt-2 text-xl font-extrabold">
+          {!partner && !preview ? (
+            <ClubLink
+              path={itemPage(kind, item, data)}
+              className="after:absolute after:inset-0 after:rounded-3xl focus:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-primary"
+            >
+              {title}
+            </ClubLink>
+          ) : (
+            title
+          )}
+        </h2>
+        {partner && (
+          <p
+            className={`mt-3 text-base leading-relaxed text-muted-foreground ${compact ? "line-clamp-2" : "line-clamp-3"}`}
+          >
+            {plainRichText(local(item, "description", lang))}
+          </p>
+        )}
         {partner ? (
           <div className="mt-auto pt-5">
             {item.partnershipType && (
@@ -169,20 +182,7 @@ export function ContentCard({
               </a>
             )}
           </div>
-        ) : preview ? (
-          <span className="club-card-cta mt-auto inline-flex items-center gap-2 pt-5 font-bold text-primary">
-            {lang === "ar" ? "التفاصيل" : "View details"}
-            {lang === "ar" ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
-          </span>
-        ) : (
-          <ClubLink
-            path={itemPage(kind, item, data)}
-            className="club-card-cta mt-auto inline-flex items-center gap-2 pt-5 font-bold text-primary"
-          >
-            {lang === "ar" ? "التفاصيل" : "View details"}
-            {lang === "ar" ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
-          </ClubLink>
-        )}
+        ) : null}
       </div>
     </article>
   );
