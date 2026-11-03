@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { BrandButton } from "@/components/club/BrandButton";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "../PasswordInput";
 import {
   Select,
   SelectTrigger,
@@ -165,11 +166,12 @@ export function AdminUsersEditor({ ar, currentUserId, onLoadError, run }: Props)
               : "Lowercase letters, numbers and underscores; start with a letter."}
           </span>
         </label>
-        <label className="flex flex-col gap-2">
-          <span>{ar ? "كلمة المرور" : "Password"}</span>
-          <Input
+        <div className="flex flex-col gap-2">
+          <label htmlFor="account-password">{ar ? "كلمة المرور" : "Password"}</label>
+          <PasswordInput
+            ar={ar}
+            id="account-password"
             name="password"
-            type="password"
             required
             minLength={14}
             maxLength={128}
@@ -182,7 +184,7 @@ export function AdminUsersEditor({ ar, currentUserId, onLoadError, run }: Props)
               ? "14 حرفًا على الأقل. شاركها مع صاحب الحساب بشكل خاص."
               : "At least 14 characters. Share it privately with the account holder."}
           </span>
-        </label>
+        </div>
         <RoleSelect
           ar={ar}
           value={role}
