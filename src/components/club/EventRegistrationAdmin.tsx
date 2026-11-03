@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useClub } from "./club-context";
 import type { EventRegistration } from "@/lib/club/model";
-import { eventSheetStatus } from "@/lib/club/sheets";
+import { eventSheetStatus, sheetLinks } from "@/lib/club/sheets";
 
 export function EventRegistrationAdmin({
   manageSheets = true,
@@ -16,13 +16,21 @@ export function EventRegistrationAdmin({
 }) {
   const { lang } = useClub();
   const ar = lang === "ar";
-  const [linkedUrl, setLinkedUrl] = useState("");
+  const [linkedSheet, setLinkedSheet] = useState<{ eventId: string; url: string }>();
+  const linkedUrl =
+    manageSheets && linkedSheet && linkedSheet.eventId === eventId ? linkedSheet.url : "";
 
   useEffect(() => {
     if (!eventId || !manageSheets) return;
+    let active = true;
     void eventSheetStatus(eventId)
-      .then((sheet) => setLinkedUrl(sheet.linked ? sheet.url : ""))
+      .then((sheet) => {
+        if (active) setLinkedSheet({ eventId, url: sheet.linked ? sheet.url : "" });
+      })
       .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [eventId, manageSheets]);
 
   const toggle = (key: keyof EventRegistration) => onChange({ ...value, [key]: !value[key] });
@@ -46,6 +54,20 @@ export function EventRegistrationAdmin({
           </label>
         );
       })}
+      <a
+        className="inline-flex min-h-11 items-center font-bold text-primary underline"
+        href={linkedUrl || sheetLinks.join}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {linkedUrl
+          ? ar
+            ? "فتح تبويب تسجيلات الفعالية"
+            : "Open the event registrations tab"
+          : ar
+            ? "فتح شيت نتائج تسجيل الفعاليات"
+            : "Open event registration results sheet"}
+      </a>
       {!manageSheets ? (
         <p className="text-sm text-muted-foreground">
           {ar
@@ -65,16 +87,6 @@ export function EventRegistrationAdmin({
               ? "يُنشئ النظام تبويب الفعالية تلقائيًا داخل شيت انضم إلينا عند الحفظ."
               : "The event tab is created automatically in the join spreadsheet when you save."}
           </p>
-          {linkedUrl && (
-            <a
-              className="font-bold text-primary underline"
-              href={linkedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {ar ? "فتح تبويب تسجيلات الفعالية" : "Open the event registrations tab"}
-            </a>
-          )}
         </div>
       )}
     </fieldset>

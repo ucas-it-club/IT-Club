@@ -454,6 +454,16 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
         ))}
       </nav>
       <div className="rounded-[2rem] border border-border bg-card p-4 sm:p-6">
+        {activeCollection === "events" && (
+          <a
+            href={sheetLinks.join}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="club-action mb-5 inline-flex min-h-11 items-center rounded-xl border border-border px-5 py-3 font-bold text-primary underline"
+          >
+            {ar ? "فتح شيت نتائج تسجيل الفعاليات" : "Open event registration results sheet"}
+          </a>
+        )}
         {activeCollection === "events" &&
           (() => {
             const kind = activeCollection;
