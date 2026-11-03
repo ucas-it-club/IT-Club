@@ -136,7 +136,9 @@ export async function ensureEventSheet(eventId: string, title: string) {
     eventId: validEventId,
     title,
   });
-  return eventSheetSchema.parse(value.sheet);
+  const sheet = eventSheetSchema.parse(value.sheet);
+  if (!sheet.linked) throw new SheetsError("EVENT_SHEET_MISSING");
+  return sheet;
 }
 
 export async function submitEventSignup(

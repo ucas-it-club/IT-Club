@@ -4,7 +4,7 @@ import { EventRegistrationAdmin } from "./EventRegistrationAdmin";
 import { ContentCard } from "./ClubContent";
 import { EventDetail } from "./EventDetail";
 import { NewsDetail } from "./NewsDetail";
-import { ensureEventSheet, sheetLinks } from "@/lib/club/sheets";
+import { ensureEventSheet, sheetLinks, SheetsError, submissionError } from "@/lib/club/sheets";
 import { MediaLibrary } from "./MediaLibrary";
 import { RichTextEditor } from "./RichTextEditor";
 import { ImageCropper } from "./ImageCropper";
@@ -561,7 +561,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           activeCollection !== "news" &&
           (editing !== undefined ? (
             <ContentEditor
-              manageEventSheets={!eventsOnly}
+              manageEventSheets={role === "super_admin" || eventsOnly}
               key={tab + (editing?.id || "new")}
               kind={activeCollection}
               item={editing}
@@ -801,6 +801,7 @@ export function ContentEditor({
 
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  const [savedItemId, setSavedItemId] = useState(item?.id);
   const [images, setImages] = useState(item?.images || []);
   const [driveImageUrls, setDriveImageUrls] = useState(item?.driveImageUrls || []);
   const [driveImageLink, setDriveImageLink] = useState("");
@@ -974,7 +975,8 @@ export function ContentEditor({
     setError("");
 
     try {
-      const savedId = await saveContent(targetKind, value, item?.id, kind, typedSlug || null);
+      const savedId = await saveContent(targetKind, value, savedItemId, kind, typedSlug || null);
+      setSavedItemId(savedId);
 
       if (
         manageEventSheets &&
@@ -1000,6 +1002,15 @@ export function ContentEditor({
 
       onSaved();
     } catch (error) {
+      if (error instanceof SheetsError) {
+        setError(
+          (ar
+            ? "تم حفظ الفعالية، لكن لم يتأكد إنشاء تبويب التسجيلات. "
+            : "The event was saved, but registration tab creation was not confirmed. ") +
+            submissionError(error, ar),
+        );
+        return;
+      }
       if (error instanceof Error && error.message.includes("content_slugs_pkey")) {
         setError(
           ar
