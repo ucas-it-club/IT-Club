@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   CalendarDays,
   Eye,
@@ -29,9 +28,9 @@ import {
 import { plainRichText, splitRichText } from "@/lib/club/rich-text";
 import { eventDisplayStatus } from "@/lib/club/event-timing";
 import { siteName } from "@/lib/club/seo";
-import { BrandButton } from "./BrandButton";
 import { BracketHero } from "./BracketHero";
 import { ClubLink, ContentGrid, Empty, Heading, linkClass } from "./ClubContent";
+import { EventsPage } from "./EventsPage";
 import { ContentImage } from "./ContentImage";
 import { CountUp } from "./CountUp";
 import { EventDetail } from "./EventDetail";
@@ -234,37 +233,14 @@ export function AboutPage() {
 export function ListingPage({ kind }: { kind: ContentCollection }) {
   const { lang, data } = useClub();
   const ar = lang === "ar";
-  const [status, setStatus] = useState("all");
-  const now = new Date();
-  let items = data[kind].filter(
-    (item) =>
-      status === "all" ||
-      (kind === "events" ? eventDisplayStatus(item, now) : item.status) === status,
-  );
-  if (kind === "events" || kind === "news")
+  if (kind === "events") return <EventsPage />;
+  let items = data[kind];
+  if (kind === "news")
     items = [...items].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
   return (
     <>
       <Heading ar={labels[kind][0]} en={labels[kind][1]} />
-      {kind === "events" && (
-        <div className="mb-8 flex flex-wrap gap-3">
-          {[
-            ["all", "الكل", "All"],
-            ["upcoming", "قادمة", "Upcoming"],
-            ["past", "سابقة", "Past"],
-          ].map(([key, arabic, english]) => (
-            <BrandButton
-              key={key}
-              variant={status === key ? "primary" : "outline"}
-              onClick={() => setStatus(key!)}
-              aria-pressed={status === key}
-            >
-              {ar ? arabic : english}
-            </BrandButton>
-          ))}
-        </div>
-      )}
       {kind === "members" ? (
         <>
           <h2 className="mb-6 text-2xl font-black">

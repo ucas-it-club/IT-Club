@@ -1,0 +1,157 @@
+/* Contact page: one full-width band of flat brand colour per channel.
+   Motion is limited to colour and a small arrow nudge on hover. */
+
+.contact {
+  --contact-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+.contact a {
+  text-decoration: none;
+}
+.contact a:focus-visible {
+  outline: 3px solid var(--brand-blue);
+  outline-offset: 4px;
+}
+.contact-fine {
+  margin-top: 3rem;
+  max-width: 60ch;
+  font-size: 0.8125rem;
+  line-height: 2;
+  color: var(--muted-foreground);
+}
+
+.contact-head h1 {
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.contact-head p {
+  margin-top: 1rem;
+  font-size: 1.125rem;
+  line-height: 2;
+  color: var(--muted-foreground);
+}
+
+/* Break out of the 6xl column to the screen edges; clip the scrollbar's width
+   that 100vw counts so the page never scrolls sideways. */
+.club-site:has(.contact-bands) {
+  overflow-x: clip;
+}
+.contact-bands {
+  width: calc(100vw - var(--sbw, 0px));
+  margin-inline: calc(50% - 50vw + var(--sbw, 0px) / 2);
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+}
+.contact-band {
+  --band-bg: var(--navy);
+  --band-ink: #fff;
+  --band-soft: color-mix(in oklab, #fff 78%, var(--band-bg));
+}
+.contact-band-instagram {
+  --band-bg: var(--navy);
+}
+.contact-band-facebook {
+  --band-bg: var(--brand-blue);
+}
+.contact-band-linkedin {
+  --band-bg: var(--brand-green);
+  --band-ink: var(--navy);
+  --band-soft: color-mix(in oklab, var(--navy) 80%, var(--band-bg));
+}
+.contact-band-email {
+  --band-bg: var(--background);
+  --band-ink: var(--foreground);
+  --band-soft: var(--muted-foreground);
+  border-block: 1px solid var(--border);
+}
+.dark .contact-band-instagram {
+  --band-bg: #1a2c47;
+}
+
+.contact-band-link {
+  display: block;
+  background: var(--band-bg);
+  color: var(--band-ink);
+  text-decoration: none;
+  transition: background-color 250ms var(--contact-ease);
+}
+.contact-band-link:hover {
+  background: color-mix(in oklab, var(--band-bg) 88%, #000);
+}
+.contact-band-email .contact-band-link:hover {
+  background: var(--muted);
+}
+.contact-band-link:focus-visible {
+  outline-offset: -6px;
+  outline-color: var(--band-ink);
+}
+.contact-band-inner {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2rem);
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: clamp(1.75rem, 4vw, 2.75rem) 1rem;
+}
+.contact-band-inner > svg {
+  flex: none;
+}
+.contact-band-text {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+}
+.contact-band-name {
+  font-size: clamp(1.75rem, 5vw, 3.5rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  justify-self: start;
+}
+.contact-band-email .contact-band-name {
+  font-size: clamp(1.125rem, 3.4vw, 2.25rem);
+  overflow-wrap: anywhere;
+}
+.contact-band-note {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--band-soft);
+}
+.contact-band-action {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  font-size: 1.0625rem;
+}
+.contact-band-action svg {
+  transition: transform 300ms var(--contact-ease);
+}
+.contact-band-link:hover .contact-band-action svg {
+  transform: translate(3px, -3px);
+}
+[dir="rtl"] .contact-band-link:hover .contact-band-action svg {
+  transform: translate(-3px, -3px);
+}
+
+@media (max-width: 40rem) {
+  .contact-band-inner {
+    flex-wrap: wrap;
+  }
+  .contact-band-inner > svg {
+    width: 2rem;
+    height: 2rem;
+  }
+  .contact-band-action {
+    flex-basis: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact-band-link,
+  .contact-band-action svg {
+    transition: none;
+  }
+}

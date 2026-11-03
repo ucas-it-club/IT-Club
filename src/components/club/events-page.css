@@ -1,0 +1,156 @@
+/* Events page: upcoming events as full-width navy bands (one saying so when
+   nothing is scheduled), then past events as a written record by year. */
+
+.ev-chronicle {
+  --ev-ink: var(--foreground);
+  --ev-soft: var(--muted-foreground);
+  --ev-link: var(--brand-blue);
+  --ev-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dark .ev-chronicle {
+  --ev-link: var(--primary);
+}
+.ev-chronicle a {
+  color: inherit;
+  text-decoration: none;
+}
+.ev-chronicle a:focus-visible {
+  outline: 3px solid var(--ev-link);
+  outline-offset: 4px;
+  border-radius: 0.25rem;
+}
+
+.ev-head h1 {
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.ev-head p {
+  margin-top: 0.75rem;
+  font-size: 1.125rem;
+  line-height: 2;
+  color: var(--ev-soft);
+}
+.ev-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  color: var(--ev-link);
+}
+
+.club-site:has(.ev-next) {
+  overflow-x: clip;
+}
+/* Full-bleed band, like the contact page's. */
+.ev-next {
+  width: calc(100vw - var(--sbw, 0px));
+  margin-inline: calc(50% - 50vw + var(--sbw, 0px) / 2);
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+}
+.ev-next-link {
+  display: block;
+  background: var(--navy);
+  color: #fff;
+  transition: background-color 250ms var(--ev-ease);
+}
+.dark .ev-next-link {
+  background: #1a2c47;
+}
+.ev-next li + li .ev-next-link {
+  border-top: 1px solid rgb(255 255 255 / 0.15);
+}
+.ev-next-link:hover {
+  background: color-mix(in oklab, var(--navy) 88%, #000);
+}
+.ev-next-link:focus-visible {
+  outline-color: #fff;
+  outline-offset: -6px;
+}
+.ev-next-inner {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: clamp(2rem, 5vw, 3.5rem) 1rem;
+}
+.ev-next-title {
+  font-size: clamp(1.75rem, 4.2vw, 3.25rem);
+  font-weight: 900;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+.ev-next-facts {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: rgb(255 255 255 / 0.8);
+}
+.ev-next .ev-more {
+  margin-top: 0.5rem;
+  color: oklch(0.85 0.15 136);
+}
+
+.ev-year {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  margin-top: clamp(3rem, 7vw, 5rem);
+}
+.ev-year-num {
+  position: sticky;
+  top: 6.5rem;
+  align-self: start;
+  font-size: clamp(2.75rem, 6vw, 4.5rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ev-ink);
+}
+.ev-record {
+  border-top: 2px solid var(--ev-ink);
+}
+.ev-record li {
+  border-bottom: 1px solid var(--border);
+}
+.ev-entry {
+  display: grid;
+  gap: 0.25rem;
+  padding-block: 1.25rem;
+}
+.ev-entry-date {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--ev-link);
+}
+.ev-entry-title {
+  font-size: clamp(1.125rem, 2vw, 1.375rem);
+  font-weight: 800;
+  line-height: 1.6;
+  transition: color 250ms var(--ev-ease);
+}
+.ev-entry-meta {
+  font-size: 0.9375rem;
+  color: var(--ev-soft);
+}
+.ev-entry:hover .ev-entry-title {
+  color: var(--ev-link);
+}
+
+@media (max-width: 40rem) {
+  .ev-year {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .ev-year-num {
+    position: static;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-entry-title,
+  .ev-next-link {
+    transition: none;
+  }
+}

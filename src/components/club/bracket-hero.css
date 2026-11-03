@@ -19,7 +19,7 @@
   /* The brackets are cut from a 384px logo: ~150px wide is their sharp limit. */
   --arm: clamp(2.5rem, 13vw, 9.4rem);
   /* Header height plus main's top padding: the stage fills what is left. */
-  --bh-top: 6rem;
+  --bh-top: 5rem;
   /* 100vw counts a classic scrollbar; --sbw (set by BracketHero) takes it back
      out so the stage stays centred on the visible page. */
   width: calc(100vw - var(--sbw, 0px));
