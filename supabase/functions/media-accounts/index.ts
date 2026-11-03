@@ -76,10 +76,11 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
     if (body.action !== undefined && body.action !== "create")
       return reply(400, { error: "Unknown account action" });
     const role = body.role === undefined ? "media_editor" : body.role;
-    const username = typeof body.username === "string" ? body.username.trim().toLowerCase() : "";
-    const name = typeof body.name === "string" ? body.name.trim() : username;
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const name = typeof body.name === "string" ? body.name.trim() : email;
     if (
-      !/^[a-z][a-z0-9_]{2,31}$/.test(username) ||
+      email.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
       !["editor", "media_editor", "partnerships_editor"].includes(role) ||
       name.length < 2 ||
       name.length > 200 ||
@@ -88,10 +89,9 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
       body.password.length > 128
     )
       return reply(400, {
-        error: "Invalid username, name, account type or password length",
+        error: "Invalid email, name, account type or password length",
       });
     if (!config.secret) return reply(503, { error: "Account provisioning is not configured" });
-    const email = `${username}@accounts.itclub.invalid`;
     const privileged = {
       apikey: config.secret,
       authorization: `Bearer ${config.secret}`,
@@ -136,7 +136,7 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
         id: account.id,
       });
     }
-    return reply(201, { created: true, username, id: account.id });
+    return reply(201, { created: true, email, id: account.id });
   } catch {
     return reply(502, {
       error: "Account operation could not be confirmed. Check the account list before retrying.",

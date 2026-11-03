@@ -293,13 +293,13 @@ export async function loadNews(): Promise<Content[]> {
 }
 
 export async function createAdminAccount(
-  username: string,
+  email: string,
   password: string,
   role: "editor" | "media_editor" | "partnerships_editor",
   name: string,
 ) {
   const { data, error } = await supabase().functions.invoke("media-accounts", {
-    body: { username, password, role, name },
+    body: { email, password, role, name },
   });
   check(error);
   if (!data?.created) throw new Error(data?.error || "Account creation failed");

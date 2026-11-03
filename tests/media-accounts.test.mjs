@@ -123,7 +123,7 @@ test("provisioning rejects visitors and non-super users before creating identiti
   );
   let calls = 0;
   const denied = await handleMediaAccount(
-    request({ username: "media_girl", password: "long-private-password" }),
+    request({ email: "media.girl@example.com", password: "long-private-password" }),
     config,
     async () => (++calls === 1 ? response({ id: "user" }) : response([{ role: "media_editor" }])),
   );
@@ -134,7 +134,7 @@ test("the administrator can create a media account with the selected type withou
   const calls = [];
   const result = await handleMediaAccount(
     request({
-      username: "media_boy",
+      email: " Media.Boy@Example.com ",
       password: "long-private-password",
       role: "media_editor",
       name: "Media team",
@@ -154,15 +154,20 @@ test("the administrator can create a media account with the selected type withou
   assert.equal(result.status, 201);
   assert.equal(JSON.parse(calls[3].init.body).role, "media_editor");
   assert.equal(JSON.parse(calls[3].init.body).name, "Media team");
-  assert.equal(JSON.parse(calls[2].init.body).email, "media_boy@accounts.itclub.invalid");
+  assert.equal(JSON.parse(calls[2].init.body).email, "media.boy@example.com");
   assert.equal((await result.text()).includes("long-private-password"), false);
 });
-test("invalid usernames and elevated account types are rejected before creating identities", async () => {
+test("invalid emails and elevated account types are rejected before creating identities", async () => {
   for (const body of [
-    { username: "../admin", role: "editor" },
-    { username: "new_editor", role: "super_admin" },
-    { username: "new_editor", role: "owner" },
-    { username: "new_editor", role: null },
+    { email: "../admin", role: "editor" },
+    { username: "old_username", role: "editor" },
+    { email: "missing-domain@", role: "editor" },
+    { email: "a b@example.com", role: "editor" },
+    { email: "a@@example.com", role: "editor" },
+    { email: "a".repeat(244) + "@example.com", role: "editor" },
+    { email: "editor@example.com", role: "super_admin" },
+    { email: "editor@example.com", role: "owner" },
+    { email: "editor@example.com", role: null },
   ]) {
     let n = 0;
     const result = await handleMediaAccount(
@@ -175,11 +180,11 @@ test("invalid usernames and elevated account types are rejected before creating 
   }
 });
 
-test("the administrator can create a general editor using a normal username", async () => {
+test("the administrator can create a general editor using an email address", async () => {
   const calls = [];
   const result = await handleMediaAccount(
     request({
-      username: "general_editor",
+      email: "editor@example.com",
       name: "General editor",
       role: "editor",
       password: "long-private-password",
@@ -198,13 +203,13 @@ test("the administrator can create a general editor using a normal username", as
   );
   assert.equal(result.status, 201);
   assert.equal(JSON.parse(calls[3].init.body).role, "editor");
-  assert.equal(JSON.parse(calls[2].init.body).email, "general_editor@accounts.itclub.invalid");
+  assert.equal(JSON.parse(calls[2].init.body).email, "editor@example.com");
 });
 
-test("existing website clients can still create their named media accounts during rollout", async () => {
+test("email accounts default to the media role when the role is omitted", async () => {
   const calls = [];
   const result = await handleMediaAccount(
-    request({ username: "media_girl", password: "long-private-password" }),
+    request({ email: "media.girl@example.com", password: "long-private-password" }),
     config,
     async (url, init) => {
       calls.push({ url, init });
@@ -225,7 +230,7 @@ test("the administrator can create an account explicitly assigned to partnership
   const calls = [];
   const result = await handleMediaAccount(
     request({
-      username: "partnerships_team",
+      email: "partners@example.com",
       name: "Partnerships team",
       role: "partnerships_editor",
       password: "long-private-password",
