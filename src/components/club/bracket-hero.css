@@ -135,7 +135,9 @@
 /* With JavaScript (the head script marks <html class="js"> before first paint),
    the entrance brings the brackets and name in, so they wait hidden instead of
    painting in place and jumping. Without JavaScript they simply show. */
-.js .bh[data-mode="pending"] :is(.bh-arm, .bh-name) {
+/* Until the animation is built (data-ready), not just while pending: loading GSAP
+   takes a moment after hydration, and the finished hero would flash in that gap. */
+.js .bh:not([data-ready]) :is(.bh-arm, .bh-name) {
   opacity: 0;
 }
 .bh[data-mode="pending"] .bh-panel {
@@ -279,4 +281,3 @@
     animation: none;
   }
 }
-
