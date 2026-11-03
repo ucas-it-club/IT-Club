@@ -4,10 +4,12 @@ import type { EventRegistration } from "@/lib/club/model";
 import { eventSheetStatus } from "@/lib/club/sheets";
 
 export function EventRegistrationAdmin({
+  manageSheets = true,
   eventId,
   value,
   onChange,
 }: {
+  manageSheets?: boolean;
   eventId: string | undefined;
   value: EventRegistration;
   onChange: (value: EventRegistration) => void;
@@ -17,11 +19,11 @@ export function EventRegistrationAdmin({
   const [linkedUrl, setLinkedUrl] = useState("");
 
   useEffect(() => {
-    if (!eventId) return;
+    if (!eventId || !manageSheets) return;
     void eventSheetStatus(eventId)
       .then((sheet) => setLinkedUrl(sheet.linked ? sheet.url : ""))
       .catch(() => {});
-  }, [eventId]);
+  }, [eventId, manageSheets]);
 
   const toggle = (key: keyof EventRegistration) => onChange({ ...value, [key]: !value[key] });
 
@@ -44,7 +46,13 @@ export function EventRegistrationAdmin({
           </label>
         );
       })}
-      {!eventId ? (
+      {!manageSheets ? (
+        <p className="text-sm text-muted-foreground">
+          {ar
+            ? "يمكنك تعديل إعدادات النموذج هنا. إنشاء وربط تبويب التسجيلات في الشيت يتولاه المدير العام قبل فتح التسجيل للطلاب."
+            : "You can edit form settings here. A general administrator must create and link the spreadsheet tab before students can register."}
+        </p>
+      ) : !eventId ? (
         <p className="text-sm text-muted-foreground">
           {ar
             ? "عند حفظ فعالية قادمة سيُنشأ لها تبويب تلقائيًا داخل شيت انضم إلينا."
