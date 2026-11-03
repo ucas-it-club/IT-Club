@@ -295,7 +295,7 @@ export async function loadNews(): Promise<Content[]> {
 export async function createAdminAccount(
   email: string,
   password: string,
-  role: "editor" | "media_editor" | "partnerships_editor",
+  role: "editor" | "media_editor" | "partnerships_editor" | "communications_editor",
   name: string,
 ) {
   const { data, error } = await supabase().functions.invoke("media-accounts", {
@@ -310,7 +310,7 @@ export async function saveAdmin(
   id: string,
   name: string,
   email: string,
-  role: "editor" | "media_editor" | "partnerships_editor" = "editor",
+  role: "editor" | "media_editor" | "partnerships_editor" | "communications_editor" = "editor",
 ) {
   const { error } = await supabase().from("club_admins").upsert({ id, name, email, role });
 
@@ -344,7 +344,7 @@ export async function loadMedia(): Promise<MediaAsset[]> {
   const role = auth.user ? await loadRole(auth.user.id) : "";
   const newsOnly = role === "media_editor";
   const partnersOnly = role === "partnerships_editor";
-  const scoped = newsOnly || partnersOnly;
+  const scoped = newsOnly || partnersOnly || role === "communications_editor";
   const [assets, memberLinks, eventLinks, newsLinks, partnerLinks] = await Promise.all([
     rows("club_media", "created_at"),
     scoped ? Promise.resolve([]) : rows("club_member_media", "member_id", "media_id"),

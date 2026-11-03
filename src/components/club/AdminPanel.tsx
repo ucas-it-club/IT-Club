@@ -202,7 +202,15 @@ export function AdminPanel() {
       </form>
     );
 
-  if (!["editor", "super_admin", "media_editor", "partnerships_editor"].includes(role))
+  if (
+    ![
+      "editor",
+      "super_admin",
+      "media_editor",
+      "partnerships_editor",
+      "communications_editor",
+    ].includes(role)
+  )
     return (
       <div>
         <p role="alert">
@@ -225,6 +233,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
   const ar = lang === "ar";
   const queryClient = useQueryClient();
   const partnershipsOnly = role === "partnerships_editor";
+  const communications = role === "communications_editor";
 
   async function deleteContent(kind: ContentCollection, id: string) {
     await removeContent(kind, id);
@@ -235,7 +244,9 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
     );
   }
 
-  const [tab, setTab] = useState(partnershipsOnly ? "partners" : "dashboard");
+  const [tab, setTab] = useState(
+    communications ? "news" : partnershipsOnly ? "partners" : "dashboard",
+  );
   const [memberSearch, setMemberSearch] = useState("");
   const [articleSearch, setArticleSearch] = useState({ events: "", news: "" });
   const memberItems = data.members
@@ -306,39 +317,49 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
     }
   }
 
-  const tabs = partnershipsOnly
+  const tabs = communications
     ? [
+        ["news", ar ? "الأخبار" : "News"],
         ["partners", ar ? "الشراكات" : "Partnerships"],
-        ["media", ar ? "صور الشراكات" : "Partnership media"],
-      ]
-    : [
-        ["dashboard", ar ? "نظرة عامة" : "Overview"],
         ["media", ar ? "مكتبة الصور" : "Media library"],
-        ...collections
-          .filter((x) => x !== "news" || canManageNews(role))
-          .map((x) => [x, labels[x][ar ? 0 : 1]]),
-        ["joinRequests", ar ? "طلبات الانضمام" : "Applications"],
-        ["contactMessages", ar ? "الرسائل" : "Messages"],
-        ...(role === "super_admin"
-          ? [
-              ["settings", ar ? "إعدادات الموقع" : "Site settings"],
-              ["admins", ar ? "المحررون" : "Editors"],
-            ]
-          : []),
-      ];
+      ]
+    : partnershipsOnly
+      ? [
+          ["partners", ar ? "الشراكات" : "Partnerships"],
+          ["media", ar ? "صور الشراكات" : "Partnership media"],
+        ]
+      : [
+          ["dashboard", ar ? "نظرة عامة" : "Overview"],
+          ["media", ar ? "مكتبة الصور" : "Media library"],
+          ...collections
+            .filter((x) => x !== "news" || canManageNews(role))
+            .map((x) => [x, labels[x][ar ? 0 : 1]]),
+          ["joinRequests", ar ? "طلبات الانضمام" : "Applications"],
+          ["contactMessages", ar ? "الرسائل" : "Messages"],
+          ...(role === "super_admin"
+            ? [
+                ["settings", ar ? "إعدادات الموقع" : "Site settings"],
+                ["admins", ar ? "المحررون" : "Editors"],
+              ]
+            : []),
+        ];
 
   return (
     <>
       <div className="club-admin-banner mb-5 flex flex-wrap items-center justify-between gap-4 rounded-[2rem] bg-brand-gradient p-6 text-white sm:p-8">
         <div>
           <h1 className="text-3xl font-black">
-            {partnershipsOnly
+            {communications
               ? ar
-                ? "لوحة لجنة الشراكات"
-                : "Partnerships committee"
-              : ar
-                ? "لوحة إدارة النادي"
-                : "Club administration"}
+                ? "العلاقات العامة والإعلام"
+                : "Public relations and media"
+              : partnershipsOnly
+                ? ar
+                  ? "لوحة لجنة الشراكات"
+                  : "Partnerships committee"
+                : ar
+                  ? "لوحة إدارة النادي"
+                  : "Club administration"}
           </h1>
           <p className="mt-2 break-all text-sm text-white/85">
             {user.email} ·{" "}
@@ -346,13 +367,17 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
               ? ar
                 ? "مدير عام"
                 : "Super admin"
-              : partnershipsOnly
+              : communications
                 ? ar
-                  ? "لجنة الشراكات"
-                  : "Partnerships committee"
-                : ar
-                  ? "محرر"
-                  : "Editor"}
+                  ? "العلاقات العامة والإعلام"
+                  : "Public relations and media"
+                : partnershipsOnly
+                  ? ar
+                    ? "لجنة الشراكات"
+                    : "Partnerships committee"
+                  : ar
+                    ? "محرر"
+                    : "Editor"}
           </p>
         </div>
         <BrandButton
@@ -374,7 +399,11 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           { count: data.news.length, label: ar ? "الأخبار" : "News", Icon: Newspaper },
           { count: data.partners.length, label: ar ? "الشراكات" : "Partners", Icon: Handshake },
         ]
-          .filter((item) => !partnershipsOnly || item.Icon === Handshake)
+          .filter((item) =>
+            communications
+              ? item.Icon === Handshake || item.Icon === Newspaper
+              : !partnershipsOnly || item.Icon === Handshake,
+          )
           .map(({ count, label, Icon }) => (
             <div key={label} className="rounded-3xl border border-border bg-card p-5 sm:p-6">
               <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary text-primary">

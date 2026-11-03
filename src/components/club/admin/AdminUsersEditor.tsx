@@ -19,7 +19,7 @@ import {
 } from "@/lib/club/supabase";
 import { DeleteButton } from "./DeleteButton";
 
-type AccountRole = "editor" | "media_editor" | "partnerships_editor";
+type AccountRole = "editor" | "media_editor" | "partnerships_editor" | "communications_editor";
 type AdminRow = { id: string; name: string; email: string; role: string };
 type Props = {
   ar: boolean;
@@ -48,7 +48,12 @@ function RoleSelect({
         value={value}
         disabled={disabled}
         onValueChange={(value) => {
-          if (value === "editor" || value === "media_editor" || value === "partnerships_editor")
+          if (
+            value === "editor" ||
+            value === "media_editor" ||
+            value === "partnerships_editor" ||
+            value === "communications_editor"
+          )
             onChange(value);
         }}
         dir={ar ? "rtl" : "ltr"}
@@ -62,6 +67,9 @@ function RoleSelect({
             <SelectItem value="media_editor">{ar ? "لجنة الإعلام" : "Media committee"}</SelectItem>
             <SelectItem value="partnerships_editor">
               {ar ? "لجنة الشراكات" : "Partnerships committee"}
+            </SelectItem>
+            <SelectItem value="communications_editor">
+              {ar ? "العلاقات العامة والإعلام" : "Public relations and media"}
             </SelectItem>
           </SelectGroup>
         </SelectContent>
@@ -215,11 +223,13 @@ export function AdminUsersEditor({ ar, currentUserId, onLoadError, run }: Props)
                 <RoleSelect
                   ar={ar}
                   value={
-                    admin.role === "partnerships_editor"
-                      ? "partnerships_editor"
-                      : admin.role === "media_editor"
-                        ? "media_editor"
-                        : "editor"
+                    admin.role === "communications_editor"
+                      ? "communications_editor"
+                      : admin.role === "partnerships_editor"
+                        ? "partnerships_editor"
+                        : admin.role === "media_editor"
+                          ? "media_editor"
+                          : "editor"
                   }
                   onChange={(value) => void changeRole(admin, value)}
                   disabled={admin.id === currentUserId || changingId !== null}

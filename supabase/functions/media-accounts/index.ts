@@ -54,7 +54,11 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
       const targets = await targetResponse.json();
       if (!Array.isArray(targets)) return reply(502, { error: "Account lookup failed" });
       if (targets.length !== 1) return reply(404, { error: "Editor account not found" });
-      if (!["editor", "media_editor", "partnerships_editor"].includes(targets[0]?.role))
+      if (
+        !["editor", "media_editor", "partnerships_editor", "communications_editor"].includes(
+          targets[0]?.role,
+        )
+      )
         return reply(403, { error: "Only editor accounts can be deleted" });
       // Delete the identity first. The club_admins foreign key cascades in the same
       // transaction, so a failed Auth deletion leaves the account visible for retry.
@@ -81,7 +85,7 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
     if (
       email.length > 254 ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-      !["editor", "media_editor", "partnerships_editor"].includes(role) ||
+      !["editor", "media_editor", "partnerships_editor", "communications_editor"].includes(role) ||
       name.length < 2 ||
       name.length > 200 ||
       typeof body.password !== "string" ||
@@ -106,11 +110,13 @@ export async function handleMediaAccount(req: Request, config: Config, http: typ
         email_confirm: true,
         app_metadata: {
           provisioned_for:
-            role === "media_editor"
-              ? "media_committee"
-              : role === "partnerships_editor"
-                ? "partnerships_committee"
-                : "club_administration",
+            role === "communications_editor"
+              ? "public_relations_and_media"
+              : role === "media_editor"
+                ? "media_committee"
+                : role === "partnerships_editor"
+                  ? "partnerships_committee"
+                  : "club_administration",
         },
       }),
     });

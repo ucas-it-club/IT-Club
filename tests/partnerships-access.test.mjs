@@ -33,18 +33,23 @@ before(async () => {
     if (
       file.includes("visits") ||
       file.includes("visit_guard") ||
-      file.includes("partnerships_committee_access")
+      file.includes("partnerships_committee_access") ||
+      file.includes("communications_role")
     )
       continue;
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
   }
-  const migrated = migrations.find((file) => file.includes("partnerships_committee_access"));
+  const migrated = migrations.find(
+    (file) =>
+      file.includes("partnerships_committee_access") || file.includes("communications_role"),
+  );
   await db.exec(
     readFileSync(
       migrated ? "supabase/migrations/" + migrated : "docs/partnerships-access.sql",
       "utf8",
     ),
   );
+  await db.exec(readFileSync("supabase/migrations/20261103114340_communications_role.sql", "utf8"));
   for (const [id, role] of [
     [owner, "super_admin"],
     [partner, "partnerships_editor"],
@@ -63,6 +68,94 @@ before(async () => {
   }
 });
 after(async () => db?.close());
+
+test("communications accounts manage news and partners but cannot access unrelated administration", async () => {
+  await as(owner);
+  await db.query("insert into club_admins values($1,'Communications',$2,'communications_editor')", [
+    outsider,
+    "communications@example.com",
+  ]);
+  await as(outsider);
+  const partnerRow = (
+    await db.query("insert into club_partners(data) values($1) returning id", [
+      JSON.stringify(payload),
+    ])
+  ).rows[0];
+  const newsRow = (
+    await db.query(
+      "insert into club_news(data,publication_status) values($1,'draft') returning id",
+      [JSON.stringify({ ...payload, date: "2026-11-03" })],
+    )
+  ).rows[0];
+  assert.equal(
+    (await db.query("select id from club_news where id=$1", [newsRow.id])).rows.length,
+    1,
+  );
+  assert.equal(
+    (
+      await db.query(
+        "update club_news set publication_status='published' where id=$1 returning id",
+        [newsRow.id],
+      )
+    ).rows.length,
+    1,
+  );
+  assert.equal(
+    (
+      await db.query("update club_news set publication_status='draft' where id=$1 returning id", [
+        newsRow.id,
+      ])
+    ).rows.length,
+    1,
+  );
+  assert.equal(
+    (
+      await db.query("update club_partners set data=$1 where id=$2 returning id", [
+        JSON.stringify({ ...payload, title: "Updated partner" }),
+        partnerRow.id,
+      ])
+    ).rows.length,
+    1,
+  );
+  assert.equal(
+    (await db.query("delete from club_partners where id=$1 returning id", [partnerRow.id])).rows
+      .length,
+    1,
+  );
+  await assert.rejects(() =>
+    db.query("insert into club_events(data) values($1)", [
+      JSON.stringify({ ...payload, date: "2026-11-03", status: "past" }),
+    ]),
+  );
+  await assert.rejects(() =>
+    db.query("insert into club_members(data) values($1)", [
+      JSON.stringify({ ...payload, committee: "relations", isFounder: false }),
+    ]),
+  );
+  assert.equal((await db.query("select * from club_submissions")).rows.length, 0);
+  assert.equal((await db.query("update club_settings set data='{}' returning id")).rows.length, 0);
+  assert.equal(
+    (
+      await db.query("update club_admins set role='super_admin' where id=$1 returning id", [
+        outsider,
+      ])
+    ).rows.length,
+    0,
+  );
+  await as(owner);
+  await db.query("update club_admins set role='partnerships_editor' where id=$1", [outsider]);
+  await as(outsider);
+  assert.equal(
+    (await db.query("select club_private.can_manage_news() as allowed")).rows[0].allowed,
+    false,
+  );
+  assert.equal(
+    (await db.query("select id from club_news where id=$1", [newsRow.id])).rows.length,
+    0,
+  );
+  await as(owner);
+  await db.query("delete from club_admins where id=$1", [outsider]);
+});
 
 test("partnership members can create, edit, publish through the current public collection and delete partnerships", async () => {
   await as(partner);
