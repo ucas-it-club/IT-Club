@@ -87,7 +87,7 @@ export function AdminUsersEditor({ ar, currentUserId, onLoadError, run }: Props)
     setNotice("");
     try {
       await createAdminAccount(
-        String(values.get("username")),
+        String(values.get("email")),
         String(values.get("password")),
         role,
         String(values.get("name")),
@@ -148,22 +148,21 @@ export function AdminUsersEditor({ ar, currentUserId, onLoadError, run }: Props)
           />
         </label>
         <label className="flex flex-col gap-2">
-          <span>{ar ? "اسم المستخدم" : "Username"}</span>
+          <span>{ar ? "البريد الإلكتروني" : "Email"}</span>
           <Input
-            name="username"
+            name="email"
+            type="email"
             required
-            minLength={3}
-            maxLength={32}
-            pattern="[a-z][a-z0-9_]{2,31}"
+            maxLength={254}
             disabled={busy}
             autoComplete="off"
             dir="ltr"
-            placeholder="media_girl"
+            placeholder="name@example.com"
           />
           <span className="text-sm text-muted-foreground">
             {ar
-              ? "حروف إنجليزية صغيرة وأرقام وشرطة سفلية، ويبدأ بحرف."
-              : "Lowercase letters, numbers and underscores; start with a letter."}
+              ? "أدخل البريد الإلكتروني الذي سيُستخدم لتسجيل الدخول."
+              : "Enter the email address used to sign in."}
           </span>
         </label>
         <div className="flex flex-col gap-2">
@@ -206,9 +205,7 @@ export function AdminUsersEditor({ ar, currentUserId, onLoadError, run }: Props)
             <div>
               <p className="font-bold">{admin.name}</p>
               <p className="text-sm text-muted-foreground" dir="ltr">
-                {admin.email.endsWith("@accounts.itclub.invalid")
-                  ? admin.email.split("@")[0]
-                  : admin.email}
+                {admin.email}
               </p>
             </div>
             {admin.role === "super_admin" ? (

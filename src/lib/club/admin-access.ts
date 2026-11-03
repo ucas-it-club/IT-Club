@@ -3,5 +3,7 @@ export const canManageNews = (role: string) => role === "media_editor" || role =
 
 export function loginEmail(identifier: string) {
   const value = identifier.trim().toLowerCase();
-  return /^[a-z][a-z0-9_]{2,31}$/.test(value) ? `${value}@accounts.itclub.invalid` : value;
+  if (value.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+    throw new Error("A valid email address is required");
+  return value;
 }

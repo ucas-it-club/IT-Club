@@ -180,10 +180,8 @@ export function AdminPanel() {
       >
         <h1 className="text-3xl font-black">{ar ? "تسجيل دخول الإدارة" : "Admin sign-in"}</h1>
         <label className="block">
-          <span className="mb-2 block">
-            {ar ? "اسم المستخدم أو البريد الإلكتروني" : "Username or email"}
-          </span>
-          <Input name="email" type="text" autoComplete="username" dir="ltr" required />
+          <span className="mb-2 block">{ar ? "البريد الإلكتروني" : "Email"}</span>
+          <Input name="email" type="email" autoComplete="username" dir="ltr" required />
         </label>
         <div className="block">
           <label htmlFor="login-password" className="mb-2 block">
