@@ -51,6 +51,7 @@ import {
 } from "@/lib/club/model";
 import { BrandButton } from "@/components/club/BrandButton";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "./PasswordInput";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -184,10 +185,18 @@ export function AdminPanel() {
           </span>
           <Input name="email" type="text" autoComplete="username" dir="ltr" required />
         </label>
-        <label className="block">
-          <span className="mb-2 block">{ar ? "كلمة المرور" : "Password"}</span>
-          <Input name="password" type="password" autoComplete="current-password" required />
-        </label>
+        <div className="block">
+          <label htmlFor="login-password" className="mb-2 block">
+            {ar ? "كلمة المرور" : "Password"}
+          </label>
+          <PasswordInput
+            ar={ar}
+            id="login-password"
+            name="password"
+            autoComplete="current-password"
+            required
+          />
+        </div>
         {error && <p role="alert">{error}</p>}
         <BrandButton disabled={busy} type="submit">
           {busy ? (ar ? "جارٍ الدخول…" : "Signing in…") : ar ? "دخول" : "Sign in"}
