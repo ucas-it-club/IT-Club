@@ -21,6 +21,7 @@ export const collegeUrl: Record<Lang, string> = {
 
 export type Content = {
   id: string;
+  publicationStatus?: "draft" | "published";
   /** Readable URL name for news, events, partners, and member profiles. */
   slug?: string;
   title: string;
