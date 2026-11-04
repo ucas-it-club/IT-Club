@@ -14,11 +14,58 @@
   outline-offset: 4px;
 }
 
-.club-nav-bar {
-  padding: 5px;
+.club-header {
+  margin-top: 12px;
+}
+.club-header-surface {
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 32px;
+  background: color-mix(in oklab, var(--background) 94%, transparent);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 10px 28px -18px color-mix(in oklab, var(--brand-blue) 40%, transparent);
+  overflow: hidden;
+}
+.club-header-brand {
+  padding-inline-end: 14px;
+}
+.club-header-actions {
+  padding-inline-start: 12px;
+  border-inline-start: 1px solid var(--border);
+}
+.club-nav-bar {
+  padding: 0;
+}
+.club-language-button {
+  background: var(--secondary);
+  color: var(--primary);
+  padding-inline: 12px;
+}
+.club-theme-button {
+  color: var(--primary);
+  background: var(--secondary);
+}
+.club-theme-button:hover {
   background: var(--muted);
+}
+@media (min-width: 1280px) {
+  .club-header-brand {
+    border-inline-end: 1px solid var(--border);
+  }
+}
+@media (max-width: 380px) {
+  .club-header-brand span {
+    font-size: 11px;
+  }
+  .club-header-brand {
+    padding-inline-end: 0;
+    gap: 4px;
+  }
+  .club-header-actions {
+    padding-inline-start: 5px;
+  }
+  .club-language-button svg {
+    display: none;
+  }
 }
 
 .club-site .club-nav-link {
@@ -32,35 +79,15 @@
   border: 1px solid transparent;
 }
 
-.club-nav-link::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--accent);
-  opacity: 0;
-  transform: scale(0.4);
-  transition:
-    opacity 240ms ease,
-    transform 240ms ease;
-}
-
-.club-site .club-nav-link:hover {
+.club-site .club-nav-link:not([aria-current="page"]):hover {
   color: var(--primary);
   background: var(--secondary);
 }
 
 .club-site .club-nav-link[aria-current="page"] {
-  color: var(--primary);
-  background: var(--card);
-  border-color: var(--border);
-  box-shadow: 0 3px 10px color-mix(in oklab, var(--primary) 12%, transparent);
-}
-
-.club-nav-link[aria-current="page"]::before {
-  opacity: 1;
-  transform: scale(1);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 3px 10px color-mix(in oklab, var(--brand-blue) 15%, transparent);
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
@@ -81,8 +108,10 @@
   }
 }
 
-/* Give Arabic letter descenders room, including gradient-clipped headings. */
-.club-site :is(h1, h2, h3) {
+/* Give Arabic letter descenders room, including gradient-clipped headings.
+   The home hero swaps tags for SEO (name is the h1, slogan a p) but keeps the
+   look it had: the slogan keeps heading spacing and the name stays plain. */
+.club-site :is(h1, h2, h3, .club-hero-slogan):not(.club-hero-name) {
   line-height: 1.65;
   padding-block-end: 0.2em;
   margin-block-end: 0.5em;
@@ -99,9 +128,13 @@
   z-index: 1;
   left: 50%;
   top: 50%;
-  width: 0;
-  height: 0;
-  transform: translate(-50%, -50%);
+  /* Fixed box, centred by margin, grown with transform. The old keyframes
+     animated width/height, so every frame relaid out the page and repainted a
+     ring carrying four blurred shadows — the entrance ran at ~5fps. Scale and
+     opacity stay on the compositor. */
+  width: 100vmax;
+  height: 100vmax;
+  margin: -50vmax 0 0 -50vmax;
   border: 2px solid #ebf5fb;
   border-radius: 50%;
   box-shadow:
@@ -109,6 +142,7 @@
     inset 0 0 3px 1px rgb(235 245 251 / 95%),
     0 0 16px 6px rgb(235 245 251 / 55%),
     0 0 40px 12px rgb(235 245 251 / 20%);
+  will-change: transform, opacity;
   animation: club-grid-reveal 2.8s ease-out both;
 }
 .club-grid-pulse-second {
@@ -116,8 +150,7 @@
 }
 @keyframes club-grid-reveal {
   0% {
-    width: 0;
-    height: 0;
+    transform: scale(0);
     opacity: 0;
   }
   8% {
@@ -127,8 +160,7 @@
     opacity: 0.5;
   }
   100% {
-    width: 150vmax;
-    height: 150vmax;
+    transform: scale(1.5);
     opacity: 0;
   }
 }
@@ -172,4 +204,202 @@
   .club-social-action .club-action {
     transition: none;
   }
+}
+
+/* ---------- Scroll reveal ---------- */
+
+/* Visible by default: if the observer never runs, nothing is hidden. The
+   shifted state is only applied once the component has mounted and marked
+   itself, so a no-JS document reads normally. */
+.club-reveal {
+  transition:
+    opacity 620ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 620ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+html.js .club-reveal:not(.is-shown) {
+  opacity: 0;
+  transform: translateY(18px);
+}
+html.js .club-reveal.is-shown {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Card interaction ---------- */
+
+/* One hover language for every content card: a small lift, a brand-tinted
+   border and a deeper shadow. Applied on the card, so the media inside can
+   respond to the same hover without its own listener. */
+.club-card {
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 320ms ease,
+    border-color 320ms ease;
+}
+@media (hover: hover) {
+  .club-card:hover,
+  .club-card:focus-within {
+    transform: translateY(-6px);
+    border-color: color-mix(in oklab, var(--brand-blue) 45%, transparent);
+    box-shadow:
+      0 2px 4px oklch(0.283 0.068 254.4 / 6%),
+      0 22px 48px -18px color-mix(in oklab, var(--brand-blue) 38%, transparent);
+  }
+  .club-card:hover .club-card-media,
+  .club-card:focus-within .club-card-media {
+    transform: scale(1.06);
+  }
+}
+.club-card-media {
+  transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The thin brand rule that wipes in across a card or section heading. */
+.club-rule::after {
+  content: "";
+  display: block;
+  height: 3px;
+  width: 0;
+  margin-top: 0.75rem;
+  border-radius: 999px;
+  background-image: linear-gradient(100deg, var(--brand-blue), var(--brand-green));
+  transition: width 760ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.club-reveal.is-shown .club-rule::after,
+.club-rule.is-shown::after {
+  width: 4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .club-reveal,
+  .club-card,
+  .club-card-media,
+  .club-rule::after {
+    transition: none;
+  }
+  html.js .club-reveal:not(.is-shown) {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The privacy strip slides up once, after hydration; it is fixed, so it shifts
+   no layout while it arrives. */
+.club-notice {
+  animation: club-notice-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes club-notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .club-notice {
+    animation: none;
+  }
+}
+
+/* ---------- Hero ---------- */
+
+/* The mark breathes; everything else in the hero holds still, so the motion
+   reads as one deliberate moment rather than a page full of effects. */
+/* The glow is painted by a static wrapper; only the mark itself translates.
+   Animating an element that also carries a drop-shadow re-rasterises the
+   filtered layer every frame, which is the same cost that made the old
+   background blobs drop half the frame budget. */
+.club-hero-mark {
+  filter: drop-shadow(0 18px 32px color-mix(in oklab, var(--brand-blue) 28%, transparent));
+}
+.club-hero-logo {
+  animation: club-hero-float 7s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes club-hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+/* ---------- Partner logos ---------- */
+
+/* Convention for a partner wall: quiet until you look at it. */
+.club-partner-media {
+  filter: grayscale(1);
+  opacity: 0.75;
+  transition:
+    filter 320ms ease,
+    opacity 320ms ease;
+}
+@media (hover: hover) {
+  .club-card:hover .club-partner-media,
+  .club-card:focus-within .club-partner-media {
+    filter: none;
+    opacity: 1;
+  }
+}
+
+/* The details link nudges toward its arrow on hover. */
+@media (hover: hover) {
+  .club-card:hover .club-card-cta svg,
+  .club-card:focus-within .club-card-cta svg {
+    transform: translateX(var(--club-cta-shift, 4px));
+  }
+}
+.club-card-cta svg {
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[dir="rtl"] .club-card-cta {
+  --club-cta-shift: -4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .club-hero-logo,
+  .club-card-cta svg,
+  .club-partner-media {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Membership invitation above the mascot's head. */
+.club-join-bubble {
+  position: relative;
+  isolation: isolate;
+  white-space: nowrap;
+  border-radius: 1rem;
+  padding: 0.55rem 0.85rem;
+  color: #fff;
+  background: linear-gradient(
+    110deg,
+    var(--brand-blue),
+    color-mix(in oklab, var(--brand-blue) 60%, var(--brand-green))
+  );
+  border: 1px solid color-mix(in oklab, var(--brand-green) 70%, var(--brand-blue));
+  box-shadow: 0 4px 14px color-mix(in oklab, var(--brand-blue) 20%, transparent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.club-join-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -0.4rem;
+  inset-inline-end: 35%;
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--brand-blue);
+  transform: rotate(45deg);
+  border-bottom: 1px solid var(--brand-green);
+  border-right: 1px solid var(--brand-green);
+  z-index: -1;
 }

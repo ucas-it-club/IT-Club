@@ -1,4 +1,5 @@
-import { supabase } from "./supabase";
+import { recordClubVisit } from "./public-api";
+import { pageOf } from "./paths";
 
 let request: Promise<number> | undefined;
 
@@ -21,19 +22,18 @@ export function recordVisit(): Promise<number> {
     /* Use in-memory ID. */
   }
 
-  request = (async () => {
-    const { data, error } = await supabase().rpc("record_club_visit", { visit_id: sessionId });
+  // Editors, automated browsers and dev/preview hosts read the count without adding to it.
+  const counts =
+    pageOf(location.pathname).split("/")[0] !== "admin" &&
+    !navigator.webdriver &&
+    !/^(localhost|127\.|\[::1\]|id-preview--)|\.lovableproject\.com$/.test(location.hostname);
 
-    if (error) throw error;
-    const count = Number(data);
-
-    if (!Number.isSafeInteger(count) || count < 0) throw new Error("Invalid visit count");
-
-    return count;
-  })().catch((error) => {
-    request = undefined;
-    throw error;
-  });
+  request = recordClubVisit(counts ? sessionId : "00000000-0000-0000-0000-000000000000").catch(
+    (error) => {
+      request = undefined;
+      throw error;
+    },
+  );
 
   return request;
 }

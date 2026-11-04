@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
-import { useClub } from "./ClubProvider";
-import { BrandButton } from "@/components/game/BrandButton";
+import { useClub } from "./club-context";
+import { BrandButton } from "@/components/club/BrandButton";
 import { Input } from "@/components/ui/input";
 import {
   configureRegistration,
+  isOpen,
   loadRegistration,
   sheetLinks,
   submissionError,
   type Registration,
 } from "@/lib/club/sheets";
+import { saveSettings } from "@/lib/club/supabase";
 
 export function RegistrationAdmin({ canEdit }: { canEdit: boolean }) {
-  const { lang } = useClub();
+  const { lang, settings } = useClub();
   const ar = lang === "ar";
   const [status, setStatus] = useState<Registration>();
   const [limit, setLimit] = useState("40");
@@ -48,7 +50,7 @@ export function RegistrationAdmin({ canEdit }: { canEdit: boolean }) {
 
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") void load();
-    }, 15000);
+    }, 60000);
 
     return () => {
       active = false;
@@ -101,6 +103,28 @@ export function RegistrationAdmin({ canEdit }: { canEdit: boolean }) {
                   const value = await configureRegistration(enabled, Number(limit));
                   setStatus(value);
                   setUnavailable(false);
+
+                  // Mirror the resulting state into club_settings so public
+                  // pages can decide whether to show the join prompt without
+                  // each visitor paying for a call to Apps Script. A failure
+                  // here must not look like the save failed: Apps Script is
+                  // authoritative and has already accepted the change.
+                  const open = isOpen(value);
+
+                  if (open !== settings.registrationOpen) {
+                    try {
+                      await saveSettings({ ...settings, registrationOpen: open });
+                    } catch {
+                      setNotice(
+                        ar
+                          ? "حُفظت الإعدادات في السكربت، لكن تعذر تحديث حالة التسجيل المعروضة على الموقع."
+                          : "Saved to the script, but the site's displayed registration state could not be updated.",
+                      );
+
+                      return;
+                    }
+                  }
+
                   setNotice(ar ? "تم حفظ إعدادات التسجيل." : "Registration settings saved.");
                 } catch (error) {
                   setNotice(submissionError(error, ar));
@@ -134,8 +158,8 @@ export function RegistrationAdmin({ canEdit }: { canEdit: boolean }) {
               </label>
               <p className="text-sm text-muted-foreground">
                 {ar
-                  ? "العدد هو الطلبات المحفوظة في الشيت. إعادة الفتح لا تصفّر العداد؛ زيدي الحد لاستقبال المزيد."
-                  : "The count comes from saved sheet rows. Reopening does not reset it; increase the limit to accept more."}
+                  ? "يظهر زر الديناصور «انضم إلينا» عند فتح التسجيل ما دام العدد أقل من الحد، ويختفي عند بلوغه أو إغلاق التسجيل. العدد من الشيت؛ إعادة الفتح لا تصفّر العداد."
+                  : "The floating mascot Join us button appears while registration is enabled and below the limit. It hides when full or closed. Counts come from the sheet; reopening does not reset them."}
               </p>
               <BrandButton type="submit" disabled={busy || unavailable}>
                 {busy

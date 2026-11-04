@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useClub } from "./ClubProvider";
+import { useClub } from "./club-context";
 import {
   configured,
   loadMedia,
@@ -9,8 +9,9 @@ import {
   deleteMedia,
   type MediaAsset,
 } from "@/lib/club/supabase";
-import { BrandButton } from "@/components/game/BrandButton";
+import { BrandButton } from "@/components/club/BrandButton";
 import { Input } from "@/components/ui/input";
+import emptyMediaIllustration from "@/assets/empty-media-library.png";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -23,7 +24,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 
-export const mediaKey = ["club-media"];
+const mediaKey = ["club-media"];
 
 const noAssets: MediaAsset[] = [];
 
@@ -171,19 +172,22 @@ export function MediaLibrary({ onSelect }: { onSelect?: (url: string) => void })
       )}
       {loading ? (
         <p role="status">{ar ? "جارٍ التحميل…" : "Loading…"}</p>
+      ) : !loadError && !assets.length ? (
+        <div className="flex justify-center py-6">
+          <img
+            src={emptyMediaIllustration}
+            alt={ar ? "مكتبة الصور فارغة" : "The media library is empty"}
+            width={320}
+            height={320}
+            className="h-72 w-72 max-w-full object-contain sm:h-80 sm:w-80"
+          />
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visibleAssets.map(({ asset, usage }) => (
             <AssetCard key={asset.id} asset={asset} onSelect={onSelect} usage={usage} />
           ))}
         </div>
-      )}
-      {!loading && !assets.length && (
-        <p className="text-muted-foreground">
-          {ar
-            ? "المكتبة فارغة. ارفعي أول صورة من الأعلى."
-            : "The library is empty. Upload the first image above."}
-        </p>
       )}
     </section>
   );
@@ -217,11 +221,16 @@ function AssetCard({
 
     try {
       await work();
-    } catch {
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "";
       setError(
-        ar
-          ? "تعذر إتمام العملية. قد تكون الصورة مستخدمة أو تحتاج صلاحيات."
-          : "Could not complete the action. The image may be in use or access may be missing.",
+        message.includes("Image is used by published content")
+          ? ar
+            ? "الصورة مستخدمة في محتوى منشور. أزلها من ذلك المحتوى أولًا ثم أعد المحاولة."
+            : "This image is used by published content. Remove it there first, then retry."
+          : ar
+            ? `تعذر إتمام العملية${message ? `: ${message}` : "."}`
+            : `Could not complete the action${message ? `: ${message}` : "."}`,
       );
     } finally {
       setBusy(false);
@@ -256,6 +265,11 @@ function AssetCard({
               <li key={i}>{label}</li>
             ))}
           </ul>
+          <p className="mt-2 text-muted-foreground">
+            {ar
+              ? "للحذف النهائي، أزل الصورة من المحتوى المذكور أعلاه واحفظ التغيير أولًا."
+              : "To delete it permanently, remove it from the content above and save first."}
+          </p>
         </div>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">

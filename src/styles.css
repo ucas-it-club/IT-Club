@@ -4,8 +4,36 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Cairo, self-hosted. Same family the brand already uses; the variable cut
+   covers 400–900, and unicode-range keeps an Arabic reader off the Latin file.
+
+   Imported from src/ rather than served out of public/ so the bundler
+   fingerprints the filename. Files under public/ are emitted verbatim and fall
+   outside the build's `/assets/*` immutable cache rule, which had these two
+   revalidating on every single page load — on the critical path, since they
+   are preloaded. */
+@font-face {
+  font-family: "Cairo";
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url("./assets/fonts/cairo-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF,
+    U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+
+@font-face {
+  font-family: "Cairo";
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url("./assets/fonts/cairo-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /*
- * UCAS IT CLUB — "اكتشف مسارك" design system.
+ * UCAS IT CLUB design system.
  * Brand colors derived from the UCAS IT CLUB logo:
  *   blue  #1864BC → oklch(0.509 0.156 255.7)
  *   green #73BF49 → oklch(0.730 0.170 136.1)
@@ -78,6 +106,31 @@
   --ring: var(--brand-blue);
 }
 
+.dark {
+  color-scheme: dark;
+  --background: #0d1726;
+  --foreground: #e8eff8;
+  --card: #152337;
+  --card-foreground: #e8eff8;
+  --popover: #192a40;
+  --popover-foreground: #e8eff8;
+  --primary: #78b7f3;
+  --primary-foreground: #ffffff;
+  --secondary: #20344c;
+  --secondary-foreground: #e8eff8;
+  --muted: #1b2b40;
+  --muted-foreground: #adbdd1;
+  --accent: #86cd62;
+  --accent-foreground: #102414;
+  --border: #30445d;
+  --input: #405670;
+  --ring: #78b7f3;
+  --destructive: #ff8585;
+}
+.dark .text-gradient-brand {
+  background-image: linear-gradient(120deg, #78b7f3 10%, #86cd62 90%);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -85,6 +138,15 @@
 
   html {
     scroll-behavior: smooth;
+  }
+
+  /* Cairo's Latin sits lower than its Arabic (x-height 0.51em vs an Arabic body
+     around 0.50em but far more ink above it), so English reads a size smaller.
+     font-size-adjust scales the glyphs only — the rem root is untouched, so
+     padding, gaps and card sizes stay identical in both languages. Browsers
+     without support just render today's metrics. */
+  html[dir="ltr"] {
+    font-size-adjust: ex-height 0.54;
   }
 
   body {
@@ -116,7 +178,17 @@
 }
 
 @utility bg-brand-gradient {
-  background-image: linear-gradient(135deg, var(--brand-blue), var(--brand-green));
+  /* Mid stop holds chroma ~0.15; a plain blue->green oklab lerp sags to 0.082 (muddy teal).
+     100deg keeps the ramp on the long axis so pills show both brand ends, not the middle. */
+  background-image: linear-gradient(
+    100deg,
+    var(--brand-blue) 0%,
+    oklch(0.62 0.15 190) 50%,
+    var(--brand-green) 100%
+  );
+  /* Without this the ramp is sized to the padding box but painted over the
+     border box, so a transparent border shows the next repeat tile as a slit. */
+  background-origin: border-box;
 }
 
 @utility bg-brand-gradient-soft {
@@ -125,6 +197,7 @@
     color-mix(in oklab, var(--brand-blue) 9%, transparent),
     color-mix(in oklab, var(--brand-green) 9%, transparent)
   );
+  background-origin: border-box;
 }
 
 @utility shadow-glow-blue {
@@ -147,8 +220,16 @@
 
 @utility bg-grid-pattern {
   background-image:
-    linear-gradient(to left, color-mix(in oklab, var(--brand-blue) 7%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklab, var(--brand-blue) 7%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      to left,
+      color-mix(in oklab, var(--brand-blue) 7%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--brand-blue) 7%, transparent) 1px,
+      transparent 1px
+    );
   background-size: 44px 44px;
 }
 
@@ -165,30 +246,6 @@
   }
 }
 
-@keyframes pop-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.7);
-  }
-  70% {
-    transform: scale(1.05);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes float-y {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-14px);
-  }
-}
-
 @keyframes drift {
   0%,
   100% {
@@ -199,71 +256,12 @@
   }
 }
 
-@keyframes glow-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--brand-blue) 40%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 0 12px transparent;
-  }
-}
-
-@keyframes orbit {
-  from {
-    transform: rotate(0deg) translateX(26px) rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg) translateX(26px) rotate(-360deg);
-  }
-}
-
-@keyframes dash-flow {
-  to {
-    background-position-x: -44px;
-  }
-}
-
-@keyframes shimmer {
-  from {
-    background-position: 200% 50%;
-  }
-  to {
-    background-position: -200% 50%;
-  }
-}
-
 .animate-stage-in {
   animation: stage-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.animate-pop-in {
-  animation: pop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.animate-float-slow {
-  animation: float-y 5s ease-in-out infinite;
-}
-
 .animate-drift {
   animation: drift 9s ease-in-out infinite;
-}
-
-.animate-glow-pulse {
-  animation: glow-pulse 2.2s ease-out infinite;
-}
-
-.animate-orbit {
-  animation: orbit 1.6s linear infinite;
-}
-
-.animate-dash-flow {
-  animation: dash-flow 1.4s linear infinite;
-}
-
-.animate-shimmer {
-  background-size: 200% 100%;
-  animation: shimmer 2.4s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

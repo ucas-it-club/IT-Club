@@ -10,24 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as PathfinderRouteImport } from './routes/pathfinder'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as ClubIndexRouteImport } from './routes/club.index'
 import { Route as ClubSplatRouteImport } from './routes/club.$'
+import { Route as EnIndexRouteImport } from './routes/en.index'
+import { Route as EnSplatRouteImport } from './routes/en.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PathfinderRoute = PathfinderRouteImport.update({
-  id: '/pathfinder',
-  path: '/pathfinder',
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClubIndexRoute = ClubIndexRouteImport.update({
@@ -40,43 +36,57 @@ const ClubSplatRoute = ClubSplatRouteImport.update({
   path: '/club/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EnIndexRoute = EnIndexRouteImport.update({
+  id: '/en/',
+  path: '/en/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnSplatRoute = EnSplatRouteImport.update({
+  id: '/en/$',
+  path: '/en/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/pathfinder': typeof PathfinderRoute
+  '/$': typeof SplatRoute
   '/club/$': typeof ClubSplatRoute
+  '/en/$': typeof EnSplatRoute
   '/club/': typeof ClubIndexRoute
+  '/en/': typeof EnIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/pathfinder': typeof PathfinderRoute
+  '/$': typeof SplatRoute
   '/club/$': typeof ClubSplatRoute
+  '/en/$': typeof EnSplatRoute
   '/club': typeof ClubIndexRoute
+  '/en': typeof EnIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/pathfinder': typeof PathfinderRoute
+  '/$': typeof SplatRoute
   '/club/$': typeof ClubSplatRoute
+  '/en/$': typeof EnSplatRoute
   '/club/': typeof ClubIndexRoute
+  '/en/': typeof EnIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/pathfinder' | '/club/$' | '/club/'
+  fullPaths: '/' | '/$' | '/club/$' | '/en/$' | '/club/' | '/en/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/pathfinder' | '/club/$' | '/club'
-  id: '__root__' | '/' | '/admin' | '/pathfinder' | '/club/$' | '/club/'
+  to: '/' | '/$' | '/club/$' | '/en/$' | '/club' | '/en'
+  id: '__root__' | '/' | '/$' | '/club/$' | '/en/$' | '/club/' | '/en/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
-  PathfinderRoute: typeof PathfinderRoute
+  SplatRoute: typeof SplatRoute
   ClubSplatRoute: typeof ClubSplatRoute
+  EnSplatRoute: typeof EnSplatRoute
   ClubIndexRoute: typeof ClubIndexRoute
+  EnIndexRoute: typeof EnIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -88,18 +98,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pathfinder': {
-      id: '/pathfinder'
-      path: '/pathfinder'
-      fullPath: '/pathfinder'
-      preLoaderRoute: typeof PathfinderRouteImport
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/club/': {
@@ -116,15 +119,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClubSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/en/': {
+      id: '/en/'
+      path: '/en'
+      fullPath: '/en/'
+      preLoaderRoute: typeof EnIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/en/$': {
+      id: '/en/$'
+      path: '/en/$'
+      fullPath: '/en/$'
+      preLoaderRoute: typeof EnSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
-  PathfinderRoute: PathfinderRoute,
+  SplatRoute: SplatRoute,
   ClubSplatRoute: ClubSplatRoute,
+  EnSplatRoute: EnSplatRoute,
   ClubIndexRoute: ClubIndexRoute,
+  EnIndexRoute: EnIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

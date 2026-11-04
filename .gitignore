@@ -44,3 +44,12 @@ tools/
 skills-lock.json
 docs/SRS_UCAS_IT_Club_Website_v2.docx.md
 
+
+# Impeccable design-session scratch
+.impeccable/
+
+# Generated local artifacts
+.artifact-work/
+output/
+outputs/
+tmp/

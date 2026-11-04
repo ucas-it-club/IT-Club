@@ -1,175 +1,149 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Globe,
-  Gamepad2,
-  Smartphone,
-  Palette,
-  Users,
-  Eye,
-  CalendarDays,
-  Menu,
-  X,
-  ExternalLink,
-} from "lucide-react";
+import { Globe, Menu, Moon, Sun, X } from "lucide-react";
+import logo from "@/assets/ucas-logo.webp";
+import { brandButtonClass } from "./brand-button-styles";
+import { collections, isUnavailableSection, type ContentCollection } from "@/lib/club/model";
+import { otherLangHref, pageOf } from "@/lib/club/paths";
+import { readTheme, THEME_COOKIE, writePrefCookie } from "@/lib/club/prefs";
+import { ClubProvider } from "./ClubProvider";
+import { useClub } from "./club-context";
+import { ClubLink, Heading } from "./ClubContent";
+import { FloatingBackground } from "./FloatingBackground";
+import { FloatingJoin } from "./FloatingJoin";
+import { PrivacyNotice } from "./PrivacyNotice";
+import { SiteFooter } from "./SiteFooter";
 import "./club.css";
-import logo from "@/assets/ucas-logo.png";
-import { BrandButton } from "@/components/game/BrandButton";
-import { FloatingBackground } from "@/components/game/FloatingBackground";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
-import { ClubProvider, useClub } from "./ClubProvider";
-import {
-  collections,
-  categories,
-  committees,
-  majors,
-  majorEnglishLabels,
-  labels,
-  local,
-  safeUrl,
-  contactSchema,
-  joinSchema,
-  type Content,
-  type ContentCollection,
-} from "@/lib/club/model";
-import {
-  loadRegistration,
-  submitToSheet,
-  submissionError,
-  type Registration,
-} from "@/lib/club/sheets";
-import { AdminPanel } from "./AdminPanel";
-import { ContactPage } from "./ContactPage";
 
-const nav = [
+const AdminPanel = lazy(() =>
+  import("./AdminPanel").then((module) => ({ default: module.AdminPanel })),
+);
+const JoinForm = lazy(() =>
+  import("./PublicForm").then((module) => ({ default: module.PublicForm })),
+);
+const HomePage = lazy(() => import("./ClubPages").then((module) => ({ default: module.HomePage })));
+const AboutPage = lazy(() =>
+  import("./ClubPages").then((module) => ({ default: module.AboutPage })),
+);
+const ListingPage = lazy(() =>
+  import("./ClubPages").then((module) => ({ default: module.ListingPage })),
+);
+const DetailPage = lazy(() =>
+  import("./ClubPages").then((module) => ({ default: module.DetailPage })),
+);
+const ContactPage = lazy(() =>
+  import("./ContactPage").then((module) => ({ default: module.ContactPage })),
+);
+const PrivacyPage = lazy(() =>
+  import("./PrivacyPage").then((module) => ({ default: module.PrivacyPage })),
+);
+
+const navigationItems = [
   ["", "الرئيسية", "Home"],
   ["about", "من نحن", "About"],
   ["members", "الفريق", "Team"],
   ["partners", "الشراكات", "Partners"],
   ["events", "الفعاليات", "Events"],
+  ["news", "الأخبار", "News"],
   ["contact", "تواصل معنا", "Contact"],
-];
+] as const;
 
-const linkClass =
-  "club-action inline-flex items-center justify-center gap-2 rounded-full border-2 border-primary/30 bg-card px-6 py-3 text-base font-bold text-primary transition-colors hover:bg-primary/5";
-
-function ClubLink({
-  path = "",
-  children,
-  className = linkClass,
-  navigation = false,
-}: {
-  path?: string;
-  children: ReactNode;
-  className?: string;
-  navigation?: boolean;
-}) {
-  const target = path ? `/club/${path}` : "/";
-
-  return (
-    <Link
-      to={target}
-      className={className}
-      activeOptions={{ exact: !path, includeSearch: false, includeHash: false }}
-      data-club-navigation={navigation || undefined}
-    >
-      {children}
-    </Link>
-  );
+function useTheme() {
+  const [dark, setDark] = useState(() => readTheme() === "dark");
+  useEffect(() => {
+    const sync = () => setDark(document.documentElement.classList.contains("dark"));
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  const toggle = () => {
+    const next = !document.documentElement.classList.contains("dark");
+    document.documentElement.classList.toggle("dark", next);
+    document.documentElement.style.colorScheme = next ? "dark" : "light";
+    setDark(next);
+    writePrefCookie(THEME_COOKIE, next ? "dark" : "light");
+    try {
+      localStorage.setItem("ucas-theme", next ? "dark" : "light");
+    } catch {
+      /* Optional storage. */
+    }
+  };
+  return { dark, toggle };
 }
 
-function Heading({ ar, en, children }: { ar: string; en: string; children?: ReactNode }) {
-  const { lang } = useClub();
-
-  return (
-    <div className="mb-10 text-center">
-      <p className="text-sm font-bold text-primary">UCAS IT CLUB</p>
-      <h1 className="mt-3 text-3xl font-black sm:text-5xl text-gradient-brand">
-        {lang === "ar" ? ar : en}
-      </h1>
-      {children && (
-        <div className="mx-auto mt-5 max-w-2xl text-base leading-loose text-muted-foreground">
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Empty() {
-  const { lang } = useClub();
-
-  return (
-    <p className="rounded-3xl border border-border bg-card p-10 text-center text-muted-foreground">
-      {lang === "ar"
-        ? "لم يُنشر محتوى في هذا القسم بعد."
-        : "No content has been published here yet."}
-    </p>
-  );
-}
-
-function Shell({ children }: { children: ReactNode }) {
-  const { lang, setLang, settings, loading } = useClub();
+function SiteHeader() {
+  const location = useLocation();
+  const { lang, loading, error, data, settings } = useClub();
   const [open, setOpen] = useState(false);
+  const { dark, toggle } = useTheme();
   const ar = lang === "ar";
-  const isAdmin = useLocation().pathname.replace(/^\/club\/?/, "").split("/")[0] === "admin";
-
+  const links =
+    loading || error
+      ? navigationItems
+      : navigationItems.filter(([path]) => !isUnavailableSection(path, data, settings));
   return (
-    <div dir={ar ? "rtl" : "ltr"} className="club-site relative isolate min-h-screen">
-      {!isAdmin && <FloatingBackground entrancePulse={!loading} />}
-      <a href="#club-main" className="sr-only focus:not-sr-only">
-        {ar ? "انتقل للمحتوى" : "Skip to content"}
-      </a>
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
-          <ClubLink className="flex items-center gap-3">
+    <header className="club-header sticky top-3 z-40 mx-auto max-w-7xl px-3 sm:px-4">
+      <div className="club-header-surface">
+        <div className="club-header-row flex items-center justify-between gap-2 px-3 py-2 sm:px-4">
+          <ClubLink className="club-header-brand flex shrink-0 items-center gap-2">
             <img
               src={logo}
               width={44}
               height={56}
-              className="h-12 w-10 object-contain"
+              className="h-9 w-8 object-contain"
               alt="UCAS IT CLUB"
             />
-            <span className="font-black">UCAS IT CLUB</span>
+            <span className="text-sm font-black">UCAS IT CLUB</span>
           </ClubLink>
           <nav
             aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}
-            className="club-nav-bar hidden items-center gap-1 xl:flex"
+            className="club-nav-bar hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex"
           >
-            {nav.map(([path, a, e]) => (
+            {links.map(([path, arabic, english]) => (
               <ClubLink
                 key={path}
-                path={path!}
+                path={path}
                 navigation
-                className="club-nav-link rounded-full px-3 py-2 text-sm font-bold"
+                className="club-nav-link rounded-full px-3 py-2 text-sm font-bold aria-[current=page]:bg-brand-gradient"
               >
-                {ar ? a : e}
+                {ar ? arabic : english}
               </ClubLink>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
-            <BrandButton
-              variant="outline"
-              size="sm"
-              onClick={() => setLang(ar ? "en" : "ar")}
+          <div className="club-header-actions flex shrink-0 items-center gap-1">
+            <Link
+              to={otherLangHref(location.pathname)}
+              hrefLang={ar ? "en" : "ar"}
+              className={brandButtonClass("ghost", "sm", "club-language-button")}
               aria-label={ar ? "Switch to English" : "التبديل للعربية"}
             >
-              <Globe size={16} />
-              {ar ? "EN" : "عربي"}
-            </BrandButton>
+              <Globe size={16} aria-hidden="true" />
+              <span lang={ar ? "en" : "ar"}>{ar ? "EN" : "عربي"}</span>
+            </Link>
             <button
               type="button"
-              onClick={() => setOpen(!open)}
+              onClick={toggle}
+              className="club-theme-button rounded-full p-2.5"
+              aria-label={
+                ar
+                  ? dark
+                    ? "تفعيل الوضع الفاتح"
+                    : "تفعيل الوضع الداكن"
+                  : dark
+                    ? "Use light theme"
+                    : "Use dark theme"
+              }
+              aria-pressed={dark}
+              title={
+                ar ? (dark ? "الوضع الفاتح" : "الوضع الداكن") : dark ? "Light theme" : "Dark theme"
+              }
+            >
+              {dark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen((value) => !value)}
               aria-expanded={open}
               aria-label={ar ? "القائمة" : "Menu"}
               className="rounded-xl p-2 xl:hidden"
@@ -180,746 +154,116 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
         {open && (
           <nav className="grid grid-cols-2 gap-2 border-t border-border p-4 xl:hidden">
-            {nav.map(([path, a, e]) => (
+            {links.map(([path, arabic, english]) => (
               <span key={path} onClick={() => setOpen(false)}>
                 <ClubLink
-                  path={path!}
+                  path={path}
                   navigation
-                  className="club-nav-link block rounded-xl p-3 text-sm font-bold"
+                  className="club-nav-link block rounded-xl p-3 text-sm font-bold aria-[current=page]:bg-brand-gradient"
                 >
-                  {ar ? a : e}
+                  {ar ? arabic : english}
                 </ClubLink>
               </span>
             ))}
           </nav>
         )}
-      </header>
+      </div>
+    </header>
+  );
+}
+
+function Shell({ children }: { children: ReactNode }) {
+  const { lang, loading } = useClub();
+  const page = pageOf(useLocation().pathname);
+  const isAdmin = page.split("/")[0] === "admin";
+  return (
+    <div dir={lang === "ar" ? "rtl" : "ltr"} className="club-site relative isolate min-h-screen">
+      {!isAdmin && <FloatingBackground entrancePulse={!loading} />}
+      <a href="#club-main" className="sr-only focus:not-sr-only">
+        {lang === "ar" ? "انتقل للمحتوى" : "Skip to content"}
+      </a>
+      <SiteHeader />
       <main
         id="club-main"
         tabIndex={-1}
-        className="mx-auto max-w-6xl px-4 py-12 sm:py-16 animate-stage-in"
+        className={`mx-auto max-w-6xl px-4 animate-stage-in ${page === "" ? "pt-4 pb-12 sm:pt-5 sm:pb-16" : "py-12 sm:py-16"}`}
       >
         {children}
       </main>
-      <footer className="border-t border-border py-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 px-4">
-          <p className="font-bold">
-            {ar
-              ? "النادي التكنولوجي — الكلية الجامعية للعلوم التطبيقية"
-              : "University College of Applied Sciences"}
-            <span className="block mt-1 text-sm text-muted-foreground">UCAS IT CLUB</span>
-          </p>
-          <div className="flex flex-wrap gap-4 text-sm font-bold">
-            <ClubLink path="contact" className="text-primary">
-              {ar ? "تواصل معنا" : "Contact us"}
-            </ClubLink>
-            {(["facebook", "instagram", "linkedin", "github"] as const).map(
-              (key) =>
-                safeUrl(settings[key]) && (
-                  <a
-                    key={key}
-                    href={safeUrl(settings[key])}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary capitalize"
-                  >
-                    {key}
-                  </a>
-                ),
-            )}
-          </div>
-        </div>
-      </footer>
+      {!isAdmin && !page.startsWith("join") && <FloatingJoin ar={lang === "ar"} />}
+      <PrivacyNotice ar={lang === "ar"} />
+      {!isAdmin && !loading && <SiteFooter />}
     </div>
   );
 }
 
-function Card({
-  item,
-  kind,
-  compact = false,
-}: {
-  item: Content;
-  kind: ContentCollection;
-  compact?: boolean;
-}) {
+export function Missing() {
   const { lang } = useClub();
-  const title = local(item, "title", lang);
-  const image = item.images?.map(safeUrl).find(Boolean);
-
-  const aspect = kind === "members" ? "aspect-square" : "aspect-video";
-
-  return (
-    <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-transform hover:-translate-y-1">
-      {image ? (
-        <img
-          src={image}
-          alt={title}
-          loading="lazy"
-          width={640}
-          height={360}
-          className={`w-full ${aspect} ${kind === "partners" ? "object-contain p-6" : "object-cover"}`}
-        />
-      ) : (
-        <div className={`flex w-full ${aspect} items-center justify-center bg-brand-gradient`}>
-          <img
-            src={logo}
-            alt=""
-            aria-hidden="true"
-            className="h-16 w-14 object-contain brightness-0 invert opacity-90"
-          />
-        </div>
-      )}
-      <div className="p-6">
-        {item.date && (
-          <time dateTime={item.date} className="text-sm text-muted-foreground">
-            {item.date}
-          </time>
-        )}
-        <h2 className="mt-2 text-xl font-extrabold">{title}</h2>
-        <p
-          className={`mt-3 text-base leading-relaxed text-muted-foreground ${compact ? "truncate" : "line-clamp-3"}`}
-        >
-          {local(item, "description", lang)}
-        </p>
-        {kind === "partners" ? (
-          <>
-            {item.partnershipType && (
-              <p className="mt-3 font-bold text-primary">{local(item, "partnershipType", lang)}</p>
-            )}
-            {safeUrl(item.websiteUrl) && (
-              <a
-                href={safeUrl(item.websiteUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-5 inline-flex items-center gap-2 text-primary font-bold"
-              >
-                {lang === "ar" ? "موقع الشريك" : "Visit partner"}
-                <ExternalLink size={16} />
-              </a>
-            )}
-          </>
-        ) : (
-          <ClubLink
-            path={`${kind}/${item.id}`}
-            className="mt-5 inline-flex items-center gap-2 text-primary font-bold"
-          >
-            {lang === "ar" ? "التفاصيل" : "View details"}
-            {lang === "ar" ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
-          </ClubLink>
-        )}
-      </div>
-    </article>
-  );
-}
-
-function Grid({
-  items,
-  kind,
-  compact = false,
-}: {
-  items: Content[];
-  kind: ContentCollection;
-  compact?: boolean;
-}) {
-  return items.length ? (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map((item) => (
-        <Card key={item.id} item={item} kind={kind} compact={compact} />
-      ))}
-    </div>
-  ) : (
-    <Empty />
-  );
-}
-
-function Home() {
-  const { lang, data, visitorCount } = useClub();
-  const ar = lang === "ar";
-
   return (
     <>
-      <section className="mx-auto max-w-4xl text-center">
-        <img
-          src={logo}
-          alt="UCAS IT CLUB"
-          width={124}
-          height={160}
-          className="mx-auto h-40 w-32 object-contain animate-float-slow"
-        />
-        <p className="mt-7 text-primary font-bold">
-          {ar ? "النادي التكنولوجي" : "Technology Club"}
-          <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
-            {ar ? "الكلية الجامعية للعلوم التطبيقية" : "University College of Applied Sciences"}
-          </span>
-        </p>
-        <h1 className="mt-4 text-4xl font-black leading-tight sm:text-6xl text-gradient-brand">
-          {ar ? "نتعلم نبتكر نتقدم" : "Learn, innovate, advance"}
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg leading-loose text-muted-foreground">
-          {ar
-            ? "مجتمع طلابي يجمع المهتمين بالتقنية. تعرّف على فريق النادي وفعالياته، وكن جزءًا من التجربة."
-            : "A student community for technology enthusiasts. Meet the team and take part in club activities."}
-        </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <ClubLink
-            path="join"
-            className={
-              linkClass +
-              " bg-brand-gradient text-primary-foreground border-transparent shadow-glow-blue"
-            }
-          >
-            {ar ? "انضم إلينا" : "Join the club"}
-          </ClubLink>
-        </div>
-      </section>
-      <div className="my-14 grid grid-cols-3 gap-3">
-        {(
-          [
-            [Users, data.members.length, ar ? "الأعضاء" : "Members"],
-            [Eye, visitorCount ?? "—", ar ? "الزيارات" : "Visits"],
-            [
-              CalendarDays,
-              data.events.filter((x) => x.status === "past").length,
-              ar ? "فعاليات منفذة" : "Past events",
-            ],
-          ] as const
-        ).map(([Icon, n, label]) => (
-          <div
-            key={label}
-            className="rounded-3xl border border-border bg-card p-5 text-center shadow-card"
-          >
-            <Icon className="mx-auto text-primary" />
-            <strong className="my-2 block text-3xl font-black">{n}</strong>
-            <span className="text-sm font-bold text-muted-foreground">{label}</span>
-          </div>
-        ))}
-      </div>
-      <section className="mt-14">
-        <h2 className="mb-6 text-2xl font-black">{ar ? "من أخبار النادي" : "Club news"}</h2>
-        <Grid items={data.events.slice(0, 1)} kind="events" compact />
-      </section>
-    </>
-  );
-}
-
-function About() {
-  const { lang, settings } = useClub();
-  const ar = lang === "ar";
-
-  return (
-    <>
-      <Heading ar="من نحن" en="About the club" />
-      <div className="grid gap-6 sm:grid-cols-2">
-        {(["vision", "mission"] as const).map((key) => {
-          // SAFETY: key is "vision" | "mission" from the as-const array above, so
-          // `${key}_en` is exactly "vision_en" | "mission_en".
-          const enKey = `${key}_en` as "vision_en" | "mission_en";
-
-          return (
-            <article key={key} className="rounded-3xl border border-border bg-card p-8 shadow-card">
-              <h2 className="text-2xl font-black text-primary">
-                {key === "vision" ? (ar ? "رؤيتنا" : "Our vision") : ar ? "رسالتنا" : "Our mission"}
-              </h2>
-              <p className="mt-4 whitespace-pre-line text-base leading-loose text-muted-foreground">
-                {settings[ar ? key : enKey] ||
-                  (ar
-                    ? "سيُنشر النص الرسمي المعتمد قريبًا."
-                    : "The approved official statement will be published here.")}
-              </p>
-            </article>
-          );
-        })}
-      </div>
-      <h2 className="mt-12 mb-6 text-2xl font-black">{ar ? "أهدافنا" : "Our goals"}</h2>
-      {settings[ar ? "goals" : "goals_en"] ? (
-        <ol className="grid gap-4 sm:grid-cols-2">
-          {settings[ar ? "goals" : "goals_en"]
-            .split("\n")
-            .filter(Boolean)
-            .map((goal, i) => (
-              <li key={i} className="rounded-3xl bg-brand-gradient-soft p-6">
-                <strong className="text-primary">{i + 1}. </strong>
-                {goal}
-              </li>
-            ))}
-        </ol>
-      ) : (
-        <Empty />
-      )}
-      <h2 className="mt-12 mb-6 text-2xl font-black">{ar ? "مجالات عملنا" : "Our fields"}</h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {categories.map(([key, a, e], i) => {
-          const Icon = [Smartphone, Globe, Gamepad2, Palette][i]!;
-
-          return (
-            <div key={key} className="rounded-3xl border border-border bg-card p-6">
-              <Icon className="h-9 w-9 text-primary" />
-              <h3 className="mt-4 font-extrabold">{ar ? a : e}</h3>
-            </div>
-          );
-        })}
+      <Heading ar="الصفحة غير موجودة" en="Page not found" />
+      <div className="text-center">
+        <ClubLink>{lang === "ar" ? "العودة للرئيسية" : "Back to home"}</ClubLink>
       </div>
     </>
   );
 }
 
-function Listing({ kind }: { kind: ContentCollection }) {
-  const { lang, data } = useClub();
-  const ar = lang === "ar";
-  const [status, setStatus] = useState("all");
-  let items = data[kind].filter((x) => status === "all" || x.status === status);
-
-  if (kind === "events")
-    items = [...items].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-
+function LoadingView({ admin = false }: { admin?: boolean }) {
+  const { lang } = useClub();
   return (
-    <>
-      <Heading ar={labels[kind][0]} en={labels[kind][1]} />
-      {kind === "events" && (
-        <div className="mb-8 flex flex-wrap gap-3">
-          {[
-            ["all", "الكل", "All"],
-            ["upcoming", "قادمة", "Upcoming"],
-            ["past", "سابقة", "Past"],
-          ].map(([key, a, e]) => (
-            <BrandButton
-              key={key}
-              variant={status === key ? "primary" : "outline"}
-              onClick={() => setStatus(key!)}
-              aria-pressed={status === key}
-            >
-              {ar ? a : e}
-            </BrandButton>
-          ))}
-        </div>
-      )}
-      {kind === "members" ? (
-        <>
-          <h2 className="mb-6 text-2xl font-black">
-            {ar ? "الهيئة الإدارية" : "Administrative board"}
-          </h2>
-          <Grid kind={kind} items={items.filter((x) => x.isFounder)} />
-          {committees.map(([key, a, e]) => (
-            <section key={key} className="mt-10">
-              <h2 className="mb-5 text-xl font-black text-primary">{ar ? a : e}</h2>
-              <Grid kind={kind} items={items.filter((x) => !x.isFounder && x.committee === key)} />
-            </section>
-          ))}
-        </>
-      ) : (
-        <Grid items={items} kind={kind} />
-      )}
-    </>
-  );
-}
-
-function Detail({ kind, id }: { kind: ContentCollection; id: string }) {
-  const { data, lang } = useClub();
-  const item = data[kind].find((x) => x.id === id);
-  const ar = lang === "ar";
-
-  if (!item)
-    return (
-      <>
-        <Heading ar="المحتوى غير موجود" en="Content not found" />
-        <ClubLink path={kind}>{ar ? "العودة للقائمة" : "Back to list"}</ClubLink>
-      </>
-    );
-
-  return (
-    <>
-      <Heading ar={item.title} en={item.title_en} />
-      <article className="rounded-[2rem] border border-border bg-card p-6 shadow-card sm:p-10">
-        {item.date && (
-          <time dateTime={item.date} className="text-primary font-bold">
-            {item.date}
-          </time>
-        )}
-        {item.role && <p className="font-bold text-primary">{local(item, "role", lang)}</p>}
-        <p className="mt-5 whitespace-pre-line text-base leading-loose text-muted-foreground">
-          {local(item, "description", lang)}
-        </p>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2">
-          {item.images
-            ?.filter((x) => safeUrl(x))
-            .map((url, i) => (
-              <img
-                key={url}
-                src={url}
-                alt={`${local(item, "title", lang)} — ${i + 1}`}
-                width={800}
-                height={600}
-                loading="lazy"
-                className="w-full rounded-2xl object-contain"
-              />
-            ))}
-        </div>
-        <div className="mt-7 flex flex-wrap gap-3">
-          {(
-            [
-              ["githubUrl", "GitHub"],
-              ["linkedinUrl", "LinkedIn"],
-            ] as const
-          ).map(
-            ([key, label]) =>
-              safeUrl(item[key]) && (
-                <a
-                  key={key}
-                  href={safeUrl(item[key])}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={linkClass}
-                >
-                  {label}
-                  <ExternalLink size={16} />
-                </a>
-              ),
-          )}
-        </div>
-      </article>
-      <div className="mt-8">
-        <ClubLink path={kind}>{ar ? "العودة للقائمة" : "Back to list"}</ClubLink>
-      </div>
-    </>
-  );
-}
-
-function PublicForm({ join }: { join: boolean }) {
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
-  const { lang, settings } = useClub();
-  const ar = lang === "ar";
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [success, setSuccess] = useState(false);
-  const feedback = useRef<HTMLParagraphElement>(null);
-  useEffect(() => {
-    if (message) feedback.current?.focus();
-  }, [message]);
-  const requestId = useRef<string | undefined>(undefined);
-  const [registration, setRegistration] = useState<Registration>();
-  const [registrationUnavailable, setRegistrationUnavailable] = useState(false);
-  useEffect(() => {
-    if (!join) return;
-    let active = true;
-
-    const refresh = async () => {
-      try {
-        const value = await loadRegistration();
-
-        if (active) {
-          setRegistration(value);
-          setRegistrationUnavailable(false);
-        }
-      } catch {
-        if (active) setRegistrationUnavailable(true);
-      }
-    };
-
-    void refresh();
-
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 15000);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, [join]);
-  const [major, setMajor] = useState("");
-  const [committee, setCommittee] = useState<string>(committees[0][0]);
-
-  async function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    if (busy) return;
-    const form = e.currentTarget;
-    // SAFETY: this form has no file inputs, so every FormData entry value is a string.
-    const values = Object.fromEntries(new FormData(form)) as Record<string, string>;
-
-    if (join) {
-      values["preferredCommittee"] = committee;
-      values["major"] = major;
-    }
-
-    const parsed = (join ? joinSchema : contactSchema).safeParse(values);
-
-    if (!parsed.success) {
-      const errors = {
-        name: ["أدخلي الاسم من حرفين إلى 200 حرف.", "Enter a name of 2–200 characters."],
-        fullName: [
-          "أدخلي الاسم الكامل من حرفين إلى 200 حرف.",
-          "Enter a full name of 2–200 characters.",
-        ],
-        email: [
-          "أدخلي بريدًا جامعيًا ينتهي بـ @smail.ucas.edu.ps.",
-          "Enter your @smail.ucas.edu.ps email address.",
-        ],
-        studentId: [
-          "الرقم الجامعي يجب أن يتكوّن من 9 أرقام.",
-          "Student ID must contain exactly 9 digits.",
-        ],
-        major: ["اختاري التخصص من القائمة.", "Select your major."],
-        preferredCommittee: ["اختاري اللجنة المرغوبة.", "Select a committee."],
-        phone: [
-          "رقم الهاتف يجب أن يبدأ بـ 056 أو 059 ويتكوّن من 9 أو 10 أرقام.",
-          "Phone must start with 056 or 059 and contain 9 or 10 digits.",
-        ],
-        message: [
-          "النص يجب أن يكون بين 10 و4000 حرف.",
-          "Your message must contain 10–4000 characters.",
-        ],
-      } satisfies Record<string, [string, string]>;
-
-      const errorFor = (field: string) => {
-        if (!Object.hasOwn(errors, field)) return undefined;
-
-        // SAFETY: hasOwn above confirms field is one of errors' known keys.
-        return errors[field as keyof typeof errors];
-      };
-
-      setMessage(
-        [
-          ...new Set(
-            parsed.error.issues.map(
-              (issue) =>
-                errorFor(String(issue.path[0]))?.[ar ? 0 : 1] ||
-                (ar ? "تحققي من الحقول." : "Check your fields."),
-            ),
-          ),
-        ].join(" "),
-      );
-
-      return;
-    }
-
-    setBusy(true);
-    setMessage("");
-
-    try {
-      requestId.current ??= crypto.randomUUID();
-      await submitToSheet(join, parsed.data, requestId.current);
-      setSuccess(true);
-      form.reset();
-    } catch (error) {
-      setMessage(submissionError(error, ar));
-
-      if (error instanceof Error && error.message === "JOIN_CLOSED") {
-        setRegistration((prev) => (prev ? { ...prev, open: false } : prev));
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const fields = join
-    ? [
-        ["fullName", "الاسم الكامل", "Full name", "text"],
-        ["email", "البريد الإلكتروني", "Email", "email"],
-        ["phone", "الهاتف (اختياري)", "Phone (optional)", "tel"],
-        ["studentId", "الرقم الجامعي", "Student ID", "text"],
-      ]
-    : [
-        ["name", "الاسم", "Name", "text"],
-        ["email", "البريد الإلكتروني", "Email", "email"],
-      ];
-
-  return (
-    <>
-      <Heading ar={join ? "انضم إلينا" : "تواصل معنا"} en={join ? "Join the club" : "Contact us"} />
-      <div className="mx-auto max-w-2xl rounded-[2rem] border border-border bg-card p-6 shadow-card sm:p-10">
-        {!ready ? (
-          <p role="status">{ar ? "جارٍ تجهيز النموذج…" : "Preparing the form…"}</p>
-        ) : success ? (
-          <div
-            role="status"
-            className="rounded-2xl bg-brand-gradient-soft p-6 text-primary font-bold"
-          >
-            {ar
-              ? "تهانينا على وصول طلب الإنضمام قريبا سيتم مراجعة طلبك و إرسالة رسالة القبول"
-              : "Your submission has been saved successfully. Thank you."}
-          </div>
-        ) : join && (registrationUnavailable || !registration || !registration.open) ? (
-          <p
-            role="status"
-            className="rounded-2xl bg-brand-gradient-soft p-6 font-bold text-primary"
-          >
-            {registrationUnavailable
-              ? ar
-                ? "استقبال الطلبات غير متاح حاليًا. يرجى المحاولة لاحقًا."
-                : "Applications are currently unavailable. Please try later."
-              : !registration
-                ? ar
-                  ? "جارٍ التحقق من استقبال الطلبات…"
-                  : "Checking registration availability…"
-                : ar
-                  ? "تم وقف استقبال الأعضاء الجدد"
-                  : "New membership applications are closed."}
-          </p>
-        ) : (
-          <form noValidate onSubmit={submit} className="space-y-5" aria-busy={busy}>
-            {fields.map(([name, a, en, type]) => (
-              <label key={name} className="block text-sm font-bold">
-                <span className="mb-2 block">{ar ? a : en}</span>
-                <Input
-                  name={name!}
-                  type={type!}
-                  required={name !== "phone"}
-                  maxLength={
-                    name === "studentId" ? 9 : name === "phone" ? 10 : name === "email" ? 254 : 200
-                  }
-                  minLength={name === "studentId" || name === "phone" ? 9 : undefined}
-                  inputMode={name === "studentId" || name === "phone" ? "numeric" : undefined}
-                  pattern={
-                    name === "studentId"
-                      ? "[0-9]{9}"
-                      : name === "phone"
-                        ? "05[69][0-9]{6,7}"
-                        : name === "email" && join
-                          ? "[^@]+@smail\\.ucas\\.edu\\.ps"
-                          : undefined
-                  }
-                  title={
-                    name === "studentId"
-                      ? ar
-                        ? "أدخل الرقم الجامعي المكوّن من 9 أرقام"
-                        : "Enter a 9-digit student ID"
-                      : undefined
-                  }
-                  onInput={
-                    name === "studentId" || name === "phone"
-                      ? (e) => {
-                          e.currentTarget.value = e.currentTarget.value
-                            .replace(/[^0-9]/g, "")
-                            .slice(0, name === "phone" ? 10 : 9);
-                        }
-                      : undefined
-                  }
-                  autoComplete={
-                    name === "email"
-                      ? "email"
-                      : name === "phone"
-                        ? "tel"
-                        : name === "name" || name === "fullName"
-                          ? "name"
-                          : "off"
-                  }
-                />
-              </label>
-            ))}
-            {join && (
-              <label className="block text-sm font-bold">
-                <span className="mb-2 block">{ar ? "التخصص" : "Major"}</span>
-                <Select dir={ar ? "rtl" : "ltr"} value={major} onValueChange={setMajor} required>
-                  <SelectTrigger className="h-auto min-h-10 whitespace-normal text-start">
-                    <SelectValue placeholder={ar ? "اختاري التخصص" : "Select a major"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {majors.map((name) => (
-                      <SelectItem key={name} value={name}>
-                        {ar ? name : majorEnglishLabels[name]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-            )}
-            {join && (
-              <label className="block text-sm font-bold">
-                <span className="mb-2 block">{ar ? "اللجنة المرغوبة" : "Preferred committee"}</span>
-                <Select dir={ar ? "rtl" : "ltr"} value={committee} onValueChange={setCommittee}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {committees.map(([key, a, en]) => (
-                      <SelectItem key={key} value={key}>
-                        {ar ? a : en}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-            )}
-            <label className="block text-sm font-bold">
-              <span className="mb-2 block">
-                {ar ? (join ? "عرّفنا بنفسك" : "الرسالة") : join ? "Introduce yourself" : "Message"}
-              </span>
-              <Textarea
-                name="message"
-                required
-                minLength={10}
-                maxLength={4000}
-                rows={5}
-                wrap="soft"
-                className="resize-y whitespace-pre-wrap [overflow-wrap:anywhere] leading-7"
-              />
-            </label>
-            <p className="text-sm text-muted-foreground">
-              {ar
-                ? "تُستخدم بياناتك للرد على رسالتك أو مراجعة طلب انضمامك من إدارة النادي."
-                : "Club administrators use your details to respond to your message or review your membership request."}
-            </p>
-            {message && (
-              <p
-                ref={feedback}
-                tabIndex={-1}
-                role="alert"
-                className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-primary"
-              >
-                {message}
-              </p>
-            )}
-            {busy && (
-              <p role="status" className="text-primary">
-                {ar
-                  ? "جارٍ إرسال الطلب إلى Google Sheets، انتظري تأكيد الحفظ…"
-                  : "Sending to Google Sheets. Please wait for confirmation…"}
-              </p>
-            )}
-            <BrandButton
-              type="submit"
-              disabled={busy || (join && (!registration?.open || registrationUnavailable))}
-            >
-              {busy ? (ar ? "جارٍ الإرسال…" : "Sending…") : ar ? "إرسال" : "Submit"}
-            </BrandButton>
-          </form>
-        )}
-        {settings.email && (
-          <a className="mt-6 block text-primary" href={`mailto:${settings.email}`}>
-            {settings.email}
-          </a>
-        )}
-      </div>
-    </>
-  );
-}
-
-function ContentPage() {
-  const { loading, error, lang } = useClub();
-
-  const path = useLocation()
-    .pathname.replace(/^\/club\/?/, "")
-    .replace(/\/$/, "");
-
-  const [page, id] = path.split("/");
-
-  if (page === "admin") return <AdminPanel />;
-
-  if (page === "join") return <PublicForm join />;
-
-  if (page === "contact") return <ContactPage />;
-
-  if (loading)
-    return (
-      <div role="status" className="flex min-h-[45vh] items-center justify-center">
+    <div role="status" className="flex min-h-[45vh] items-center justify-center">
+      {!admin && (
         <img src={logo} alt="UCAS IT CLUB" className="h-64 w-64 object-contain sm:h-80 sm:w-80" />
-        <span className="sr-only">{lang === "ar" ? "تحميل الموقع" : "Loading website"}</span>
-      </div>
-    );
+      )}
+      <span className="sr-only">
+        {lang === "ar"
+          ? admin
+            ? "تحميل الإدارة"
+            : "تحميل الموقع"
+          : admin
+            ? "Loading admin"
+            : "Loading website"}
+      </span>
+    </div>
+  );
+}
 
+/** The page for the current path; routes render this inside ClubSite. */
+export function ContentPage() {
+  const { loading, error, lang } = useClub();
+  const [page, id] = pageOf(useLocation().pathname).split("/");
+  if (page === "admin")
+    return (
+      <Suspense fallback={<LoadingView admin />}>
+        <AdminPanel />
+      </Suspense>
+    );
+  if (page === "join")
+    return (
+      <Suspense
+        fallback={
+          <div role="status" className="flex min-h-[45vh] items-center justify-center">
+            <span>{lang === "ar" ? "جارٍ تجهيز نموذج الانضمام…" : "Preparing the join form…"}</span>
+          </div>
+        }
+      >
+        <JoinForm join />
+      </Suspense>
+    );
+  if (page === "contact")
+    return (
+      <Suspense fallback={<LoadingView />}>
+        <ContactPage />
+      </Suspense>
+    );
+  if (page === "privacy")
+    return (
+      <Suspense fallback={<LoadingView />}>
+        <PrivacyPage />
+      </Suspense>
+    );
+  if (loading) return <LoadingView />;
   if (error)
     return (
       <p role="alert" className="py-20 text-center">
@@ -928,30 +272,36 @@ function ContentPage() {
           : "Content could not be loaded. Please refresh and try again."}
       </p>
     );
-
-  if (!page) return <Home />;
-
-  if (page === "about") return <About />;
-
-  // SAFETY: the cast only satisfies Array<ContentCollection>.includes's parameter type;
-  // the membership check below is still a plain, correct string comparison.
-  if (collections.includes(page as ContentCollection))
-    // SAFETY: collections.includes above just confirmed page is a ContentCollection.
-    return id ? (
-      <Detail kind={page as ContentCollection} id={id} />
-    ) : (
-      <Listing key={page} kind={page as ContentCollection} />
+  if (!page)
+    return (
+      <Suspense fallback={<LoadingView />}>
+        <HomePage />
+      </Suspense>
     );
-
-  return <Heading ar="الصفحة غير موجودة" en="Page not found" />;
+  if (page === "about")
+    return (
+      <Suspense fallback={<LoadingView />}>
+        <AboutPage />
+      </Suspense>
+    );
+  if (collections.includes(page as ContentCollection))
+    return (
+      <Suspense fallback={<LoadingView />}>
+        {id ? (
+          <DetailPage kind={page as ContentCollection} id={id} />
+        ) : (
+          <ListingPage key={page} kind={page as ContentCollection} />
+        )}
+      </Suspense>
+    );
+  return <Missing />;
 }
 
-export function ClubSite() {
+/** The persistent site chrome shared by every public and administrative route. */
+export function ClubSite({ children }: { children: ReactNode }) {
   return (
     <ClubProvider>
-      <Shell>
-        <ContentPage />
-      </Shell>
+      <Shell>{children}</Shell>
     </ClubProvider>
   );
 }

@@ -9,10 +9,11 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "check": "npm run typecheck && npm test && npm run lint && npm run build",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "build:static": "vite build --config vite.static.config.ts",
-    "test": "node --test tests/supabase.test.mjs",
+    "test": "node --test tests/*.test.mjs",
     "build:cloudflare": "npm run build:static && node scripts/prepare-cloudflare.mjs"
   },
   "dependencies": {

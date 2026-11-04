@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
-  Link,
   createRootRouteWithContext,
+  useLocation,
   useRouter,
   HeadContent,
   Scripts,
@@ -11,7 +11,22 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import cairoArabic from "../assets/fonts/cairo-arabic.woff2?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { readTheme } from "../lib/club/prefs";
+import { langOf } from "../lib/club/paths";
+import {
+  ldJson,
+  organizationLd,
+  pages,
+  seo,
+  siteName,
+  verificationMeta,
+  type Contact,
+} from "../lib/club/seo";
+import { safeUrl } from "../lib/club/model";
+import { loadClubData } from "../lib/club/ssr-data";
+import { ClubSite, Missing } from "@/components/club/ClubSite";
 
 function NotFoundComponent() {
   return (
@@ -77,48 +92,89 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "اكتشف مسارك | UCAS IT CLUB" },
-      {
-        name: "description",
-        content: "لعبة تفاعلية من نادي تكنولوجيا المعلومات في UCAS تساعدك تكتشف التخصص التقني الأقرب لشخصيتك واهتماماتك.",
-      },
-      { name: "author", content: "UCAS IT CLUB" },
-      { property: "og:title", content: "اكتشف مسارك — رحلتك التقنية تبدأ من هنا" },
-      {
-        property: "og:description",
-        content: "جاوب على أسئلة ممتعة واكتشف المجال التقني الأقرب لشخصيتك مع UCAS IT CLUB.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap",
-      },
-      { rel: "icon", href: "/favicon.png", type: "image/png" },
-    ],
-  }),
+  // Every page, 404s included, renders inside ClubSite, whose footer waits for
+  // this data. Only the few contact facts the head needs are returned; the
+  // payload itself already ships once, in the query cache.
+  loader: async ({ context }): Promise<{ contact: Contact }> => {
+    const settings = (await loadClubData(context.queryClient))?.settings;
+    const profiles = [settings?.linkedin, settings?.instagram, settings?.facebook, settings?.github]
+      .map(safeUrl)
+      .filter((url): url is string => Boolean(url));
+
+    return { contact: { email: settings?.email?.trim() || undefined, profiles } };
+  },
+  // After the loader: the router infers head's loaderData from it, in object order.
+  head: ({ matches, loaderData }) => {
+    const lang = langOf(matches.at(-1)?.pathname ?? "/");
+    const missing = matches.some((routeMatch) => routeMatch.status === "notFound");
+    // TanStack 1.170 currently loses root-loader data in this callback's
+    // generic type, although the runtime value is the loader result above.
+    const rootData = loaderData as unknown as { contact: Contact } | undefined;
+    // Only unmatched URLs end here; every page route sets its own tags on top.
+    const page = missing ? "missing" : "home";
+
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { name: "author", content: siteName[lang] },
+        ...verificationMeta(),
+        ...seo({
+          lang,
+          title: pages[page][lang].title,
+          description: pages[page][lang].description,
+          path: "/",
+          noindex: missing,
+        }),
+        ldJson(organizationLd(lang, rootData?.contact ?? { profiles: [] })),
+      ],
+      links: [
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        // Cairo, self-hosted: the same face the club already uses, without a
+        // render-blocking stylesheet on a third-party origin. Both cuts are
+        // variable, so one file per script covers every weight.
+        {
+          rel: "preload",
+          as: "font",
+          type: "font/woff2",
+          href: cairoArabic,
+          crossOrigin: "anonymous",
+        },
+        { rel: "icon", href: "/favicon.png", type: "image/png" },
+      ],
+    };
+  },
   shellComponent: RootShell,
   component: RootComponent,
-  notFoundComponent: NotFoundComponent,
+  notFoundComponent: Missing,
   errorComponent: ErrorComponent,
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  // The address is the language, on the server and in the browser alike.
+  const lang = langOf(useLocation().pathname);
+  const theme = readTheme();
+
   return (
-    <html lang="ar" dir="rtl">
+    <html
+      lang={lang}
+      dir={lang === "ar" ? "rtl" : "ltr"}
+      className={theme === "dark" ? "dark" : undefined}
+      style={{ colorScheme: theme }}
+      suppressHydrationWarning
+    >
       <head>
+        {/* Covers visitors whose preference predates the cookie: apply their
+            stored theme before first paint and seed the cookie so the next
+            document is server-rendered with it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){document.documentElement.classList.add('js');try{var theme=localStorage.getItem('ucas-theme');if(!theme)return;var dark=theme==='dark';document.documentElement.classList.toggle('dark',dark);document.documentElement.style.colorScheme=dark?'dark':'light';document.cookie='ucas-theme='+(dark?'dark':'light')+'; path=/; max-age=31536000; samesite=lax';}catch(e){}})();`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>
@@ -134,8 +190,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      {/* One site chrome for every route; only the page inside it changes. */}
+      <ClubSite>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </ClubSite>
     </QueryClientProvider>
   );
 }

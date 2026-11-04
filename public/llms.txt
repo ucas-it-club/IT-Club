@@ -1,0 +1,28 @@
+# UCAS IT Club (النادي التكنولوجي)
+
+> The student technology club of the University College of Applied Sciences (UCAS). The site is in Arabic, with an English version of every page under /en.
+
+## What the club does
+
+- Works in mobile apps, websites, games and multimedia
+- Organised in committees (media, public relations, activities) led by an administrative board
+- Publishes club news and runs student events
+
+## Pages
+
+- [About](/en/about): vision, mission, goals and committees
+- [News](/en/news): club news and announcements
+- [Events](/en/events): upcoming and past events
+- [Team](/en/team): the administrative board and committees
+- [Join](/en/join): membership application
+- [Contact](/en/contact): email and social profiles
+- Each page's Arabic version drops the /en prefix, for example [/about](/about)
+- [Sitemap](/sitemap.xml): every page in both languages
+
+## Contact
+
+- Email: itclub@ucas.edu.ps
+- LinkedIn: https://www.linkedin.com/company/ucas-it-club/
+- Instagram: https://www.instagram.com/ucas.it.club/
+- Facebook: https://www.facebook.com/people/Ucas-IT-Club/61586651370844/
+- Parent college: https://www.ucas.edu.ps/

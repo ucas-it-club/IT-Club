@@ -1,5 +1,5 @@
 import { Facebook, Instagram, Linkedin, MessageCircle, ExternalLink } from "lucide-react";
-import { useClub } from "./ClubProvider";
+import { useClub } from "./club-context";
 
 const channels = [
   {

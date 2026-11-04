@@ -1,0 +1,11 @@
+project_id = "jxweaxenswbjpxxjmihb"
+
+# Public sitemap reads only anonymous content under RLS.
+[functions.sitemap]
+verify_jwt = false
+
+[functions.delete-media]
+verify_jwt = true
+
+[functions.media-accounts]
+verify_jwt = false

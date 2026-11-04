@@ -1,16 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ClubSite } from "@/components/club/ClubSite";
+import { ContentPage } from "@/components/club/ClubSite";
+import { homeHead } from "@/lib/club/page-route";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "UCAS IT CLUB | نادي تكنولوجيا المعلومات" },
-      {
-        name: "description",
-        content:
-          "مشاريع وفريق وفعاليات نادي تكنولوجيا المعلومات في الكلية الجامعية للعلوم التطبيقية.",
-      },
-    ],
-  }),
-  component: ClubSite,
+  head: () => homeHead("ar"),
+  component: ContentPage,
 });

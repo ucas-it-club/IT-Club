@@ -1,14 +1,10 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
+import { url, key, configured, SetupRequiredError } from "./public-api";
 import { prepareImage } from "./images";
 import { contentSchema, type Content, type ContentCollection, type Settings } from "./model";
+import { loginEmail } from "./admin-access";
 
-// Public browser configuration; RLS still controls all data access.
-const url = import.meta.env.VITE_SUPABASE_URL || "https://jxweaxenswbjpxxjmihb.supabase.co";
-
-const key =
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_kHJik-SCyMiMQ7nn2SRHbQ_0FR6CpOZ";
-
-export const configured = Boolean(url && key);
+export { url, key, configured, SetupRequiredError } from "./public-api";
 
 let client: SupabaseClient | undefined;
 
@@ -25,12 +21,6 @@ export function supabase() {
   return client;
 }
 
-export class SetupRequiredError extends Error {
-  constructor() {
-    super("Supabase database setup is required. Run the supplied migration.");
-  }
-}
-
 function check(error: { message: string; code?: string | undefined } | null) {
   if (!error) return;
 
@@ -43,6 +33,13 @@ export const changed = () => window.dispatchEvent(new Event("club-data-changed")
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 type Row = Record<string, JsonValue>;
+
+const contentTables: Record<ContentCollection, string> = {
+  members: "club_members",
+  events: "club_events",
+  news: "club_news",
+  partners: "club_partners",
+};
 
 async function rows(table: string, order = "id", tie = "id") {
   const result: Row[] = [];
@@ -120,67 +117,58 @@ export function watchQuery<T>(
   };
 }
 
-export async function loadPublic() {
-  const [content, settings] = await Promise.all([
-    rows("club_content", "updated_at"),
-    supabase().from("club_settings").select("data").eq("id", "public").maybeSingle(),
-  ]);
-
-  check(settings.error);
-
-  const data: Record<ContentCollection, Content[]> = {
-    members: [],
-    events: [],
-    partners: [],
-  };
-
-  for (const row of content) {
-    // SAFETY: kind is unverified until the hasOwn check below drops rows that
-    // aren't one of the three ContentCollection keys.
-    const kind = row["kind"] as ContentCollection;
-
-    if (!Object.hasOwn(data, kind)) continue;
-    data[kind].push({
-      // SAFETY: club_content.data is only ever written by saveContent, which
-      // validates the value against contentSchema before insert.
-      ...(row["data"] as Omit<Content, "id">),
-      id: String(row["id"]),
-      createdAt: typeof row["created_at"] === "string" ? row["created_at"] : "",
-      updatedAt: row["updated_at"],
-      updatedBy: String(row["updated_by"] || ""),
-    });
-  }
-
-  // SAFETY: club_settings.data is only ever written by saveSettings, which takes a Settings value.
-  return { data, settings: settings.data?.data as Settings | undefined };
-}
-
+/**
+ * `slug` is the item's URL name: a string sets it, null asks the database to
+ * generate one from title_en, and undefined leaves the column alone.
+ */
 export async function saveContent(
   kind: ContentCollection,
   value: Omit<Content, "id">,
   id?: string,
+  originalKind: ContentCollection = kind,
+  slug?: string | null,
 ) {
-  contentSchema.parse(value);
+  if (kind !== originalKind && ![kind, originalKind].every((x) => x === "events" || x === "news")) {
+    throw new Error("Invalid content type change");
+  }
+  const { publicationStatus, ...content } = value;
+  contentSchema.parse(content);
 
-  const result = id
-    ? await supabase()
-        .from("club_content")
-        .update({ data: value })
-        .eq("id", id)
-        .eq("kind", kind)
-        .select("id")
-        .single()
-    : await supabase().from("club_content").insert({ kind, data: value }).select("id").single();
+  if (id && kind !== originalKind) {
+    const moved = await supabase().rpc("club_move_article", {
+      source_kind: originalKind,
+      target_kind: kind,
+      article_id: id,
+      new_data: value,
+      new_slug: slug ?? null,
+    });
+    check(moved.error);
+    if (!moved.data) throw new Error("The moved article was not returned");
+    changed();
+    return String(moved.data);
+  }
+
+  const table = contentTables[kind];
+  const values = {
+    data: content,
+    ...(kind === "news" ? { publication_status: publicationStatus ?? "draft" } : {}),
+    ...(slug === undefined ? {} : { slug }),
+  };
+  const query = id
+    ? supabase().from(table).update(values).eq("id", id)
+    : supabase().from(table).insert(values);
+  const result = await query.select("id").single();
 
   check(result.error);
+  if (!result.data) throw new Error("The saved content was not returned");
   changed();
+  return String(result.data.id);
 }
 
 export async function removeContent(kind: ContentCollection, id: string) {
   const { error } = await supabase()
-    .from("club_content")
+    .from(contentTables[kind])
     .delete()
-    .eq("kind", kind)
     .eq("id", id)
     .select("id")
     .single();
@@ -193,6 +181,14 @@ export async function saveSettings(data: Settings) {
   const { error } = await supabase().from("club_settings").upsert({ id: "public", data });
   check(error);
   changed();
+}
+
+export async function setTeamVisibility(visible: boolean) {
+  const result = await supabase().rpc("club_set_team_visibility", { is_visible: visible });
+  check(result.error);
+  if (result.data !== visible) throw new Error("The saved team visibility was not returned");
+  changed();
+  return visible;
 }
 
 export function observeAuth(next: (user: User | null) => void) {
@@ -211,7 +207,10 @@ export function observeAuth(next: (user: User | null) => void) {
 }
 
 export async function signIn(email: string, password: string) {
-  const { error } = await supabase().auth.signInWithPassword({ email, password });
+  const { error } = await supabase().auth.signInWithPassword({
+    email: loginEmail(email),
+    password,
+  });
   check(error);
 }
 
@@ -282,24 +281,55 @@ export async function loadAdmins() {
   return (await rows("club_admins")) as AdminRow[];
 }
 
-export async function saveAdmin(id: string, name: string, email: string) {
-  const { error } = await supabase()
-    .from("club_admins")
-    .upsert({ id, name, email, role: "editor" });
+export async function loadNews(): Promise<Content[]> {
+  return (await rows("club_news", "updated_at")).map((row) => ({
+    ...(row["data"] as Omit<Content, "id">),
+    id: String(row["id"]),
+    slug: String(row["slug"] || ""),
+    publicationStatus: row["publication_status"] === "published" ? "published" : "draft",
+    createdAt: String(row["created_at"]),
+    updatedAt: String(row["updated_at"]),
+  }));
+}
+
+export async function createAdminAccount(
+  email: string,
+  password: string,
+  role:
+    "editor" | "media_editor" | "partnerships_editor" | "communications_editor" | "events_editor",
+  name: string,
+) {
+  const { data, error } = await supabase().functions.invoke("media-accounts", {
+    body: { email, password, role, name },
+  });
+  check(error);
+  if (!data?.created) throw new Error(data?.error || "Account creation failed");
+  changed();
+}
+
+export async function saveAdmin(
+  id: string,
+  name: string,
+  email: string,
+  role:
+    | "editor"
+    | "media_editor"
+    | "partnerships_editor"
+    | "communications_editor"
+    | "events_editor" = "editor",
+) {
+  const { error } = await supabase().from("club_admins").upsert({ id, name, email, role });
 
   check(error);
   changed();
 }
 
 export async function removeAdmin(id: string) {
-  const { error } = await supabase()
-    .from("club_admins")
-    .delete()
-    .eq("id", id)
-    .select("id")
-    .single();
-
+  const { data, error } = await supabase().functions.invoke("media-accounts", {
+    body: { action: "delete", id },
+  });
   check(error);
+  if (!data?.deleted || data.id !== id) throw new Error(data?.error || "Account deletion failed");
   changed();
 }
 
@@ -315,10 +345,32 @@ export type MediaAsset = {
 };
 
 export async function loadMedia(): Promise<MediaAsset[]> {
-  const [assets, links] = await Promise.all([
+  const { data: auth, error: authError } = await supabase().auth.getUser();
+  check(authError);
+  const role = auth.user ? await loadRole(auth.user.id) : "";
+  const newsOnly = role === "media_editor";
+  const partnersOnly = role === "partnerships_editor";
+  const eventsOnly = role === "events_editor";
+  const scoped = newsOnly || partnersOnly || eventsOnly || role === "communications_editor";
+  const [assets, memberLinks, eventLinks, newsLinks, partnerLinks] = await Promise.all([
     rows("club_media", "created_at"),
-    rows("club_content_media", "content_id", "media_id"),
+    newsOnly || partnersOnly
+      ? Promise.resolve([])
+      : rows("club_member_media", "member_id", "media_id"),
+    scoped && !eventsOnly ? Promise.resolve([]) : rows("club_event_media", "event_id", "media_id"),
+    partnersOnly || eventsOnly
+      ? Promise.resolve([])
+      : rows("club_news_media", "news_id", "media_id"),
+    newsOnly || eventsOnly
+      ? Promise.resolve([])
+      : rows("club_partner_media", "partner_id", "media_id"),
   ]);
+  const links = [
+    ...memberLinks.map((link) => ({ mediaId: link["media_id"], ownerId: link["member_id"] })),
+    ...eventLinks.map((link) => ({ mediaId: link["media_id"], ownerId: link["event_id"] })),
+    ...newsLinks.map((link) => ({ mediaId: link["media_id"], ownerId: link["news_id"] })),
+    ...partnerLinks.map((link) => ({ mediaId: link["media_id"], ownerId: link["partner_id"] })),
+  ];
 
   return assets.map((a) => ({
     id: String(a["id"]),
@@ -328,7 +380,11 @@ export async function loadMedia(): Promise<MediaAsset[]> {
     size: Number(a["size"]),
     mime: String(a["mime"]),
     deleting: Boolean(a["deleting"]),
-    usedBy: links.filter((l) => l["media_id"] === a["id"]).map((l) => String(l["content_id"])),
+    usedBy: [
+      ...new Set(
+        links.filter((link) => link.mediaId === a["id"]).map((link) => String(link.ownerId)),
+      ),
+    ],
   }));
 }
 
@@ -387,15 +443,20 @@ export async function renameMedia(id: string, name: string) {
 }
 
 export async function deleteMedia(id: string) {
-  const prepared = await supabase().rpc("club_prepare_media_delete", { asset_id: id });
-  check(prepared.error);
-
-  const removed = await supabase()
-    .storage.from("club-media")
-    .remove([String(prepared.data)]);
-
-  check(removed.error);
-  const done = await supabase().from("club_media").delete().eq("id", id).select("id").single();
-  check(done.error);
-  changed();
+  try {
+    const { data, error } = await supabase().functions.invoke("delete-media", {
+      body: { assetId: id },
+    });
+    if (error) {
+      let message = error.message;
+      if ("context" in error && error.context instanceof Response) {
+        const detail = await error.context.json().catch(() => null);
+        if (detail && typeof detail.error === "string") message = detail.error;
+      }
+      throw new Error(message);
+    }
+    if (!data?.deleted) throw new Error("The image could not be deleted. Please retry.");
+  } finally {
+    changed();
+  }
 }

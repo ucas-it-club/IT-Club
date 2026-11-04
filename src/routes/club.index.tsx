@@ -1,16 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ClubSite } from "@/components/club/ClubSite";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+// The site moved from /club to the root; old links move with it for good.
 export const Route = createFileRoute("/club/")({
-  head: () => ({
-    meta: [
-      { title: "UCAS IT CLUB | نادي تكنولوجيا المعلومات" },
-      {
-        name: "description",
-        content:
-          "مشاريع وفريق وفعاليات نادي تكنولوجيا المعلومات في الكلية الجامعية للعلوم التطبيقية.",
-      },
-    ],
-  }),
-  component: ClubSite,
+  beforeLoad: () => {
+    throw redirect({ href: "/", statusCode: 301 });
+  },
 });
