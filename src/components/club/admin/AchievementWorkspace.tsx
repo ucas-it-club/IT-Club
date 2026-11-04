@@ -154,7 +154,8 @@ function downloadWord(items: Achievement[], ar: boolean) {
 
 export function AchievementWorkspace({ role, ar }: { role: string; ar: boolean }) {
   const [items, setItems] = useState<Achievement[]>([]);
-  const [editing, setEditing] = useState<Achievement | null>(null);
+  // `undefined` means the editor is closed; `null` means the add form is open.
+  const [editing, setEditing] = useState<Achievement | null | undefined>(undefined);
   const [form, setForm] = useState<Achievement>(() => emptyAchievement(role));
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
@@ -233,7 +234,7 @@ export function AchievementWorkspace({ role, ar }: { role: string; ar: boolean }
     }
   };
 
-  if (editing)
+  if (editing !== undefined)
     return (
       <section className="space-y-5">
         <div className="flex items-center justify-between">
