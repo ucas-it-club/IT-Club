@@ -12,6 +12,7 @@ import { DeleteButton } from "./admin/DeleteButton";
 import { SettingsEditor } from "./admin/SettingsEditor";
 import { AdminUsersEditor } from "./admin/AdminUsersEditor";
 import { NewsWorkspace } from "./admin/NewsWorkspace";
+import { AchievementWorkspace } from "./admin/AchievementWorkspace";
 import { canManageMember, canManageNews } from "@/lib/club/admin-access";
 import {
   loadAdminDateOrder,
@@ -177,9 +178,14 @@ export function AdminPanel() {
     return (
       <form
         onSubmit={login}
-        className="mx-auto max-w-md space-y-5 rounded-3xl border border-border bg-card p-8 shadow-card"
+        className="club-login mx-auto max-w-md space-y-5 rounded-3xl border border-border bg-card p-8 shadow-card"
       >
         <h1 className="text-3xl font-black">{ar ? "تسجيل دخول الإدارة" : "Admin sign-in"}</h1>
+        <p className="club-login-description">
+          {ar
+            ? "مساحة فريق النادي لإدارة المحتوى والفعاليات. سجّل الدخول بحسابك المصرّح."
+            : "Your team workspace for content and events. Sign in with your authorized account."}
+        </p>
         <label className="block">
           <span className="mb-2 block">{ar ? "البريد الإلكتروني" : "Email"}</span>
           <Input name="email" type="email" autoComplete="username" dir="ltr" required />
@@ -325,6 +331,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
     ? [
         ["events", ar ? "الفعاليات" : "Events"],
         ["members", ar ? "أعضاء لجنة الأنشطة" : "Activities members"],
+        ["achievements", ar ? "إنجازات النادي" : "Achievements"],
         ["media", ar ? "صور الفعاليات" : "Event media"],
       ]
     : communications
@@ -332,15 +339,18 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           ["news", ar ? "الأخبار" : "News"],
           ["partners", ar ? "الشراكات" : "Partnerships"],
           ["members", ar ? "أعضاء العلاقات العامة والإعلام" : "Communications members"],
+          ["achievements", ar ? "إنجازات النادي" : "Achievements"],
           ["media", ar ? "مكتبة الصور" : "Media library"],
         ]
       : partnershipsOnly
         ? [
             ["partners", ar ? "الشراكات" : "Partnerships"],
+            ["achievements", ar ? "إنجازات النادي" : "Achievements"],
             ["media", ar ? "صور الشراكات" : "Partnership media"],
           ]
         : [
             ["dashboard", ar ? "نظرة عامة" : "Overview"],
+            ["achievements", ar ? "إنجازات النادي" : "Achievements"],
             ["media", ar ? "مكتبة الصور" : "Media library"],
             ...collections
               .filter((x) => x !== "news" || canManageNews(role))
@@ -356,7 +366,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           ];
 
   return (
-    <>
+    <div className="club-admin-workspace">
       <div className="club-admin-banner mb-5 flex flex-wrap items-center justify-between gap-4 rounded-[2rem] bg-brand-gradient p-6 text-white sm:p-8">
         <div>
           <h1 className="text-3xl font-black">
@@ -411,7 +421,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           {ar ? "خروج" : "Sign out"}
         </BrandButton>
       </div>
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+      <div className="club-admin-stats mb-5 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         {[
           { count: data.members.length, label: ar ? "أعضاء الفريق" : "Team members", Icon: Users },
           { count: data.events.length, label: ar ? "الفعاليات" : "Events", Icon: CalendarDays },
@@ -437,7 +447,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
       </div>
       <nav
         aria-label={ar ? "أقسام الإدارة" : "Administration sections"}
-        className="mb-5 flex flex-wrap gap-2"
+        className="club-admin-nav mb-5 flex flex-wrap gap-2"
       >
         {tabs.map(([key, label]) => (
           <BrandButton
@@ -457,7 +467,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           </BrandButton>
         ))}
       </nav>
-      <div className="rounded-[2rem] border border-border bg-card p-4 sm:p-6">
+      <div className="club-admin-content rounded-[2rem] border border-border bg-card p-4 sm:p-6">
         {activeCollection === "events" && (
           <a
             href={sheetLinks.join}
@@ -550,9 +560,33 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           </p>
         )}
         {tab === "media" && <MediaLibrary />}
+        {tab === "achievements" && <AchievementWorkspace role={role} ar={ar} />}
         {tab === "dashboard" && (
           <div className="py-4">
-            <h2 className="text-2xl font-black">{ar ? "نظرة عامة" : "Overview"}</h2>
+            <h2 className="text-2xl font-black">
+              {ar ? "أهلًا بفريق النادي" : "Welcome to your workspace"}
+            </h2>
+            <p className="mt-2 text-muted-foreground">
+              {ar
+                ? "محتوى منظّم، وتجربة أفضل لمجتمعنا."
+                : "Keep your content organized and your community informed."}
+            </p>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {collections
+                .filter((kind) => kind !== "news" || canManageNews(role))
+                .map((kind) => (
+                  <button
+                    key={kind}
+                    className="rounded-2xl border border-border bg-background p-5 text-start"
+                    onClick={() => setTab(kind)}
+                  >
+                    <strong className="block text-lg">{labels[kind][ar ? 0 : 1]}</strong>
+                    <span className="mt-2 block text-sm text-muted-foreground">
+                      {ar ? "عرض المحتوى وإدارته" : "Browse and manage content"}
+                    </span>
+                  </button>
+                ))}
+            </div>
             <p className="mt-3 text-muted-foreground">
               {ar
                 ? "اختر أحد الأقسام أعلاه لإدارة محتوى النادي."
@@ -725,7 +759,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
                             {ar ? "تعديل" : "Edit"}
                           </BrandButton>
                           <DeleteButton
-                            label={item.title}
+                            label={ar ? item.title : item.title_en || item.title}
                             onDelete={() => run(() => deleteContent(activeCollection, item.id))}
                           />
                         </div>
@@ -772,7 +806,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           />
         )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -1365,9 +1399,11 @@ export function ContentEditor({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="male">{ar ? "الطلاب" : "Male students"}</SelectItem>
-                <SelectItem value="female">{ar ? "الطالبات" : "Female students"}</SelectItem>
+              <SelectContent dir={ar ? "rtl" : "ltr"}>
+                <SelectGroup>
+                  <SelectItem value="male">{ar ? "الطلاب" : "Male students"}</SelectItem>
+                  <SelectItem value="female">{ar ? "الطالبات" : "Female students"}</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
             <p className="mt-2 text-xs text-muted-foreground">
@@ -1389,17 +1425,19 @@ export function ContentEditor({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                {(memberRole === "editor" || memberRole === "super_admin") && (
-                  <SelectItem value="administrative">
-                    {ar ? "الهيئة الإدارية" : "Administrative board"}
-                  </SelectItem>
-                )}
-                {allowedCommittees.map(([key, a, en]) => (
-                  <SelectItem key={key} value={key}>
-                    {ar ? a : en}
-                  </SelectItem>
-                ))}
+              <SelectContent dir={ar ? "rtl" : "ltr"}>
+                <SelectGroup>
+                  {(memberRole === "editor" || memberRole === "super_admin") && (
+                    <SelectItem value="administrative">
+                      {ar ? "الهيئة الإدارية" : "Administrative board"}
+                    </SelectItem>
+                  )}
+                  {allowedCommittees.map(([key, a, en]) => (
+                    <SelectItem key={key} value={key}>
+                      {ar ? a : en}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </label>
@@ -1490,9 +1528,11 @@ export function ContentEditor({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="upcoming">{ar ? "قادمة" : "Upcoming"}</SelectItem>
-                <SelectItem value="past">{ar ? "سابقة" : "Past"}</SelectItem>
+              <SelectContent dir={ar ? "rtl" : "ltr"}>
+                <SelectGroup>
+                  <SelectItem value="upcoming">{ar ? "قادمة" : "Upcoming"}</SelectItem>
+                  <SelectItem value="past">{ar ? "سابقة" : "Past"}</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           </label>

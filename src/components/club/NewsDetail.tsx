@@ -78,7 +78,7 @@ export function NewsDetail({
 
       <RichText
         value={local(news, "description", lang)}
-        className="mt-8 border-t border-border pt-7 text-base leading-loose text-muted-foreground lg:columns-2 lg:gap-12 lg:[column-fill:balance] [&_h2]:break-after-avoid-column [&_h2]:break-inside-avoid-column [&_h3]:break-after-avoid-column [&_h3]:break-inside-avoid-column"
+        className="mt-8 border-t border-border pt-7 text-base leading-loose text-[#172b4d] lg:columns-2 lg:gap-12 lg:[column-fill:balance] [&_h2]:break-after-avoid-column [&_h2]:break-inside-avoid-column [&_h3]:break-after-avoid-column [&_h3]:break-inside-avoid-column"
       />
 
       {validImages.length > 1 && (
