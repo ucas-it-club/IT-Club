@@ -354,7 +354,9 @@ export async function loadMedia(): Promise<MediaAsset[]> {
   const scoped = newsOnly || partnersOnly || eventsOnly || role === "communications_editor";
   const [assets, memberLinks, eventLinks, newsLinks, partnerLinks] = await Promise.all([
     rows("club_media", "created_at"),
-    scoped ? Promise.resolve([]) : rows("club_member_media", "member_id", "media_id"),
+    newsOnly || partnersOnly
+      ? Promise.resolve([])
+      : rows("club_member_media", "member_id", "media_id"),
     scoped && !eventsOnly ? Promise.resolve([]) : rows("club_event_media", "event_id", "media_id"),
     partnersOnly || eventsOnly
       ? Promise.resolve([])
