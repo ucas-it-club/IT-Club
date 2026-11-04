@@ -8,3 +8,11 @@ export function loginEmail(identifier: string) {
     throw new Error("A valid email address is required");
   return value;
 }
+
+export function canManageMember(role: string, member: { committee?: string; isFounder?: boolean }) {
+  if (role === "editor" || role === "super_admin") return true;
+  if (member.isFounder) return false;
+  return role === "communications_editor"
+    ? member.committee === "media" || member.committee === "relations"
+    : role === "events_editor" && member.committee === "activities";
+}

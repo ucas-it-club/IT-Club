@@ -209,7 +209,7 @@ test("communications accounts manage news and partners but cannot access unrelat
   );
   await assert.rejects(() =>
     db.query("insert into club_members(data) values($1)", [
-      JSON.stringify({ ...payload, committee: "relations", isFounder: false }),
+      JSON.stringify({ ...payload, committee: "administrative", isFounder: true }),
     ]),
   );
   assert.equal((await db.query("select * from club_submissions")).rows.length, 0);

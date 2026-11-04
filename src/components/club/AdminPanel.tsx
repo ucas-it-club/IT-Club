@@ -12,7 +12,7 @@ import { DeleteButton } from "./admin/DeleteButton";
 import { SettingsEditor } from "./admin/SettingsEditor";
 import { AdminUsersEditor } from "./admin/AdminUsersEditor";
 import { NewsWorkspace } from "./admin/NewsWorkspace";
-import { canManageNews } from "@/lib/club/admin-access";
+import { canManageMember, canManageNews } from "@/lib/club/admin-access";
 import {
   loadAdminDateOrder,
   sortAdminContentByDate,
@@ -50,6 +50,7 @@ import {
   type ContentCollection,
 } from "@/lib/club/model";
 import { BrandButton } from "@/components/club/BrandButton";
+import { MemberTable } from "./admin/MemberTable";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "./PasswordInput";
 import { Textarea } from "@/components/ui/textarea";
@@ -251,7 +252,8 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
   );
   const [memberSearch, setMemberSearch] = useState("");
   const [articleSearch, setArticleSearch] = useState({ events: "", news: "" });
-  const memberItems = data.members
+  const managedMembers = data.members.filter((item) => canManageMember(role, item));
+  const memberItems = managedMembers
     .filter((item) =>
       [item.title, item.title_en].some((name) =>
         normalizeAdminSearch(name || "").includes(normalizeAdminSearch(memberSearch)),
@@ -322,12 +324,14 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
   const tabs = eventsOnly
     ? [
         ["events", ar ? "الفعاليات" : "Events"],
+        ["members", ar ? "أعضاء لجنة الأنشطة" : "Activities members"],
         ["media", ar ? "صور الفعاليات" : "Event media"],
       ]
     : communications
       ? [
           ["news", ar ? "الأخبار" : "News"],
           ["partners", ar ? "الشراكات" : "Partnerships"],
+          ["members", ar ? "أعضاء العلاقات العامة والإعلام" : "Communications members"],
           ["media", ar ? "مكتبة الصور" : "Media library"],
         ]
       : partnershipsOnly
@@ -562,6 +566,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
           (editing !== undefined ? (
             <ContentEditor
               manageEventSheets={role === "super_admin" || eventsOnly}
+              memberRole={role}
               key={tab + (editing?.id || "new")}
               kind={activeCollection}
               item={editing}
@@ -581,42 +586,43 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-2xl font-black">{labels[activeCollection][ar ? 0 : 1]}</h2>
                 <div className="flex flex-wrap gap-2">
-                  {activeCollection === "members" && (
-                    <BrandButton
-                      size="sm"
-                      variant={teamVisible ? "outline" : "primary"}
-                      disabled={teamVisibilityBusy}
-                      aria-pressed={teamVisible}
-                      onClick={() => {
-                        const nextVisible = !teamVisible;
-                        setTeamVisibilityBusy(true);
-                        void run(async () => {
-                          try {
-                            await setTeamVisibility(nextVisible);
-                            queryClient.setQueryData<Awaited<ReturnType<typeof loadPublic>>>(
-                              clubPublicKey,
-                              (old) =>
-                                old && {
-                                  ...old,
-                                  settings: { ...settings, teamVisible: nextVisible },
-                                },
-                            );
-                          } finally {
-                            setTeamVisibilityBusy(false);
-                          }
-                        });
-                      }}
-                    >
-                      {teamVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-                      {teamVisible
-                        ? ar
-                          ? "إخفاء تبويبة الفريق"
-                          : "Hide team tab"
-                        : ar
-                          ? "إظهار تبويبة الفريق"
-                          : "Show team tab"}
-                    </BrandButton>
-                  )}
+                  {activeCollection === "members" &&
+                    (role === "editor" || role === "super_admin") && (
+                      <BrandButton
+                        size="sm"
+                        variant={teamVisible ? "outline" : "primary"}
+                        disabled={teamVisibilityBusy}
+                        aria-pressed={teamVisible}
+                        onClick={() => {
+                          const nextVisible = !teamVisible;
+                          setTeamVisibilityBusy(true);
+                          void run(async () => {
+                            try {
+                              await setTeamVisibility(nextVisible);
+                              queryClient.setQueryData<Awaited<ReturnType<typeof loadPublic>>>(
+                                clubPublicKey,
+                                (old) =>
+                                  old && {
+                                    ...old,
+                                    settings: { ...settings, teamVisible: nextVisible },
+                                  },
+                              );
+                            } finally {
+                              setTeamVisibilityBusy(false);
+                            }
+                          });
+                        }}
+                      >
+                        {teamVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {teamVisible
+                          ? ar
+                            ? "إخفاء تبويبة الفريق"
+                            : "Hide team tab"
+                          : ar
+                            ? "إظهار تبويبة الفريق"
+                            : "Show team tab"}
+                      </BrandButton>
+                    )}
                   <BrandButton
                     size="sm"
                     onClick={() => {
@@ -643,7 +649,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
                       ar ? "اكتب الاسم بالعربية أو الإنجليزية" : "Enter an Arabic or English name"
                     }
                   />
-                  {memberItems.length === 0 && data.members.length > 0 && (
+                  {memberItems.length === 0 && managedMembers.length > 0 && (
                     <p role="status" className="mt-2 text-sm text-muted-foreground">
                       {ar ? "لا يوجد أعضاء بهذا الاسم." : "No members match this name."}
                     </p>
@@ -684,51 +690,50 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
                     )}
                 </label>
               )}
-              <div className="space-y-3">
-                {data[activeCollection].length === 0 && (
-                  <p>{ar ? "لا توجد عناصر بعد." : "No items yet."}</p>
-                )}
-                {(activeCollection === "events"
-                  ? eventItems
-                  : activeCollection === "members"
-                    ? memberItems
-                    : data[activeCollection]
-                ).map((item) => (
-                  <article
-                    key={item.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-muted/50 px-5 py-4"
-                  >
-                    <div>
-                      <h3 className="break-words font-extrabold">
-                        {ar ? item.title : item.title_en}
-                      </h3>
-                      {item.date && (
-                        <p className="mt-1 text-xs text-muted-foreground">{item.date}</p>
-                      )}
-                      {activeCollection === "members" &&
-                        (item.isFounder || item.committee === "administrative") && (
-                          <p className="mt-1 text-sm font-bold text-primary">
-                            {ar ? "ترتيب الهيئة الإدارية" : "Board order"}:{" "}
-                            {item.displayOrder ?? (ar ? "غير محدد" : "Not set")}
+              {activeCollection === "members" ? (
+                <MemberTable
+                  ar={ar}
+                  members={memberItems}
+                  onEdit={setEditing}
+                  onDelete={(id) => run(() => deleteContent("members", id))}
+                />
+              ) : (
+                <div className="space-y-3">
+                  {data[activeCollection].length === 0 && (
+                    <p>{ar ? "لا توجد عناصر بعد." : "No items yet."}</p>
+                  )}
+                  {(activeCollection === "events" ? eventItems : data[activeCollection]).map(
+                    (item) => (
+                      <article
+                        key={item.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-muted/50 px-5 py-4"
+                      >
+                        <div>
+                          <h3 className="break-words font-extrabold">
+                            {ar ? item.title : item.title_en}
+                          </h3>
+                          {item.date && (
+                            <p className="mt-1 text-xs text-muted-foreground">{item.date}</p>
+                          )}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {ar ? "آخر تعديل بواسطة" : "Last edited by"}: {item.updatedBy || "—"}
                           </p>
-                        )}
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {ar ? "آخر تعديل بواسطة" : "Last edited by"}: {item.updatedBy || "—"}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <BrandButton variant="outline" size="sm" onClick={() => setEditing(item)}>
-                        <Pencil size={16} />
-                        {ar ? "تعديل" : "Edit"}
-                      </BrandButton>
-                      <DeleteButton
-                        label={item.title}
-                        onDelete={() => run(() => deleteContent(activeCollection, item.id))}
-                      />
-                    </div>
-                  </article>
-                ))}
-              </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <BrandButton variant="outline" size="sm" onClick={() => setEditing(item)}>
+                            <Pencil size={16} />
+                            {ar ? "تعديل" : "Edit"}
+                          </BrandButton>
+                          <DeleteButton
+                            label={item.title}
+                            onDelete={() => run(() => deleteContent(activeCollection, item.id))}
+                          />
+                        </div>
+                      </article>
+                    ),
+                  )}
+                </div>
+              )}
             </>
           ))}
         {tab === "joinRequests" && <RegistrationAdmin canEdit={role === "super_admin"} />}
@@ -773,6 +778,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
 
 export function ContentEditor({
   manageEventSheets = true,
+  memberRole = "",
   kind,
   item,
   onCancel,
@@ -780,6 +786,7 @@ export function ContentEditor({
   onDirtyChange,
 }: {
   manageEventSheets?: boolean;
+  memberRole?: string;
   kind: ContentCollection;
   item: Content | null;
   onCancel: () => void;
@@ -819,12 +826,15 @@ export function ContentEditor({
     return values;
   });
 
+  const allowedCommittees = committees.filter(([key]) =>
+    canManageMember(memberRole, { committee: key }),
+  );
   const [committee, setCommittee] = useState(
     item?.isFounder || item?.committee === "administrative"
       ? "administrative"
       : item?.committee && committees.some(([key]) => key === item.committee)
         ? item.committee
-        : committees[0][0],
+        : allowedCommittees[0]?.[0] || "media",
   );
 
   const [gender, setGender] = useState(item?.gender === "female" ? "female" : "male");
@@ -883,6 +893,10 @@ export function ContentEditor({
     if (targetKind === "news") value.publicationStatus = publicationStatus;
 
     if (kind === "members") {
+      if (!canManageMember(memberRole, { committee, isFounder: committee === "administrative" })) {
+        setError(ar ? "ليس لديك صلاحية لإدارة هذه اللجنة." : "You cannot manage this committee.");
+        return;
+      }
       value.role = values["role"] || "";
       value.role_en = values["role_en"] || "";
       value.profileEnabled = values["profileEnabled"] === "on";
@@ -1376,10 +1390,12 @@ export function ContentEditor({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="administrative">
-                  {ar ? "الهيئة الإدارية" : "Administrative board"}
-                </SelectItem>
-                {committees.map(([key, a, en]) => (
+                {(memberRole === "editor" || memberRole === "super_admin") && (
+                  <SelectItem value="administrative">
+                    {ar ? "الهيئة الإدارية" : "Administrative board"}
+                  </SelectItem>
+                )}
+                {allowedCommittees.map(([key, a, en]) => (
                   <SelectItem key={key} value={key}>
                     {ar ? a : en}
                   </SelectItem>
