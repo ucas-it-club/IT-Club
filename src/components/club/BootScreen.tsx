@@ -26,14 +26,14 @@ const script = `(function(){
 var d=document.documentElement;
 try{if(sessionStorage.getItem('ucas-boot')){d.classList.add('boot-seen');return}}catch(e){}
 var p=location.pathname;if(p==='/'||p==='/en'||p==='/en/'){d.classList.add('hero-opening');window.__bootWaitHero=true}
-var pct=document.getElementById('boot-pct'),t0=performance.now(),shown=0,finishing=false;
+var ring=document.getElementById('boot-ring'),t0=performance.now(),shown=0,finishing=false;
 function leave(){d.classList.add('booted');try{sessionStorage.setItem('ucas-boot','1')}catch(e){}}
 function tick(){
 var t=performance.now()-t0;
 var target=finishing?100:90*(1-Math.exp(-t/1400));
 shown+=(target-shown)*(finishing?0.22:0.1);
-if(pct)pct.textContent=Math.round(shown);
-if(finishing&&shown>99.4){if(pct)pct.textContent=100;setTimeout(leave,220);return}
+if(ring)ring.style.strokeDashoffset=100-shown;
+if(finishing&&shown>99.4){if(ring)ring.style.strokeDashoffset=0;setTimeout(leave,220);return}
 requestAnimationFrame(tick)}
 window.__bootDone=function(){setTimeout(function(){finishing=true},Math.max(0,700-(performance.now()-t0)))};
 setTimeout(function(){window.__bootDone()},8000);
@@ -54,6 +54,20 @@ export function BootScreen() {
       <div id="boot" className="boot" aria-hidden="true">
         <div className="boot-stage" dir="ltr">
           <div className="boot-logo">
+            {/* The diamond is drawn as the percentage climbs; same size as HeroOpening's shape. */}
+            <svg className="boot-ring" viewBox="0 0 100 100" aria-hidden="true">
+              <rect
+                id="boot-ring"
+                suppressHydrationWarning
+                x="-12.5"
+                y="-12.5"
+                width="125"
+                height="125"
+                rx="14"
+                pathLength={100}
+                transform="rotate(45 50 50)"
+              />
+            </svg>
             {pieces.map(([name, src, position]) => (
               <img
                 key={name}
@@ -65,13 +79,6 @@ export function BootScreen() {
               />
             ))}
           </div>
-          <p className="boot-count">
-            {/* The inline script moves this before hydration; React must leave it be. */}
-            <span id="boot-pct" suppressHydrationWarning>
-              0
-            </span>
-            <small>%</small>
-          </p>
         </div>
       </div>
       <script dangerouslySetInnerHTML={{ __html: script }} />

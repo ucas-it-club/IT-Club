@@ -22,12 +22,14 @@ export function ClubLink({
   className = linkClass,
   navigation = false,
   title,
+  tabIndex,
 }: {
   path?: string;
   children: ReactNode;
   className?: string;
   navigation?: boolean;
   title?: string;
+  tabIndex?: number;
 }) {
   const { lang } = useClub();
 
@@ -35,6 +37,7 @@ export function ClubLink({
     <Link
       to={hrefOf(lang, path)}
       title={title}
+      tabIndex={tabIndex}
       className={className}
       activeOptions={{ exact: !path, includeSearch: false, includeHash: false }}
       data-club-navigation={navigation || undefined}

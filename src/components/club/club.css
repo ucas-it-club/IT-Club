@@ -14,128 +14,80 @@
   outline-offset: 4px;
 }
 
-/* Header: a flat navy band across the top, like the contact and events bands.
-   Same navy in both themes; the active page gets a green rule on the band's edge. */
 .club-header {
-  --hd-h: 4rem;
-  --hd-soft: rgb(255 255 255 / 0.72);
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: var(--navy);
-  color: #fff;
+  margin-top: 12px;
 }
-.dark .club-header {
-  background: #13233b;
-  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.08);
-}
-.club-header-row {
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 1rem;
-  max-width: 72rem;
-  height: var(--hd-h);
-  margin-inline: auto;
-  padding-inline: 1rem;
+.club-header-surface {
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  background: color-mix(in oklab, var(--background) 94%, transparent);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 10px 28px -18px color-mix(in oklab, var(--brand-blue) 40%, transparent);
+  overflow: hidden;
 }
 .club-header-brand {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 0.625rem;
-  font-size: 0.9375rem;
-  font-weight: 900;
-  color: #fff;
-}
-.club-header-brand img {
-  width: 1.75rem;
-  height: 2.25rem;
-  object-fit: contain;
-}
-.club-nav-bar {
-  display: none;
-  align-items: stretch;
-  justify-content: center;
-  gap: 0.25rem;
-  min-width: 0;
-  flex: 1;
-}
-.club-site .club-nav-link {
-  display: flex;
-  align-items: center;
-  padding-inline: 0.875rem;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: var(--hd-soft);
-  white-space: nowrap;
-  border-block: 3px solid transparent;
-}
-.club-site .club-nav-link:hover {
-  color: #fff;
-}
-.club-site .club-nav-link[aria-current="page"] {
-  color: #fff;
-  border-bottom-color: var(--brand-green);
+  padding-inline-end: 14px;
 }
 .club-header-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 0.25rem;
+  padding-inline-start: 12px;
+  border-inline-start: 1px solid var(--border);
 }
-.club-language-button,
-.club-theme-button,
-.club-menu-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.75rem;
-  height: 2.75rem;
-  padding-inline: 0.625rem;
-  border-radius: 0.5rem;
-  font-size: 0.9375rem;
-  font-weight: 800;
-  color: #fff;
+.club-nav-bar {
+  padding: 0;
 }
-.club-language-button:hover,
-.club-theme-button:hover,
-.club-menu-button:hover {
-  background: rgb(255 255 255 / 0.1);
+.club-language-button {
+  background: var(--secondary);
+  color: var(--primary);
+  padding-inline: 12px;
 }
-.club-site .club-header :is(a, button):focus-visible {
-  outline-color: #fff;
-  outline-offset: -2px;
+.club-theme-button {
+  color: var(--primary);
+  background: var(--secondary);
 }
-
-/* Small screens: the links move into a navy panel of large ruled rows. */
-.club-menu {
-  display: grid;
-  max-width: 72rem;
-  margin-inline: auto;
-  padding: 0.5rem 1rem 1.5rem;
-  border-top: 1px solid rgb(255 255 255 / 0.12);
+.club-theme-button:hover {
+  background: var(--muted);
 }
-.club-menu-link {
-  display: block;
-  padding-block: 0.875rem;
-  border-bottom: 1px solid rgb(255 255 255 / 0.12);
-  font-size: 1.375rem;
-  font-weight: 800;
-  color: #fff;
-}
-.club-menu-link[aria-current="page"] {
-  color: var(--brand-green);
-}
-
 @media (min-width: 1280px) {
-  .club-nav-bar {
-    display: flex;
+  .club-header-brand {
+    border-inline-end: 1px solid var(--border);
   }
-  .club-menu-button,
-  .club-menu {
+}
+@media (max-width: 380px) {
+  .club-header-brand span {
+    font-size: 11px;
+  }
+  .club-header-brand {
+    padding-inline-end: 0;
+    gap: 4px;
+  }
+  .club-header-actions {
+    padding-inline-start: 5px;
+  }
+  .club-language-button svg {
     display: none;
   }
+}
+
+.club-site .club-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.club-site .club-nav-link:not([aria-current="page"]):hover {
+  color: var(--primary);
+  background: var(--secondary);
+}
+
+.club-site .club-nav-link[aria-current="page"] {
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 3px 10px color-mix(in oklab, var(--brand-blue) 15%, transparent);
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
@@ -372,171 +324,4 @@ html.js .club-reveal.is-shown {
   border-bottom: 1px solid var(--brand-green);
   border-right: 1px solid var(--brand-green);
   z-index: -1;
-}
-
-/* Footer: two full-width bands. A blue contact prompt, then
-   the navy band with the site map, the club's accounts and the credits. */
-.club-footer {
-  --ft-soft: rgb(255 255 255 / 0.72);
-  --ft-rule: rgb(255 255 255 / 0.14);
-  margin-top: 5rem;
-  color: #fff;
-}
-.club-footer a {
-  color: inherit;
-  text-decoration: none;
-}
-.club-footer-inner {
-  max-width: 72rem;
-  margin-inline: auto;
-  padding-inline: 1rem;
-}
-.club-site .club-footer :is(a):focus-visible {
-  outline-color: #fff;
-}
-
-.club-footer-prompt {
-  display: block;
-  background: var(--brand-blue);
-  transition: background-color 250ms ease;
-}
-.club-footer-prompt:hover {
-  background: color-mix(in oklab, var(--brand-blue) 88%, #000);
-}
-.club-site .club-footer-prompt:focus-visible {
-  outline-offset: -6px;
-}
-.club-footer-prompt-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem 2rem;
-  padding-block: clamp(2rem, 5vw, 3.25rem);
-}
-.club-footer-prompt-title {
-  font-size: clamp(1.75rem, 4.5vw, 3.25rem);
-  font-weight: 900;
-  line-height: 1.3;
-}
-.club-footer-prompt-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.125rem;
-  font-weight: 800;
-}
-.club-footer-prompt-action svg {
-  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.club-footer-prompt:hover .club-footer-prompt-action svg {
-  transform: translateX(4px);
-}
-[dir="rtl"] .club-footer-prompt:hover .club-footer-prompt-action svg {
-  transform: translateX(-4px);
-}
-
-.club-footer-main {
-  background: var(--navy);
-}
-.dark .club-footer-main {
-  background: #13233b;
-}
-.club-footer-grid {
-  display: grid;
-  gap: 2.5rem;
-  padding-block: clamp(3rem, 7vw, 4.5rem);
-}
-@media (min-width: 48rem) {
-  .club-footer-grid {
-    grid-template-columns: 1.4fr 1fr 1fr;
-    gap: 3rem;
-  }
-}
-.club-footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 1.25rem;
-  font-weight: 900;
-}
-.club-footer-brand img {
-  width: 2.25rem;
-  height: 2.75rem;
-  object-fit: contain;
-}
-.club-footer-about {
-  margin-top: 1rem;
-  max-width: 34ch;
-  font-size: 0.9375rem;
-  line-height: 2;
-  color: var(--ft-soft);
-}
-.club-footer-label {
-  font-size: 0.875rem;
-  font-weight: 800;
-  color: var(--ft-soft);
-}
-.club-footer-list {
-  margin-top: 0.75rem;
-  border-top: 1px solid var(--ft-rule);
-}
-.club-footer-list li {
-  border-bottom: 1px solid var(--ft-rule);
-}
-.club-footer-list a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-block: 0.625rem;
-  font-size: 1.0625rem;
-  font-weight: 700;
-  transition: color 200ms ease;
-}
-/* Account names are Latin and set ltr; keep the arrow on the reading side's end. */
-[dir="rtl"] .club-footer-list a[dir="ltr"] {
-  flex-direction: row-reverse;
-}
-.club-footer-list a:hover {
-  color: var(--brand-green);
-}
-.club-footer-email {
-  overflow-wrap: anywhere;
-}
-
-.club-footer-base {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem 2rem;
-  padding-block: 1.5rem;
-  border-top: 1px solid var(--ft-rule);
-  font-size: 0.875rem;
-  color: var(--ft-soft);
-}
-.club-footer-legal {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1.5rem;
-}
-.club-footer-base a {
-  text-decoration: underline;
-  text-decoration-color: transparent;
-  text-underline-offset: 0.3em;
-  transition: text-decoration-color 200ms ease;
-}
-.club-footer-base a:hover {
-  color: #fff;
-  text-decoration-color: currentColor;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .club-footer-prompt,
-  .club-footer-prompt-action svg,
-  .club-footer-list a {
-    transition: none;
-  }
 }

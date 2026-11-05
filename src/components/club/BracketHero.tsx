@@ -4,7 +4,9 @@ import { ArrowLeft, ArrowRight, ChevronDown, Instagram } from "lucide-react";
 import { brandButtonClass } from "./brand-button-styles";
 import { useClub } from "./club-context";
 import { hrefOf } from "@/lib/club/paths";
-import { safeUrl } from "@/lib/club/model";
+import { local, safeUrl } from "@/lib/club/model";
+import { contentImageUrls } from "@/lib/club/google-drive";
+import { dateParts, eventDisplayStatus } from "@/lib/club/event-timing";
 import bracketLeft from "@/assets/logo/bracket-left.webp";
 import bracketRight from "@/assets/logo/bracket-right.webp";
 import dotTop from "@/assets/logo/dot-top.webp";
@@ -37,6 +39,10 @@ const committeeIds = ["administrative", "activities", "relations", "media"];
 function useFacts() {
   const { lang, data, settings } = useClub();
   const ar = lang === "ar";
+  const now = new Date();
+  const next = data.events
+    .filter((item) => eventDisplayStatus(item, now) === "upcoming")
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""))[0];
 
   return {
     ar,
@@ -46,6 +52,10 @@ function useFacts() {
     events: data.events.length,
     open: Boolean(settings.registrationOpen),
     instagram: safeUrl(settings.instagram),
+    // The club's own photographs, for the opening screen studies.
+    photos: data.events.flatMap((item) => contentImageUrls(item)).slice(0, 6),
+    next: next ? local(next, "title", lang) : "",
+    nextDate: dateParts(next?.date, lang),
   };
 }
 
@@ -112,11 +122,8 @@ function Actions() {
   );
 }
 
-// The opening reel plays once per page load, not again after a language switch.
-let reelPlayed = false;
-
 export function BracketHero() {
-  const { ar, members, committees, events, open } = useFacts();
+  const { ar, lang, members, committees, events, open, photos, next, nextDate } = useFacts();
   const [mode, setMode] = useState<Mode>("pending");
   // No scroll story at any width, and no opening either.
   const [plain, setPlain] = useState(false);
@@ -128,16 +135,41 @@ export function BracketHero() {
   const root = useRef<HTMLElement>(null);
   // Prototype (on by default, ?intro=0 for the old hero): name, motto, numbers, name play
   // on their own before any scrolling, and every scroll step rises in like the name.
-  const { intro: introParam } = useSearch({ strict: false }) as { intro?: unknown };
+  const { intro: introParam, hero: heroParam } = useSearch({ strict: false }) as {
+    intro?: unknown;
+    hero?: unknown;
+  };
   const story = String(introParam) !== "0";
+  // Opening-screen studies: ?hero=wall | masthead | split. Absent keeps today's hero.
+  const variant =
+    heroParam === "wall" ||
+    heroParam === "shelf" ||
+    heroParam === "masthead" ||
+    heroParam === "split"
+      ? heroParam
+      : null;
   const n = (v: number) => v.toLocaleString(ar ? "ar-EG" : "en-US");
 
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const still = plain || reduced || weakDevice();
+    const still = plain || variant !== null || reduced || weakDevice();
     const html = document.documentElement;
-    const sbw = () => html.style.setProperty("--sbw", `${window.innerWidth - html.clientWidth}px`);
+    // Writing the scrollbar width inside the observation would resize the full-bleed
+    // bands that read it, so the observer would fire again on its own write. Only a
+    // real change lands, and it lands after the round that asked for it has finished.
+    let sbwValue = "";
+    let sbwQueued = 0;
+    const sbw = () => {
+      cancelAnimationFrame(sbwQueued);
+      sbwQueued = requestAnimationFrame(() => {
+        const next = `${window.innerWidth - html.clientWidth}px`;
+
+        if (next === sbwValue) return;
+        sbwValue = next;
+        html.style.setProperty("--sbw", next);
+      });
+    };
     // A ResizeObserver, not a resize listener: the scrollbar also comes and goes
     // when the opening locks scrolling, which fires no resize event.
     sbw();
@@ -153,10 +185,11 @@ export function BracketHero() {
     if (still) window.__bootDone?.();
 
     return () => {
+      cancelAnimationFrame(sbwQueued);
       ro.disconnect();
       wide.removeEventListener("change", pick);
     };
-  }, [plain]);
+  }, [plain, variant]);
 
   useEffect(() => {
     const node = root.current;
@@ -180,6 +213,14 @@ export function BracketHero() {
       }
       const [{ gsap }, { ScrollTrigger }] = loaded;
       gsap.registerPlugin(ScrollTrigger);
+      // A reload starts the story over, like the opening does; the router would otherwise
+      // put the visitor back deep inside it. Back and forward keep their place.
+      const nav = performance.getEntriesByType("navigation")[0] as
+        | PerformanceNavigationTiming
+        | undefined;
+
+      if (nav?.type === "reload" && window.scrollY > 0)
+        window.scrollTo({ top: 0, behavior: "instant" });
 
       const q = <T extends Element>(sel: string) => gsap.utils.toArray<T>(sel, node);
       // Reverting a rebuild drops the count tweens back to 0: show the real figures again.
@@ -220,15 +261,15 @@ export function BracketHero() {
           }
           // Once the brackets have all but parted (they settle at 1.65), so the name
           // never rises underneath them while they still cross the middle.
-          intro.from(".bh-word", { yPercent: 115, duration: 1.1, stagger: 0.08 }, 1.5);
+          // Hidden from the start, not when their tween begins: a `from` placed later in
+          // the timeline leaves the name showing, under the brackets, until then.
+          gsap.set(".bh-word", { yPercent: 115 });
+          intro.to(".bh-word", { yPercent: 0, duration: 1.1, stagger: 0.08 }, 1.5);
         }
         intro.from(".bh-cue", { opacity: 0, y: -8, duration: 0.8 }, opening ? 3 : 1.6);
 
-        if (mode !== "live") {
-          // Widening the window later must not start the reel and lock scrolling.
-          reelPlayed = true;
-          return;
-        }
+        // Nothing below belongs on the static layout.
+        if (mode !== "live") return;
 
         q(".bh-dot").forEach((el, i) =>
           gsap.to(el, {
@@ -382,7 +423,7 @@ export function BracketHero() {
               });
           }) as (next: Step) => void;
 
-          const steps = ScrollTrigger.create({
+          ScrollTrigger.create({
             trigger: ".bh-track",
             start: "top top",
             end: "bottom bottom",
@@ -390,77 +431,6 @@ export function BracketHero() {
               go(p < 0.1 ? "name" : p < 0.4 ? "who" : p < 0.7 ? "numbers" : "join"),
           });
 
-          // The opening reel, once per page load: brackets open, motto, numbers,
-          // brackets close on the name. Scrolling waits for it, without hiding the
-          // scrollbar (that would shift the whole page sideways).
-          if (!reelPlayed && window.scrollY < 10) {
-            reelPlayed = true;
-            const html = document.documentElement;
-            const stop = (e: Event) => e.preventDefault();
-            const keys = (e: KeyboardEvent) => {
-              if (
-                [" ", "ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End"].includes(e.key)
-              )
-                e.preventDefault();
-            };
-            // A scrollbar drag or an in-page jump fires none of the events above.
-            const pin = () => {
-              if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: "instant" });
-            };
-            const listen = (on: boolean) => {
-              const method = on ? "addEventListener" : "removeEventListener";
-              window[method]("scroll", pin);
-              window[method]("wheel", stop, { passive: false });
-              window[method]("touchmove", stop, { passive: false });
-              window[method]("keydown", keys as EventListener);
-            };
-            // The reel owns the brackets and panels, so a jump that lands before pin
-            // undoes it must not reach the scroll story.
-            const triggers = [tl.scrollTrigger!, steps];
-            const lock = (on: boolean) => {
-              listen(on);
-              for (const st of triggers) {
-                if (on) st.disable(false);
-                else st.enable();
-              }
-            };
-            const open = (on: boolean) => ({
-              duration: 0.9,
-              ease: "power3.inOut",
-              ...(on ? {} : { x: 0 }),
-            });
-            // From here, not from the reel's start: a scroll in the wait before it would
-            // leave the reel playing over the wrong place on the page.
-            lock(true);
-            const reel = gsap.timeline({ paused: true, onComplete: () => lock(false) });
-            reel
-              .set(".bh-cue", { opacity: 0 })
-              .to(left, { x: toLeft(), ...open(true) }, 0)
-              .to(right, { x: toRight(), ...open(true) }, 0)
-              .call(() => go("motto"), [], 0.2)
-              .call(() => go("numbers"), [], 2.8)
-              .call(() => go("name"), [], 5.6)
-              .to([left, right], open(false), 5.5)
-              .to(".bh-cue", { opacity: 1, duration: 0.6 }, 6.8);
-            // delay() is ignored on a paused timeline that resumes, hence delayedCall;
-            // added through the context so a rebuild cancels a pending start.
-            const startIn = self.add("startIn", (seconds: number) =>
-              gsap.delayedCall(seconds, () => reel.play()),
-            ) as (seconds: number) => void;
-            if (opening && html.classList.contains("hero-opening")) {
-              // HeroOpening drops .hero-opening from <html> when its own reel ends.
-              const mo = new MutationObserver(() => {
-                if (!html.classList.contains("hero-opening")) {
-                  mo.disconnect();
-                  startIn(1.1);
-                }
-              });
-              mo.observe(html, { attributes: true, attributeFilter: ["class"] });
-              self.add(() => () => mo.disconnect());
-            } else startIn(opening ? 1.1 : 3.4);
-            // Listeners only: on a rebuild the triggers are already gone.
-            self.add(() => () => listen(false));
-          }
           return;
         }
 
@@ -510,9 +480,21 @@ export function BracketHero() {
     : ["Mobile apps", "Mobile games", "Web", "Multimedia"];
 
   return (
-    <section ref={root} className="bh" data-mode={mode}>
+    <section ref={root} className="bh" data-mode={mode} data-variant={variant ?? undefined}>
       <div className="bh-track">
         <div className="bh-stage" dir="ltr">
+          {(variant === "wall" || variant === "shelf") && (
+            <div
+              className={variant === "wall" ? "bh-wall" : "bh-shelf"}
+              data-empty={photos.length ? undefined : ""}
+              aria-hidden="true"
+            >
+              {photos.map((src) => (
+                <img key={src} src={src} alt="" loading="lazy" decoding="async" />
+              ))}
+            </div>
+          )}
+
           <div className="bh-row">
             <Arm side="left" />
             <h1 className="bh-name" dir={ar ? "rtl" : "ltr"}>
@@ -524,6 +506,59 @@ export function BracketHero() {
             </h1>
             <Arm side="right" />
           </div>
+
+          {variant === "masthead" && (
+            <>
+              <p className="bh-dateline" dir={ar ? "rtl" : "ltr"}>
+                <span>
+                  {n(members)} {ar ? "عضوًا" : "members"}
+                </span>
+                <span>
+                  {n(committees)} {ar ? "لجان" : "committees"}
+                </span>
+                <span>
+                  {n(events)} {ar ? "فعاليات" : "events"}
+                </span>
+              </p>
+              <p className="bh-motto bh-motto-line" dir={ar ? "rtl" : "ltr"}>
+                {(ar ? ["نتعلم", "نبتكر", "نتقدم"] : ["Learn.", "Innovate.", "Advance."]).map(
+                  (w, i) => (
+                    <span key={w} className={`bh-motto-${i}`}>
+                      {w}
+                    </span>
+                  ),
+                )}
+              </p>
+            </>
+          )}
+
+          {variant === "split" && (
+            <aside className="bh-rail" dir={ar ? "rtl" : "ltr"}>
+              <p className="bh-rail-label">{ar ? "المسارات" : "Tracks"}</p>
+              <ul className="bh-rail-list">
+                {majors.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+              <div className="bh-rail-next">
+                <p className="bh-rail-label">{ar ? "الفعالية القادمة" : "Next event"}</p>
+                {next ? (
+                  <p className="bh-rail-event">
+                    {next}
+                    {nextDate && (
+                      <span>
+                        {nextDate.day} {nextDate.month}
+                      </span>
+                    )}
+                  </p>
+                ) : (
+                  <Link to={hrefOf(lang, "events")} className="bh-rail-event is-link">
+                    {ar ? "كل الفعاليات" : "All events"}
+                  </Link>
+                )}
+              </div>
+            </aside>
+          )}
 
           <div className="bh-panel bh-who" dir={ar ? "rtl" : "ltr"}>
             <h2 className="bh-title">{ar ? "من نحن" : "Who we are"}</h2>

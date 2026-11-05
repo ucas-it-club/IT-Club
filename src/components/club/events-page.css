@@ -70,11 +70,40 @@
 }
 .ev-next-inner {
   display: grid;
-  gap: 0.75rem;
-  justify-items: start;
+  gap: clamp(1.25rem, 3vw, 2rem);
+  align-items: center;
   max-width: 72rem;
   margin-inline: auto;
   padding: clamp(2rem, 5vw, 3.5rem) 1rem;
+}
+.ev-next-text {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  min-width: 0;
+}
+/* The photo sits beside the words in a wide band, and above them in a narrow one. */
+@media (min-width: 48rem) {
+  .ev-next-inner:has(.ev-next-photo) {
+    grid-template-columns: minmax(0, 1fr) clamp(12rem, 24vw, 20rem);
+  }
+}
+.ev-next-photo {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border-radius: 1rem;
+  background: rgb(0 0 0 / 0.25);
+}
+.ev-next-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 500ms var(--ev-ease);
+}
+.ev-next-link:hover .ev-next-photo img {
+  transform: scale(1.03);
 }
 .ev-next-title {
   font-size: clamp(1.75rem, 4.2vw, 3.25rem);
@@ -108,6 +137,31 @@
   letter-spacing: -0.03em;
   color: var(--ev-ink);
 }
+/* News: the year is a plain divider; the month beside each group is what sticks. */
+.nw-year {
+  margin-top: clamp(3rem, 7vw, 5rem);
+}
+.nw-year-num {
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--ev-ink);
+  font-size: clamp(3.5rem, 9vw, 7rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--ev-soft);
+}
+.nw-year .nw-month {
+  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+}
+.nw-month .ev-year-num {
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+.nw-month .ev-record {
+  border-top: 0;
+}
 .ev-record {
   --ev-rail: 1.75rem;
   --ev-dot: 0.75rem;
@@ -138,7 +192,8 @@
   content: "";
   position: absolute;
   z-index: 1;
-  top: 1.55rem;
+  top: 50%;
+  translate: 0 -50%;
   inset-inline-start: calc(1px - var(--ev-rail) - var(--ev-dot) / 2);
   width: var(--ev-dot);
   height: var(--ev-dot);
@@ -175,8 +230,32 @@
 }
 .ev-entry {
   display: grid;
-  gap: 0.25rem;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
   padding-block: 1.25rem;
+}
+.ev-entry-photo {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-radius: 0.875rem;
+  background: var(--muted);
+}
+.ev-entry-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 500ms var(--ev-ease);
+}
+.ev-entry:hover .ev-entry-photo img {
+  transform: scale(1.04);
+}
+.ev-entry-body {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
 }
 .ev-entry-date {
   font-size: 0.875rem;
@@ -208,11 +287,17 @@
   .ev-record {
     --ev-rail: 1.25rem;
   }
+  .ev-entry {
+    grid-template-columns: 4.75rem minmax(0, 1fr);
+    gap: 0.875rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ev-entry-title,
-  .ev-next-link {
+  .ev-next-link,
+  .ev-entry-photo img,
+  .ev-next-photo img {
     transition: none;
   }
 }

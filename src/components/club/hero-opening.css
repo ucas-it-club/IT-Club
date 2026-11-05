@@ -1,13 +1,12 @@
 /* Loading screen to home hero hand-over (HeroOpening). */
 
-/* While the hand-over runs, the loading screen fades in place instead of
-   lifting, so its logo passes straight to the opening's logo. */
+/* While the hand-over runs, the loading screen is swapped out at once instead of
+   lifting: the opening's navy cover, logo and shape sit exactly where its own
+   navy, logo and ring were, so nothing visibly changes. */
 .hero-opening.booted .boot {
   transform: none;
-  opacity: 0;
-  transition:
-    opacity 450ms ease,
-    visibility 0s linear 450ms;
+  visibility: hidden;
+  transition: none;
 }
 .hero-opening.booted .boot-piece-left,
 .hero-opening.booted .boot-piece-right {
@@ -36,7 +35,8 @@
 }
 .ho-shape {
   position: absolute;
-  border-radius: 22%;
-  border: 1.5px solid rgb(255 255 255 / 0.35);
+  /* Matches the loading ring: rx 14 on a 125-wide square. Width is set in JS. */
+  border-radius: 11.2%;
+  border: 1px solid rgb(255 255 255 / 0.85);
   opacity: 0;
 }

@@ -28,12 +28,24 @@
 .boot-stage {
   display: grid;
   justify-items: center;
-  gap: 0.5rem;
 }
 .boot-logo {
   position: relative;
   width: clamp(9rem, 28vw, 14rem);
   aspect-ratio: 1;
+}
+.boot-ring {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.boot-ring rect {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.85);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
 }
 .boot-piece {
   position: absolute;
@@ -68,21 +80,6 @@
     opacity: 0;
     transform: translateX(var(--from));
   }
-}
-
-.boot-count {
-  min-width: 3.2ch;
-  text-align: center;
-  font-size: clamp(2.5rem, 9vw, 5rem);
-  font-weight: 900;
-  line-height: 1;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-}
-.boot-count small {
-  font-size: 0.4em;
-  margin-inline-start: 0.1em;
-  color: rgb(255 255 255 / 0.6);
 }
 
 @media (prefers-reduced-motion: reduce) {

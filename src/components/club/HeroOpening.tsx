@@ -81,12 +81,8 @@ export function HeroOpening() {
       logo.style.left = `${r?.width ? r.left : (innerWidth - size) / 2}px`;
       logo.style.top = `${r?.width ? r.top : (innerHeight - size) / 2}px`;
 
-      // The opening is in place: the loading screen may finish now.
-      window.__bootDone?.();
-      await bootGone(html);
-      const { gsap } = await import("gsap");
-
-      if (cancelled) return;
+      // The shape is the loading screen's own ring (BootScreen: a 125%-wide square,
+      // rotated 45deg, 1% stroke), drawn in place before the screen leaves.
       const cx = parseFloat(logo.style.left) + size / 2;
       const cy = parseFloat(logo.style.top) + size / 2;
       const shape = node.querySelector<HTMLElement>(".ho-shape")!;
@@ -96,7 +92,17 @@ export function HeroOpening() {
         height: `${side}px`,
         left: `${cx - side / 2}px`,
         top: `${cy - side / 2}px`,
+        borderWidth: `${size * 0.01}px`,
+        transform: "rotate(45deg)",
+        opacity: "1",
       });
+
+      // The opening is in place: the loading screen may finish now.
+      window.__bootDone?.();
+      await bootGone(html);
+      const { gsap } = await import("gsap");
+
+      if (cancelled) return;
       // A diamond |x|+|y| <= R covers the screen once R reaches half its width plus half its height.
       const cover = ((innerWidth + innerHeight) / 2 / (side / Math.SQRT2)) * 1.08;
       const atTop = window.scrollY < 10;
@@ -108,15 +114,12 @@ export function HeroOpening() {
       });
 
       // Rotation through GSAP: it clears the CSS `rotate` property when it animates.
-      tl.fromTo(
-        shape,
-        { rotation: 45, scale: 0.7, opacity: 0 },
-        { rotation: 45, scale: 1, opacity: 1, duration: 0.5, ease: "power2.out" },
-      )
-        // It fills with the page's own background, so growing it opens the page in either theme.
-        .to(shape, { backgroundColor: "var(--background)", duration: 0.4 }, 0.35)
-        .to(shape, { scale: cover, duration: 0.9, ease: "power3.inOut" }, 0.8)
-        .set(".ho-cover", { opacity: 0 }, 1.7);
+      // The ring that was drawn while loading is this shape: it fills with the page's
+      // own background and grows, so the page opens in either theme.
+      gsap.set(shape, { rotation: 45 });
+      tl.to(shape, { backgroundColor: "var(--background)", duration: 0.4 }, 0)
+        .to(shape, { scale: cover, duration: 0.9, ease: "power3.inOut" }, 0.2)
+        .set(".ho-cover", { opacity: 0 }, 1.1);
 
       // Each logo piece flies into its place in the hero.
       for (const [name, , , target] of pieces) {
@@ -124,7 +127,7 @@ export function HeroOpening() {
         const to = document.querySelector<HTMLElement>(target)?.getBoundingClientRect();
         const from = el.getBoundingClientRect();
         if (!to || !atTop) {
-          tl.to(el, { opacity: 0, duration: 0.4 }, 1.7);
+          tl.to(el, { opacity: 0, duration: 0.4 }, 1.1);
           continue;
         }
         tl.to(
@@ -137,15 +140,15 @@ export function HeroOpening() {
             duration: 1.1,
             ease: "expo.inOut",
           },
-          1.7,
+          1.1,
         );
       }
-      tl.to(shape, { opacity: 0, duration: 0.6 }, 2.05).fromTo(
+      tl.to(shape, { opacity: 0, duration: 0.6 }, 1.45).fromTo(
         ".bh-word",
         { yPercent: 115 },
         { yPercent: 0, duration: 1, stagger: 0.08, ease: "expo.out" },
-        // After the pieces have nearly landed (1.7 + 1.1), not while they cross the name.
-        2.6,
+        // After the pieces have nearly landed (1.1 + 1.1), not while they cross the name.
+        2.0,
       );
     })();
 

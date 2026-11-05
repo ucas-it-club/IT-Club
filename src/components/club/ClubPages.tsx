@@ -30,10 +30,13 @@ import { plainRichText, splitRichText } from "@/lib/club/rich-text";
 import { eventDisplayStatus } from "@/lib/club/event-timing";
 import { contentImageUrls } from "@/lib/club/google-drive";
 import { siteName } from "@/lib/club/seo";
+import { useSearch } from "@tanstack/react-router";
+import { AboutPrototypes } from "./AboutPrototypes";
 import { BracketHero } from "./BracketHero";
 import { ContentReel } from "./ContentReel";
 import { ClubLink, ContentGrid, Empty, Heading, linkClass } from "./ClubContent";
 import { EventsPage } from "./EventsPage";
+import { NewsPage } from "./NewsPage";
 import { ContentImage } from "./ContentImage";
 import { CountUp } from "./CountUp";
 import { EventDetail } from "./EventDetail";
@@ -52,10 +55,12 @@ export function HomePage() {
   const hasPhoto = (item: Content) => contentImageUrls(item).length > 0;
   const reel = past
     .filter(hasPhoto)
-    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
-    .slice(0, 5);
+    // Oldest first, so the months run forward as you scroll.
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   const hasReel = reel.length > 1;
-  const newsReel = data.news.filter(hasPhoto).slice(0, 5);
+  const newsReel = data.news
+    .filter(hasPhoto)
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
   return (
     <>
@@ -120,6 +125,13 @@ export function HomePage() {
 }
 
 export function AboutPage() {
+  const { about } = useSearch({ strict: false }) as { about?: unknown };
+
+  // The old page stays reachable at ?about=old while the prototypes are compared.
+  return about === "old" ? <AboutPageOld /> : <AboutPrototypes />;
+}
+
+function AboutPageOld() {
   const { lang, settings, data } = useClub();
   const ar = lang === "ar";
   const goals = splitRichText(settings[ar ? "goals" : "goals_en"] || "");
@@ -265,9 +277,8 @@ export function ListingPage({ kind }: { kind: ContentCollection }) {
   const { lang, data } = useClub();
   const ar = lang === "ar";
   if (kind === "events") return <EventsPage />;
-  let items = data[kind];
-  if (kind === "news")
-    items = [...items].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  if (kind === "news") return <NewsPage />;
+  const items = data[kind];
 
   return (
     <>

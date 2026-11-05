@@ -301,3 +301,217 @@
     animation: none;
   }
 }
+
+/* ---------- Opening-screen studies (?hero=wall|masthead|split) ----------
+   Prototypes only: the scroll panels are off, so a study is the first screen
+   alone. Absent the query, none of this applies. */
+
+.bh[data-variant] .bh-panel {
+  display: none;
+}
+.bh[data-variant] .bh-stage {
+  align-content: center;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  min-height: calc(100svh - var(--bh-top));
+}
+.bh[data-variant] .bh-row {
+  min-height: 0;
+}
+
+/* wall: the club's own photographs fill the screen, the name sits on a navy scrim. */
+.bh-wall {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 2px;
+  overflow: hidden;
+}
+.bh-wall img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* The club's images are posters with type on them: blurred they read as texture
+     rather than as a second headline fighting the name. */
+  filter: blur(9px) saturate(1.15);
+  transform: scale(1.04);
+}
+.bh-wall::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* Even enough behind the name to read, uneven enough to stay a photograph. */
+  background:
+    radial-gradient(140% 110% at 50% 40%, rgb(7 18 33 / 0.84), rgb(7 18 33 / 0.96)),
+    linear-gradient(rgb(7 18 33 / 0.88), rgb(7 18 33 / 0.94));
+}
+.bh-wall[data-empty] {
+  display: none;
+}
+/* No photographs is the normal state, so the empty wall is a drawn grid, not a void. */
+.bh[data-variant="wall"]:has(.bh-wall[data-empty]) .bh-stage {
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 4.5rem 4.5rem;
+}
+.bh[data-variant="wall"] :is(.bh-row, .bh-name) {
+  position: relative;
+  z-index: 1;
+}
+.bh[data-variant="wall"] .bh-name {
+  color: #fff;
+  text-shadow: 0 2px 30px rgb(0 0 0 / 0.45);
+}
+.bh[data-variant="wall"] .bh-arm {
+  opacity: 0.72;
+}
+
+/* shelf: the same photographs kept in colour along the bottom edge, so the
+   evidence stays visible without competing with the name. */
+.bh-shelf {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+  height: clamp(7rem, 19vh, 12rem);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 42%);
+  mask-image: linear-gradient(to bottom, transparent, #000 42%);
+}
+.bh-shelf img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.92);
+}
+@media (max-width: 767px) {
+  /* Three photographs read as a strip on a phone; six read as slivers. */
+  .bh-shelf {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    height: clamp(6rem, 16vh, 9rem);
+  }
+}
+.bh-shelf[data-empty] {
+  display: none;
+}
+.bh[data-variant="shelf"] :is(.bh-row, .bh-name) {
+  position: relative;
+  z-index: 1;
+}
+
+/* masthead: a printed masthead — rules top and bottom, a ruled line of real facts. */
+.bh[data-variant="masthead"] .bh-row {
+  position: relative;
+  width: 100%;
+  max-width: 72rem;
+  padding-block: clamp(1.25rem, 3vw, 2.5rem);
+  border-block: 1px solid var(--border);
+}
+.bh[data-variant="masthead"] .bh-name {
+  font-size: clamp(1.9rem, 8.5vw, 6rem);
+}
+.bh-dateline {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  font-size: clamp(0.9375rem, 1.5vw, 1.125rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+.bh-dateline > span {
+  padding-inline: clamp(0.75rem, 2vw, 1.75rem);
+  font-variant-numeric: tabular-nums;
+}
+.bh-dateline > span + span {
+  border-inline-start: 1px solid var(--border);
+}
+.bh-motto-line {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1.4;
+}
+
+/* split: the name holds the start side, the tracks and the next event the other. */
+.bh-rail {
+  width: 100%;
+  text-align: start;
+}
+.bh-rail-label {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--muted-foreground);
+}
+.bh-rail-list {
+  margin-top: 0.75rem;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+.bh-rail-list li {
+  padding-block: 0.7rem;
+  border-bottom: 1px solid var(--border);
+  font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+  font-weight: 800;
+}
+.bh-rail-next {
+  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+}
+.bh-rail-event {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.6rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  line-height: 1.55;
+  color: var(--foreground);
+  text-decoration: none;
+}
+.bh-rail-event span {
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+.bh-rail-event.is-link:hover {
+  color: var(--primary);
+}
+@media (min-width: 1024px) {
+  .bh[data-variant="split"] .bh-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 21rem);
+    column-gap: clamp(2rem, 5vw, 5.5rem);
+  }
+  .bh[data-variant="split"] .bh-row {
+    grid-column: 1;
+  }
+  .bh[data-variant="split"] .bh-rail {
+    grid-column: 2;
+  }
+  /* Arabic reads from the right: the wide column goes there, the rail to its left. */
+  html[dir="rtl"] .bh[data-variant="split"] .bh-stage {
+    grid-template-columns: minmax(15rem, 21rem) minmax(0, 1fr);
+  }
+  html[dir="rtl"] .bh[data-variant="split"] .bh-row {
+    grid-column: 2;
+  }
+  html[dir="rtl"] .bh[data-variant="split"] .bh-rail {
+    grid-column: 1;
+  }
+}
+/* The name wraps inside its column instead of running past the edge. */
+.bh[data-variant="split"] .bh-name {
+  width: auto;
+  max-width: 100%;
+  flex-wrap: wrap;
+  /* Two lines of Arabic need the room the masks take away. */
+  line-height: 1.35;
+  font-size: clamp(2.25rem, 4.4vw, 4rem);
+}
+.bh[data-variant="split"] .bh-arm {
+  --arm: clamp(2rem, 6vw, 4.5rem);
+}
