@@ -284,10 +284,26 @@
     gap: 0;
     height: 100%;
   }
+  /* The whole photograph, never cropped top or bottom: it is fitted inside the area and
+     the space beside it is filled with a blurred copy of itself. */
   .js .er[data-design="full"]:not([data-mode="static"]) .er-photo {
+    position: relative;
+    isolation: isolate;
     aspect-ratio: auto;
     min-height: 0;
     border-radius: 0;
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-photo::before {
+    content: "";
+    position: absolute;
+    inset: -2rem;
+    z-index: -1;
+    background: var(--photo, none) center / cover;
+    filter: blur(32px) saturate(1.3);
+    opacity: 0.55;
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-photo img {
+    object-fit: contain;
   }
   /* The captions stay put while the photographs slide, and swap as each one passes the
      middle. The list's own text is kept for readers but not drawn here. */
