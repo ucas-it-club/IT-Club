@@ -86,3 +86,14 @@ export function eventRegistrationIsAvailable(event: Content, now = new Date()) {
     !eventHasEnded(event, now)
   );
 }
+
+/** Day, month name and year of a YYYY-MM-DD date, for display. */
+export function dateParts(date: string | undefined, lang: "ar" | "en") {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return undefined;
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const month = new Intl.DateTimeFormat(lang === "ar" ? "ar-PS" : "en-US", {
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(y, m - 1, d)));
+  return { day: String(d), month, year: String(y) };
+}

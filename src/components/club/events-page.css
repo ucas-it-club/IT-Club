@@ -109,10 +109,69 @@
   color: var(--ev-ink);
 }
 .ev-record {
+  --ev-rail: 1.75rem;
+  --ev-dot: 0.75rem;
+  position: relative;
+  padding-inline-start: var(--ev-rail);
   border-top: 2px solid var(--ev-ink);
 }
+/* The timeline: a rail down the start side, one dot per event. */
+.ev-record::before,
+.ev-record::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 2px;
+  background: var(--border);
+}
+.ev-record::after {
+  background: var(--ev-link);
+  transform: scaleY(0);
+  transform-origin: top;
+}
 .ev-record li {
+  position: relative;
   border-bottom: 1px solid var(--border);
+}
+.ev-record li::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 1.55rem;
+  inset-inline-start: calc(1px - var(--ev-rail) - var(--ev-dot) / 2);
+  width: var(--ev-dot);
+  height: var(--ev-dot);
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: var(--background);
+}
+/* Scrolling draws the rail down to the middle of the screen and lights each dot as
+   it gets there. Pure CSS: without support the rail and dots simply stay plain. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .ev-record::after {
+      animation: ev-rail linear both;
+      animation-timeline: view();
+      animation-range: cover 50svh cover calc(100% - 50svh);
+    }
+    .ev-record li::before {
+      animation: ev-dot linear both;
+      animation-timeline: view();
+      animation-range: cover 40% cover 50%;
+    }
+  }
+}
+@keyframes ev-rail {
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes ev-dot {
+  to {
+    border-color: var(--ev-link);
+    background: var(--ev-link);
+  }
 }
 .ev-entry {
   display: grid;
@@ -145,6 +204,9 @@
   }
   .ev-year-num {
     position: static;
+  }
+  .ev-record {
+    --ev-rail: 1.25rem;
   }
 }
 

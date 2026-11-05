@@ -10,6 +10,7 @@ import bracketRight from "@/assets/logo/bracket-right.webp";
 import dotTop from "@/assets/logo/dot-top.webp";
 import dotBottom from "@/assets/logo/dot-bottom.webp";
 import { HeroOpening } from "./HeroOpening";
+import { weakDevice } from "@/lib/club/device";
 
 /**
  * Home hero: the club name between the logo's two brackets.
@@ -22,8 +23,10 @@ import { HeroOpening } from "./HeroOpening";
  * Three modes, decided on the client so the server render is always the plain
  * first screen:
  *   pending  server render / before JS: the name only.
- *   live     sticky stage, scrubbed by GSAP ScrollTrigger.
- *   static   reduced motion or a weak device: every panel stacked, no scroll story.
+ *   live     1024px and up: sticky stage, scrubbed by GSAP ScrollTrigger.
+ *   static   narrower, reduced motion, a weak device or GSAP failing to load: every
+ *            panel stacked and the page scrolls normally.
+ * The mode follows the width live, so a resize needs no reload.
  * GSAP is imported on demand so it never touches the entry bundle.
  */
 
@@ -44,19 +47,6 @@ function useFacts() {
     open: Boolean(settings.registrationOpen),
     instagram: safeUrl(settings.instagram),
   };
-}
-
-function weakDevice() {
-  const nav = navigator as Navigator & {
-    deviceMemory?: number;
-    connection?: { saveData?: boolean };
-  };
-
-  return (
-    (nav.deviceMemory !== undefined && nav.deviceMemory <= 2) ||
-    (nav.hardwareConcurrency !== undefined && nav.hardwareConcurrency <= 2) ||
-    nav.connection?.saveData === true
-  );
 }
 
 /**
@@ -128,6 +118,8 @@ let reelPlayed = false;
 export function BracketHero() {
   const { ar, members, committees, events, open } = useFacts();
   const [mode, setMode] = useState<Mode>("pending");
+  // No scroll story at any width, and no opening either.
+  const [plain, setPlain] = useState(false);
   // The hand-over plays only on a visit that showed the loading screen.
   const [opening, setOpening] = useState(false);
   useEffect(() => {
@@ -143,7 +135,7 @@ export function BracketHero() {
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const still = reduced || weakDevice();
+    const still = plain || reduced || weakDevice();
     const html = document.documentElement;
     const sbw = () => html.style.setProperty("--sbw", `${window.innerWidth - html.clientWidth}px`);
     // A ResizeObserver, not a resize listener: the scrollbar also comes and goes
@@ -152,12 +144,19 @@ export function BracketHero() {
     const ro = new ResizeObserver(sbw);
     ro.observe(html);
 
-    setMode(still ? "static" : "live");
+    const wide = window.matchMedia("(min-width: 1024px)");
+    const pick = () => setMode(!still && wide.matches ? "live" : "static");
+    pick();
+    wide.addEventListener("change", pick);
+    setPlain(still);
     // No opening will run, so the loading screen should not wait for one.
     if (still) window.__bootDone?.();
 
-    return () => ro.disconnect();
-  }, []);
+    return () => {
+      ro.disconnect();
+      wide.removeEventListener("change", pick);
+    };
+  }, [plain]);
 
   useEffect(() => {
     const node = root.current;
@@ -168,15 +167,25 @@ export function BracketHero() {
     let cancelled = false;
 
     void (async () => {
-      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
-        import("gsap"),
-        import("gsap/ScrollTrigger"),
-      ]);
+      const loaded = await Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).catch(
+        () => null,
+      );
 
       if (cancelled) return;
+      if (!loaded) {
+        // A failed script must not leave a tall empty track or a hidden name.
+        node.dataset["ready"] = "";
+        setPlain(true);
+        return;
+      }
+      const [{ gsap }, { ScrollTrigger }] = loaded;
       gsap.registerPlugin(ScrollTrigger);
 
       const q = <T extends Element>(sel: string) => gsap.utils.toArray<T>(sel, node);
+      // Reverting a rebuild drops the count tweens back to 0: show the real figures again.
+      q<HTMLElement>("[data-count]").forEach((el) => {
+        el.textContent = Number(el.dataset["count"]).toLocaleString(ar ? "ar-EG" : "en-US");
+      });
       const ctx = gsap.context((self) => {
         const intro = gsap.timeline({ defaults: { ease: "expo.out" } });
 
@@ -215,7 +224,11 @@ export function BracketHero() {
         }
         intro.from(".bh-cue", { opacity: 0, y: -8, duration: 0.8 }, opening ? 3 : 1.6);
 
-        if (mode !== "live") return;
+        if (mode !== "live") {
+          // Widening the window later must not start the reel and lock scrolling.
+          reelPlayed = true;
+          return;
+        }
 
         q(".bh-dot").forEach((el, i) =>
           gsap.to(el, {
@@ -261,11 +274,6 @@ export function BracketHero() {
         const toLeft = () => -Math.max(0, left.offsetLeft - edge());
         const toRight = () =>
           Math.max(0, stage.clientWidth - right.offsetLeft - right.offsetWidth - edge());
-        // Phones have no room beside the panels, so both brackets also rise to
-        // the top corners, level with each other, and the panels take the width.
-        const narrow = () => window.matchMedia("(max-width: 639px)").matches;
-        const up = (arm: HTMLElement) => () =>
-          narrow() ? -Math.max(0, arm.offsetTop - edge()) : 0;
 
         const tl = gsap.timeline({
           defaults: { ease: "none" },
@@ -273,7 +281,8 @@ export function BracketHero() {
             trigger: ".bh-track",
             start: "top top",
             end: "bottom bottom",
-            scrub: true,
+            // Catches up over a moment instead of following the wheel exactly: the glide.
+            scrub: 0.45,
             invalidateOnRefresh: true,
           },
         });
@@ -290,8 +299,8 @@ export function BracketHero() {
         };
 
         tl.to(".bh-cue", { opacity: 0, duration: 0.2 }, 0)
-          .to(left, { x: toLeft, y: up(left), duration: 1, ease: "power2.inOut" }, 0)
-          .to(right, { x: toRight, y: up(right), duration: 1, ease: "power2.inOut" }, 0);
+          .to(left, { x: toLeft, duration: 1, ease: "power2.inOut" }, 0)
+          .to(right, { x: toRight, duration: 1, ease: "power2.inOut" }, 0);
 
         if (story) {
           tl.to({}, { duration: 3 }, 1);
@@ -373,7 +382,7 @@ export function BracketHero() {
               });
           }) as (next: Step) => void;
 
-          ScrollTrigger.create({
+          const steps = ScrollTrigger.create({
             trigger: ".bh-track",
             start: "top top",
             end: "bottom bottom",
@@ -394,26 +403,40 @@ export function BracketHero() {
               )
                 e.preventDefault();
             };
-            const lock = (on: boolean) => {
+            // A scrollbar drag or an in-page jump fires none of the events above.
+            const pin = () => {
+              if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: "instant" });
+            };
+            const listen = (on: boolean) => {
               const method = on ? "addEventListener" : "removeEventListener";
+              window[method]("scroll", pin);
               window[method]("wheel", stop, { passive: false });
               window[method]("touchmove", stop, { passive: false });
               window[method]("keydown", keys as EventListener);
             };
+            // The reel owns the brackets and panels, so a jump that lands before pin
+            // undoes it must not reach the scroll story.
+            const triggers = [tl.scrollTrigger!, steps];
+            const lock = (on: boolean) => {
+              listen(on);
+              for (const st of triggers) {
+                if (on) st.disable(false);
+                else st.enable();
+              }
+            };
             const open = (on: boolean) => ({
               duration: 0.9,
               ease: "power3.inOut",
-              ...(on ? {} : { x: 0, y: 0 }),
+              ...(on ? {} : { x: 0 }),
             });
-            const reel = gsap.timeline({
-              paused: true,
-              onStart: () => lock(true),
-              onComplete: () => lock(false),
-            });
+            // From here, not from the reel's start: a scroll in the wait before it would
+            // leave the reel playing over the wrong place on the page.
+            lock(true);
+            const reel = gsap.timeline({ paused: true, onComplete: () => lock(false) });
             reel
               .set(".bh-cue", { opacity: 0 })
-              .to(left, { x: toLeft(), y: up(left)(), ...open(true) }, 0)
-              .to(right, { x: toRight(), y: up(right)(), ...open(true) }, 0)
+              .to(left, { x: toLeft(), ...open(true) }, 0)
+              .to(right, { x: toRight(), ...open(true) }, 0)
               .call(() => go("motto"), [], 0.2)
               .call(() => go("numbers"), [], 2.8)
               .call(() => go("name"), [], 5.6)
@@ -424,7 +447,7 @@ export function BracketHero() {
             const startIn = self.add("startIn", (seconds: number) =>
               gsap.delayedCall(seconds, () => reel.play()),
             ) as (seconds: number) => void;
-            if (opening) {
+            if (opening && html.classList.contains("hero-opening")) {
               // HeroOpening drops .hero-opening from <html> when its own reel ends.
               const mo = new MutationObserver(() => {
                 if (!html.classList.contains("hero-opening")) {
@@ -434,8 +457,9 @@ export function BracketHero() {
               });
               mo.observe(html, { attributes: true, attributeFilter: ["class"] });
               self.add(() => () => mo.disconnect());
-            } else startIn(3.4);
-            self.add(() => () => lock(false));
+            } else startIn(opening ? 1.1 : 3.4);
+            // Listeners only: on a rebuild the triggers are already gone.
+            self.add(() => () => listen(false));
           }
           return;
         }
@@ -549,7 +573,7 @@ export function BracketHero() {
           <ChevronDown className="bh-cue" size={28} aria-hidden="true" />
         </div>
       </div>
-      {opening && mode === "live" && <HeroOpening />}
+      {opening && !plain && mode !== "pending" && <HeroOpening />}
     </section>
   );
 }

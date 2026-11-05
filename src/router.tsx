@@ -13,6 +13,9 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
+    // Without this, the CSS smooth scrolling animates every jump back to the top.
+    scrollRestorationBehavior: "instant",
+    defaultViewTransition: true,
     // /About is not /about: one address per page, anything else is a 404.
     caseSensitive: true,
     defaultPreloadStaleTime: 0,

@@ -23,12 +23,15 @@ import {
   local,
   memberGender,
   safeUrl,
+  type Content,
   type ContentCollection,
 } from "@/lib/club/model";
 import { plainRichText, splitRichText } from "@/lib/club/rich-text";
 import { eventDisplayStatus } from "@/lib/club/event-timing";
+import { contentImageUrls } from "@/lib/club/google-drive";
 import { siteName } from "@/lib/club/seo";
 import { BracketHero } from "./BracketHero";
+import { ContentReel } from "./ContentReel";
 import { ClubLink, ContentGrid, Empty, Heading, linkClass } from "./ClubContent";
 import { EventsPage } from "./EventsPage";
 import { ContentImage } from "./ContentImage";
@@ -46,44 +49,72 @@ export function HomePage() {
   const past = data.events.filter((item) => eventDisplayStatus(item, now) === "past");
   const upcoming = data.events.filter((item) => eventDisplayStatus(item, now) !== "past");
   const preview = (upcoming.length ? upcoming : past).slice(0, 3);
+  const hasPhoto = (item: Content) => contentImageUrls(item).length > 0;
+  const reel = past
+    .filter(hasPhoto)
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+    .slice(0, 5);
+  const hasReel = reel.length > 1;
+  const newsReel = data.news.filter(hasPhoto).slice(0, 5);
 
   return (
     <>
       <BracketHero />
 
-      <section className="mt-16">
-        <Reveal>
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
-            <h2 className="club-rule text-2xl font-black">
-              {ar
-                ? upcoming.length
-                  ? "الفعاليات القادمة"
-                  : "فعاليات نفّذها النادي"
-                : upcoming.length
-                  ? "Upcoming events"
-                  : "Events the club has run"}
-            </h2>
-            <ClubLink path="events" className="text-sm font-bold text-primary">
-              {ar ? "كل الفعاليات" : "All events"}
-            </ClubLink>
-          </div>
-        </Reveal>
-        <ContentGrid items={preview} kind="events" compact />
-      </section>
+      {hasReel && (
+        <ContentReel
+          kind="events"
+          items={reel}
+          title={ar ? "فعاليات نفّذها النادي" : "Events the club has run"}
+          allLabel={ar ? "كل الفعاليات" : "All events"}
+        />
+      )}
 
-      <section className="mt-16">
-        <Reveal>
-          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
-            <h2 className="club-rule text-2xl font-black">
-              {ar ? "من أخبار النادي" : "Club news"}
-            </h2>
-            <ClubLink path="news" className="text-sm font-bold text-primary">
-              {ar ? "كل الأخبار" : "All news"}
-            </ClubLink>
-          </div>
-        </Reveal>
-        <ContentGrid items={data.news.slice(0, 3)} kind="news" compact />
-      </section>
+      {/* The reel already shows past events; the grid stays for upcoming ones. */}
+      {(upcoming.length > 0 || !hasReel) && (
+        <section className="mt-16">
+          <Reveal>
+            <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
+              <h2 className="club-rule text-2xl font-black">
+                {ar
+                  ? upcoming.length
+                    ? "الفعاليات القادمة"
+                    : "فعاليات نفّذها النادي"
+                  : upcoming.length
+                    ? "Upcoming events"
+                    : "Events the club has run"}
+              </h2>
+              <ClubLink path="events" className="text-sm font-bold text-primary">
+                {ar ? "كل الفعاليات" : "All events"}
+              </ClubLink>
+            </div>
+          </Reveal>
+          <ContentGrid items={preview} kind="events" compact />
+        </section>
+      )}
+
+      {newsReel.length > 1 ? (
+        <ContentReel
+          kind="news"
+          items={newsReel}
+          title={ar ? "من أخبار النادي" : "Club news"}
+          allLabel={ar ? "كل الأخبار" : "All news"}
+        />
+      ) : (
+        <section className="mt-16">
+          <Reveal>
+            <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
+              <h2 className="club-rule text-2xl font-black">
+                {ar ? "من أخبار النادي" : "Club news"}
+              </h2>
+              <ClubLink path="news" className="text-sm font-bold text-primary">
+                {ar ? "كل الأخبار" : "All news"}
+              </ClubLink>
+            </div>
+          </Reveal>
+          <ContentGrid items={data.news.slice(0, 3)} kind="news" compact />
+        </section>
+      )}
     </>
   );
 }

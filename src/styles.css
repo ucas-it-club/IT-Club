@@ -6,6 +6,7 @@
    server-rendered page has already painted unstyled. */
 @import "./components/club/boot-screen.css";
 @import "./components/club/hero-opening.css";
+@import "./components/club/content-reel.css";
 @import "./components/club/bracket-hero.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -270,7 +271,51 @@
   animation: drift 9s ease-in-out infinite;
 }
 
+/* Motion tokens: one easing and timing for page changes. */
+:root {
+  --ease-leave: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-leave: 0.22s;
+  --dur-arrive: 0.6s;
+}
+
+/* Page change: the header stays still while the page content leaves and arrives. */
+.club-header {
+  view-transition-name: site-header;
+}
+.club-site main {
+  view-transition-name: page;
+}
+::view-transition-group(site-header),
+::view-transition-group(page) {
+  animation: none;
+}
+::view-transition-old(page) {
+  animation: page-leave var(--dur-leave) var(--ease-leave) both;
+}
+::view-transition-new(page) {
+  animation: page-arrive var(--dur-arrive) var(--ease-arrive) 80ms both;
+}
+@keyframes page-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}
+@keyframes page-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
   *,
   *::before,
   *::after {

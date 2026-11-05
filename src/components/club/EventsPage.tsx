@@ -1,22 +1,10 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { local } from "@/lib/club/model";
-import { eventDisplayStatus, formatEventTime } from "@/lib/club/event-timing";
+import { dateParts, eventDisplayStatus, formatEventTime } from "@/lib/club/event-timing";
 import { itemPage } from "@/lib/club/paths";
 import { useClub } from "./club-context";
 import { ClubLink } from "./ClubContent";
 import "./events-page.css";
-
-type Lang = "ar" | "en";
-
-function dateParts(date: string | undefined, lang: Lang) {
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return undefined;
-  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
-  const month = new Intl.DateTimeFormat(lang === "ar" ? "ar-PS" : "en-US", {
-    month: "long",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(y, m - 1, d)));
-  return { day: String(d), month, year: String(y) };
-}
 
 function useEvents() {
   const { lang, data } = useClub();

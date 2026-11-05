@@ -1,6 +1,7 @@
 /* Home hero: the club name between the logo's brackets. Same tokens and Cairo
    as the rest of the site. Modes are set by BracketHero: pending (server
-   render), live (sticky scroll story), static (reduced motion / weak device). */
+   render), live (sticky scroll story, 1024px and up), static (narrower,
+   reduced motion, weak device or GSAP failed: normal scrolling). */
 
 .club-site {
   /* Brand hues as text: the raw logo green fails contrast on the light ground. */
@@ -126,12 +127,6 @@
   max-width: min(44rem, calc(100% - 2 * var(--arm) - 2rem));
   text-align: center;
 }
-@media (max-width: 639px) {
-  /* The brackets park in the top corners here, so the panels use the full width. */
-  .bh[data-mode="live"] .bh-panel {
-    max-width: 100%;
-  }
-}
 /* With JavaScript (the head script marks <html class="js"> before first paint),
    the entrance brings the brackets and name in, so they wait hidden instead of
    painting in place and jumping. Without JavaScript they simply show. */
@@ -149,10 +144,35 @@
 }
 .bh[data-mode="static"] .bh-stage {
   gap: 5rem;
-  padding-block: 2rem 4rem;
+  padding-block: 0 4rem;
 }
 .bh[data-mode="static"] .bh-stage > * {
   grid-area: auto;
+}
+/* The first screen stays the name alone; the panels follow below it. */
+.bh[data-mode="static"] .bh-row {
+  min-height: calc(100svh - var(--bh-top));
+}
+/* The brackets stay beside the name, so the stacked panels use the full width. */
+.bh[data-mode="static"] .bh-panel {
+  max-width: min(44rem, 100%);
+}
+
+/* Stacked panels rise as they scroll in. Pure CSS, so older browsers just show them. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .bh[data-mode="static"] .bh-panel {
+      animation: bh-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+}
+@keyframes bh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
 }
 
 .bh-title {
