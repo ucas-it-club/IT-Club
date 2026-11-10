@@ -10,7 +10,16 @@ import { useEffect, useRef, useState } from "react";
  * Renders the final value immediately when motion is reduced or when the value
  * is not yet known, so the number is never wrong or missing.
  */
-export function CountUp({ value, duration = 1100 }: { value: number | null; duration?: number }) {
+export function CountUp({
+  value,
+  duration = 1100,
+  locale,
+}: {
+  value: number | null;
+  duration?: number;
+  /** Digits to count in, e.g. "ar-EG" for Arabic-Indic numerals. */
+  locale?: string;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const [shown, setShown] = useState<number | null>(null);
   useEffect(() => {
@@ -54,7 +63,7 @@ export function CountUp({ value, duration = 1100 }: { value: number | null; dura
 
   return (
     <span ref={ref} style={{ fontVariantNumeric: "tabular-nums" }}>
-      {value === null ? "—" : (shown ?? value)}
+      {value === null ? "—" : (shown ?? value).toLocaleString(locale)}
     </span>
   );
 }

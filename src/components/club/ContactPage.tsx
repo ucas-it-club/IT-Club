@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
 import { ArrowUpLeft, ArrowUpRight, Facebook, Instagram, Linkedin, Mail } from "lucide-react";
 import { useClub } from "./club-context";
-import "./contact-page.css";
 
 type Channel = {
   key: string;

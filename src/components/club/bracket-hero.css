@@ -27,6 +27,10 @@
   margin-inline: calc(50% - 50vw + var(--sbw, 0px) / 2);
   overflow-x: clip;
 }
+/* Until BracketHero sets --sbw, 100vw is a scrollbar too wide: never scroll sideways. */
+.club-site:has(.bh) {
+  overflow-x: clip;
+}
 
 .bh-stage {
   position: relative;
@@ -514,4 +518,177 @@
 }
 .bh[data-variant="split"] .bh-arm {
   --arm: clamp(2rem, 6vw, 4.5rem);
+}
+
+/* ---------- Prototype: ?after=sentence (stacked layout only) ---------- */
+
+.bh-sent {
+  width: min(56rem, 100%);
+  padding-inline: 1rem;
+  text-align: start;
+}
+.bh-sent-lede {
+  font-size: clamp(1.5rem, 4.4vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.75;
+  color: var(--foreground);
+  text-wrap: pretty;
+}
+.bh-sent-n {
+  font-size: 1.3em;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--bh-ink-1);
+}
+.bh-sent-n:nth-of-type(2) {
+  color: var(--bh-ink-2);
+}
+.bh-sent-n:nth-of-type(3) {
+  color: var(--bh-ink-3);
+}
+/* The fields finish the sentence: one ruled row, no pills. */
+.bh-sent-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: clamp(1.5rem, 4vw, 2.5rem);
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 640px) {
+  .bh-sent-fields {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.bh-sent-fields li {
+  position: relative;
+  padding: 1rem 0.25rem 1.1rem;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 800;
+  color: var(--foreground);
+}
+/* Each field's own top rule, so the rules can draw in one after another. */
+.bh-sent-fields li::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--foreground);
+  transform-origin: var(--bh-from, left);
+}
+[dir="rtl"] .bh-sent-fields li::before {
+  --bh-from: right;
+}
+.bh-sent-close {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+  margin-top: clamp(2rem, 5vw, 3rem);
+}
+.bh-sent-motto {
+  display: flex;
+  gap: 0 0.4em;
+  font-size: clamp(1.375rem, 3.2vw, 2rem);
+  font-weight: 900;
+  line-height: 1.4;
+}
+.bh-sent .bh-actions {
+  margin-top: 0;
+  justify-content: flex-start;
+}
+
+/* As the section scrolls in: the lede rises out of a mask, the field rules draw one
+   after another, then their names rise. Scroll-linked, so it never replays or waits. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .bh-sent-lede,
+    .bh-sent-close {
+      animation: bh-sent-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 60%;
+    }
+    .bh-sent-fields li::before {
+      animation: bh-sent-rule linear both;
+      animation-timeline: view();
+    }
+    .bh-sent-fields li:nth-child(1)::before {
+      animation-range: entry 20% entry 55%;
+    }
+    .bh-sent-fields li:nth-child(2)::before {
+      animation-range: entry 30% entry 65%;
+    }
+    .bh-sent-fields li:nth-child(3)::before {
+      animation-range: entry 40% entry 75%;
+    }
+    .bh-sent-fields li:nth-child(4)::before {
+      animation-range: entry 50% entry 85%;
+    }
+  }
+}
+@keyframes bh-sent-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(-20% -5% -20% -5%);
+  }
+}
+@keyframes bh-sent-rule {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* ---------- Compact stacked hero (below 1024px) ----------
+   Name, who we are, the numbers and the way in share one screen. No rise-in. */
+@media (max-width: 1023.98px) {
+  .bh[data-mode="static"] .bh-stage {
+    gap: 1.5rem;
+    padding-block: 0.5rem 2.5rem;
+  }
+  .bh[data-mode="static"] .bh-row {
+    min-height: 0;
+  }
+  .bh[data-mode="static"] .bh-panel {
+    animation: none;
+  }
+  .bh[data-mode="static"] .bh-title {
+    font-size: 1.25rem;
+  }
+  .bh[data-mode="static"] .bh-text {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+  .bh[data-mode="static"] .bh-majors {
+    gap: 0.4rem;
+    margin-top: 1rem;
+  }
+  .bh[data-mode="static"] .bh-majors li {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  .bh[data-mode="static"] .bh-facts {
+    gap: 0.75rem;
+  }
+  .bh[data-mode="static"] .bh-facts dt {
+    font-size: clamp(2rem, 10vw, 3.25rem);
+  }
+  .bh[data-mode="static"] .bh-facts dd {
+    margin-top: 0.25rem;
+    font-size: 0.9rem;
+  }
+  .bh[data-mode="static"] .bh-reg {
+    margin-top: 0.75rem;
+  }
+  .bh[data-mode="static"] .bh-motto {
+    font-size: 1.5rem;
+  }
+  .bh[data-mode="static"] .bh-actions {
+    margin-top: 1rem;
+  }
 }

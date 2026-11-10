@@ -13,7 +13,6 @@ import { FloatingBackground } from "./FloatingBackground";
 import { FloatingJoin } from "./FloatingJoin";
 import { PrivacyNotice } from "./PrivacyNotice";
 import { SiteFooter } from "./SiteFooter";
-import "./club.css";
 
 const AdminPanel = lazy(() =>
   import("./AdminPanel").then((module) => ({ default: module.AdminPanel })),
@@ -179,6 +178,35 @@ function Shell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!loading && !window.__bootWaitHero) window.__bootDone?.();
   }, [loading]);
+  // Prototype: ?motion=1 turns the premium motion layer on for this session (motion-proto.css),
+  // ?motion=0 turns it off. It also lets the header step aside while reading down.
+  useEffect(() => {
+    const html = document.documentElement;
+    const param = new URLSearchParams(window.location.search).get("motion");
+    let on = false;
+    try {
+      if (param === "1") sessionStorage.setItem("ucas-motion", "1");
+      if (param === "0") sessionStorage.removeItem("ucas-motion");
+      on = sessionStorage.getItem("ucas-motion") === "1";
+    } catch {
+      // Storage blocked: the prototype simply stays off.
+    }
+    html.classList.toggle("motion", on);
+    if (!on) return;
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      html.toggleAttribute("data-scrolled", y > 40);
+      // Ignore jitter; hide only while reading down, never with focus inside the header.
+      if (Math.abs(y - last) < 6) return;
+      const inHeader = document.querySelector(".club-header")?.contains(document.activeElement);
+      html.toggleAttribute("data-header-away", y > last && y > 240 && !inHeader);
+      last = y;
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   return (
     <div dir={lang === "ar" ? "rtl" : "ltr"} className="club-site relative isolate min-h-screen">
       {!isAdmin && <FloatingBackground />}

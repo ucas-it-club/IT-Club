@@ -30,8 +30,6 @@ import { plainRichText, splitRichText } from "@/lib/club/rich-text";
 import { eventDisplayStatus } from "@/lib/club/event-timing";
 import { contentImageUrls } from "@/lib/club/google-drive";
 import { siteName } from "@/lib/club/seo";
-import { useSearch } from "@tanstack/react-router";
-import { AboutPrototypes } from "./AboutPrototypes";
 import { BracketHero } from "./BracketHero";
 import { ContentReel } from "./ContentReel";
 import { ClubLink, ContentGrid, Empty, Heading, linkClass } from "./ClubContent";
@@ -125,13 +123,6 @@ export function HomePage() {
 }
 
 export function AboutPage() {
-  const { about } = useSearch({ strict: false }) as { about?: unknown };
-
-  // The old page stays reachable at ?about=old while the prototypes are compared.
-  return about === "old" ? <AboutPageOld /> : <AboutPrototypes />;
-}
-
-function AboutPageOld() {
   const { lang, settings, data } = useClub();
   const ar = lang === "ar";
   const goals = splitRichText(settings[ar ? "goals" : "goals_en"] || "");

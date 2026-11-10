@@ -6,7 +6,6 @@ import { itemPage } from "@/lib/club/paths";
 import { useClub } from "./club-context";
 import { ClubLink } from "./ClubContent";
 import { ContentImage } from "./ContentImage";
-import "./events-page.css";
 
 function useEvents() {
   const { lang, data } = useClub();
@@ -36,7 +35,6 @@ function Head({ ar }: { ar: boolean }) {
   return (
     <header className="ev-head">
       <h1 id="ev-heading">{ar ? "الفعاليات" : "Events"}</h1>
-      <p>{ar ? "كل فعاليات النادي، القادمة والسابقة." : "Every club event, coming up and past."}</p>
     </header>
   );
 }

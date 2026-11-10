@@ -13,6 +13,7 @@ import dotTop from "@/assets/logo/dot-top.webp";
 import dotBottom from "@/assets/logo/dot-bottom.webp";
 import { HeroOpening } from "./HeroOpening";
 import { weakDevice } from "@/lib/club/device";
+import { CountUp } from "./CountUp";
 
 /**
  * Home hero: the club name between the logo's two brackets.
@@ -122,6 +123,54 @@ function Actions() {
   );
 }
 
+/**
+ * Prototype for the stacked layout: who the club is, in one sentence that carries its
+ * own figures, finished by the four fields as a ruled row, then the motto and the way in.
+ */
+function Sentence({ majors }: { majors: string[] }) {
+  const { ar, members, committees, events } = useFacts();
+  const locale = "en-US";
+  const N = ({ v }: { v: number }) => (
+    <b className="bh-sent-n">
+      <CountUp value={v} locale={locale} />
+    </b>
+  );
+
+  return (
+    <div className="bh-sent" dir={ar ? "rtl" : "ltr"}>
+      <p className="bh-sent-lede">
+        {ar ? (
+          <>
+            نادٍ طلابي في الكلية الجامعية للعلوم التطبيقية يديره طلبته: <N v={members} /> عضوًا في{" "}
+            <N v={committees} /> لجان، و<N v={events} /> فعاليات حتى الآن، في أربعة مجالات:
+          </>
+        ) : (
+          <>
+            A student-run club at the University College of Applied Sciences: <N v={members} />{" "}
+            members in <N v={committees} /> committees and <N v={events} /> events so far, across
+            four fields:
+          </>
+        )}
+      </p>
+      <ul className="bh-sent-fields">
+        {majors.map((m) => (
+          <li key={m}>{m}</li>
+        ))}
+      </ul>
+      <div className="bh-sent-close">
+        <p className="bh-sent-motto">
+          {(ar ? ["نتعلم", "نبتكر", "نتقدم"] : ["Learn.", "Innovate.", "Advance."]).map((w, i) => (
+            <span key={w} className={`bh-motto-${i}`}>
+              {w}
+            </span>
+          ))}
+        </p>
+        <Actions />
+      </div>
+    </div>
+  );
+}
+
 export function BracketHero() {
   const { ar, lang, members, committees, events, open, photos, next, nextDate } = useFacts();
   const [mode, setMode] = useState<Mode>("pending");
@@ -135,10 +184,17 @@ export function BracketHero() {
   const root = useRef<HTMLElement>(null);
   // Prototype (on by default, ?intro=0 for the old hero): name, motto, numbers, name play
   // on their own before any scrolling, and every scroll step rises in like the name.
-  const { intro: introParam, hero: heroParam } = useSearch({ strict: false }) as {
+  const {
+    intro: introParam,
+    hero: heroParam,
+    after: afterParam,
+  } = useSearch({ strict: false }) as {
     intro?: unknown;
     hero?: unknown;
+    after?: unknown;
   };
+  // Prototype (?after=sentence): below 1024px, one sentence replaces the stacked panels.
+  const sentence = afterParam === "sentence" && mode === "static";
   const story = String(introParam) !== "0";
   // Opening-screen studies: ?hero=wall | masthead | split. Absent keeps today's hero.
   const variant =
@@ -148,7 +204,7 @@ export function BracketHero() {
     heroParam === "split"
       ? heroParam
       : null;
-  const n = (v: number) => v.toLocaleString(ar ? "ar-EG" : "en-US");
+  const n = (v: number) => v.toLocaleString("en-US");
 
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -216,8 +272,7 @@ export function BracketHero() {
       // A reload starts the story over, like the opening does; the router would otherwise
       // put the visitor back deep inside it. Back and forward keep their place.
       const nav = performance.getEntriesByType("navigation")[0] as
-        | PerformanceNavigationTiming
-        | undefined;
+        PerformanceNavigationTiming | undefined;
 
       if (nav?.type === "reload" && window.scrollY > 0)
         window.scrollTo({ top: 0, behavior: "instant" });
@@ -225,7 +280,7 @@ export function BracketHero() {
       const q = <T extends Element>(sel: string) => gsap.utils.toArray<T>(sel, node);
       // Reverting a rebuild drops the count tweens back to 0: show the real figures again.
       q<HTMLElement>("[data-count]").forEach((el) => {
-        el.textContent = Number(el.dataset["count"]).toLocaleString(ar ? "ar-EG" : "en-US");
+        el.textContent = Number(el.dataset["count"]).toLocaleString("en-US");
       });
       const ctx = gsap.context((self) => {
         const intro = gsap.timeline({ defaults: { ease: "expo.out" } });
@@ -415,7 +470,7 @@ export function BracketHero() {
                     duration: 1,
                     ease: "power2.out",
                     onUpdate: () => {
-                      el.textContent = Math.round(proxy.v).toLocaleString(ar ? "ar-EG" : "en-US");
+                      el.textContent = Math.round(proxy.v).toLocaleString("en-US");
                     },
                   },
                   "<",
@@ -450,7 +505,7 @@ export function BracketHero() {
               duration: 0.7,
               ease: "power2.out",
               onUpdate: () => {
-                el.textContent = Math.round(proxy.v).toLocaleString(ar ? "ar-EG" : "en-US");
+                el.textContent = Math.round(proxy.v).toLocaleString("en-US");
               },
             },
             1.9,
@@ -560,50 +615,58 @@ export function BracketHero() {
             </aside>
           )}
 
-          <div className="bh-panel bh-who" dir={ar ? "rtl" : "ltr"}>
-            <h2 className="bh-title">{ar ? "من نحن" : "Who we are"}</h2>
-            <p className="bh-text">
-              {ar
-                ? "نادٍ طلابي في الكلية الجامعية للعلوم التطبيقية، يديره طلبته ويجمع المهتمين بالبرمجة والتصميم والألعاب والوسائط."
-                : "A student-run club at the University College of Applied Sciences for everyone working in code, design, games and media."}
-            </p>
-            <ul className="bh-majors">
-              {majors.map((m) => (
-                <li key={m}>{m}</li>
-              ))}
-            </ul>
-          </div>
+          {sentence ? (
+            <Sentence majors={majors} />
+          ) : (
+            <>
+              <div className="bh-panel bh-who" dir={ar ? "rtl" : "ltr"}>
+                <h2 className="bh-title">{ar ? "من نحن" : "Who we are"}</h2>
+                <p className="bh-text">
+                  {ar
+                    ? "نادٍ طلابي في الكلية الجامعية للعلوم التطبيقية، يديره طلبته ويجمع المهتمين بالبرمجة والتصميم والألعاب والوسائط."
+                    : "A student-run club at the University College of Applied Sciences for everyone working in code, design, games and media."}
+                </p>
+                <ul className="bh-majors">
+                  {majors.map((m) => (
+                    <li key={m}>{m}</li>
+                  ))}
+                </ul>
+              </div>
 
-          <div className="bh-panel bh-numbers" dir={ar ? "rtl" : "ltr"}>
-            <dl className="bh-facts">
-              {(
-                [
-                  [members, ar ? "عضوًا" : "members"],
-                  [committees, ar ? "لجان" : "committees"],
-                  [events, ar ? "فعاليات" : "events"],
-                ] as const
-              ).map(([v, label]) => (
-                <div key={label}>
-                  <dt data-count={v}>{n(v)}</dt>
-                  <dd>{label}</dd>
-                </div>
-              ))}
-            </dl>
-            {open && <p className="bh-reg is-open">{ar ? "التسجيل مفتوح" : "Registration open"}</p>}
-          </div>
+              <div className="bh-panel bh-numbers" dir={ar ? "rtl" : "ltr"}>
+                <dl className="bh-facts">
+                  {(
+                    [
+                      [members, ar ? "عضوًا" : "members"],
+                      [committees, ar ? "لجان" : "committees"],
+                      [events, ar ? "فعاليات" : "events"],
+                    ] as const
+                  ).map(([v, label]) => (
+                    <div key={label}>
+                      <dt data-count={v}>{n(v)}</dt>
+                      <dd>{label}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {open && (
+                  <p className="bh-reg is-open">{ar ? "التسجيل مفتوح" : "Registration open"}</p>
+                )}
+              </div>
 
-          <div className="bh-panel bh-join" dir={ar ? "rtl" : "ltr"}>
-            <h2 className="bh-motto">
-              {(ar ? ["نتعلم", "نبتكر", "نتقدم"] : ["Learn.", "Innovate.", "Advance."]).map(
-                (w, i) => (
-                  <span key={w} className={`bh-motto-${i}`}>
-                    {w}
-                  </span>
-                ),
-              )}
-            </h2>
-            <Actions />
-          </div>
+              <div className="bh-panel bh-join" dir={ar ? "rtl" : "ltr"}>
+                <h2 className="bh-motto">
+                  {(ar ? ["نتعلم", "نبتكر", "نتقدم"] : ["Learn.", "Innovate.", "Advance."]).map(
+                    (w, i) => (
+                      <span key={w} className={`bh-motto-${i}`}>
+                        {w}
+                      </span>
+                    ),
+                  )}
+                </h2>
+                <Actions />
+              </div>
+            </>
+          )}
 
           <ChevronDown className="bh-cue" size={28} aria-hidden="true" />
         </div>

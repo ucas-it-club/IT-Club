@@ -9,22 +9,49 @@
   /* Card size and shape, per design. */
   --er-card: clamp(15rem, 26vw, 24rem);
   --er-ratio: 4 / 3;
-  /* Not a flat colour: two soft glows in the brand's blue and green over a navy that
-     deepens downwards. */
-  background:
-    radial-gradient(60rem 28rem at 10% 0%, oklch(0.5 0.16 250 / 0.5), transparent 70%),
-    radial-gradient(48rem 26rem at 95% 100%, oklch(0.62 0.17 136 / 0.3), transparent 70%),
-    linear-gradient(180deg, var(--navy), oklch(0.2 0.05 254));
-  color: #fff;
+  position: relative;
+  isolation: isolate;
+  /* Light theme: the band is the page itself, its grid showing through, lit by two
+     faint brand glows. Dark theme: a deeper navy that melts into the dark page. */
+  --er-ink: var(--foreground);
+  --er-soft: var(--muted-foreground);
+  --er-accent: oklch(0.5 0.15 138);
+  --er-tile: var(--muted);
+  --er-rule: var(--border);
+  --er-cap-fade: color-mix(in oklab, var(--background) 85%, transparent);
+  color: var(--er-ink);
 }
 .dark .er {
+  --er-ink: #fff;
+  --er-soft: rgb(255 255 255 / 0.6);
+  --er-accent: oklch(0.85 0.15 136);
+  --er-tile: rgb(255 255 255 / 0.08);
+  --er-rule: rgb(255 255 255 / 0.14);
+  --er-cap-fade: oklch(0.2 0.05 254 / 0.75);
+}
+.er::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background:
-    radial-gradient(60rem 28rem at 10% 0%, oklch(0.45 0.15 250 / 0.5), transparent 70%),
-    radial-gradient(48rem 26rem at 95% 100%, oklch(0.55 0.16 136 / 0.28), transparent 70%),
-    linear-gradient(180deg, #1a2c47, oklch(0.17 0.04 254));
+    radial-gradient(60rem 28rem at 10% 15%, oklch(0.6 0.15 250 / 0.12), transparent 70%),
+    radial-gradient(48rem 26rem at 95% 85%, oklch(0.7 0.16 136 / 0.12), transparent 70%);
+  mask-image: linear-gradient(transparent, #000 7rem, #000 calc(100% - 7rem), transparent);
+}
+.dark .er::before {
+  background:
+    linear-gradient(to left, rgb(255 255 255 / 0.04) 1px, transparent 1px) 0 0 / 44px 44px,
+    linear-gradient(to bottom, rgb(255 255 255 / 0.04) 1px, transparent 1px) 0 0 / 44px 44px,
+    radial-gradient(60rem 28rem at 10% 15%, oklch(0.45 0.15 250 / 0.45), transparent 70%),
+    radial-gradient(48rem 26rem at 95% 85%, oklch(0.55 0.16 136 / 0.25), transparent 70%),
+    linear-gradient(180deg, #16263d, oklch(0.17 0.04 254));
 }
 .er + .er {
-  border-top: 1px solid rgb(255 255 255 / 0.14);
+  border-top: 1px solid var(--er-rule);
+}
+.dark .er + .er {
+  border-top: 0;
 }
 /* The strip travels to the left in both languages, so its items run left to right
    inside an RTL page and each card keeps its own reading direction. */
@@ -58,7 +85,7 @@
   align-items: center;
   gap: 0.5rem;
   font-weight: 800;
-  color: oklch(0.85 0.15 136);
+  color: var(--er-accent);
 }
 .er-strip {
   display: flex;
@@ -80,7 +107,7 @@
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: 0.875rem;
-  background: rgb(255 255 255 / 0.08);
+  background: var(--er-tile);
 }
 .er-photo img {
   width: 100%;
@@ -97,7 +124,7 @@
 .er-date {
   font-size: 0.9375rem;
   font-weight: 800;
-  color: oklch(0.85 0.15 136);
+  color: var(--er-accent);
 }
 .er-title {
   font-size: 1.25rem;
@@ -111,7 +138,7 @@
 }
 .er a:focus-visible,
 .er button:focus-visible {
-  outline: 3px solid #fff;
+  outline: 3px solid var(--er-ink);
   outline-offset: 3px;
   border-radius: 0.25rem;
 }
@@ -220,17 +247,17 @@
     border-bottom: 2px solid transparent;
     font-size: 0.875rem;
     font-weight: 800;
-    color: rgb(255 255 255 / 0.6);
+    color: var(--er-soft);
     transition:
       color 250ms ease,
       border-color 250ms ease;
   }
   .er-nav button:hover,
   .er-nav button[data-on] {
-    color: #fff;
+    color: var(--er-ink);
   }
   .er-nav button[data-on] {
-    border-color: oklch(0.85 0.15 136);
+    border-color: var(--er-accent);
   }
   /* rail: the tabs carry the photograph of the item they lead to. */
   .er[data-design="rail"] .er-nav {
@@ -256,8 +283,8 @@
     opacity: 1;
   }
   .er[data-design="rail"] .er-nav button[data-on] {
-    color: #fff;
-    box-shadow: inset 0 -2px 0 oklch(0.85 0.15 136);
+    color: var(--er-ink);
+    box-shadow: inset 0 -2px 0 var(--er-accent);
   }
 
   /* full: one photograph across nearly the whole screen at a time, its caption in a bar
@@ -359,7 +386,7 @@
     inset: -2rem 0 0;
     z-index: -1;
     background:
-      linear-gradient(180deg, transparent, oklch(0.2 0.05 254 / 0.75)),
+      linear-gradient(180deg, transparent, var(--er-cap-fade)),
       var(--photo, none) center / cover;
     filter: blur(28px) saturate(1.5);
     opacity: 0.55;

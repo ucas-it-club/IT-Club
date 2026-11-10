@@ -12,14 +12,17 @@
   display: grid;
   place-items: center;
   background: var(--splash);
-  transition:
-    transform 800ms cubic-bezier(0.76, 0, 0.24, 1),
-    visibility 0s linear 800ms;
 }
+/* Leaving plays the assembly backwards: the pieces slide back out, the full ring
+   fades (it never runs backwards, which would read as progress lost), then the
+   navy fades onto the page. */
 .booted .boot {
-  transform: translateY(-100%);
+  opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  transition:
+    opacity 600ms ease 300ms,
+    visibility 0s linear 900ms;
 }
 .boot-seen .boot {
   display: none;
@@ -31,7 +34,8 @@
 }
 .boot-logo {
   position: relative;
-  width: clamp(9rem, 28vw, 14rem);
+  /* The diamond is ~1.77x this, so short landscape screens size it by height too. */
+  width: clamp(6rem, min(28vw, 40vh), 14rem);
   aspect-ratio: 1;
 }
 .boot-ring {
@@ -68,12 +72,25 @@
   --from: -60%;
   animation-delay: 0.3s;
 }
-/* The pieces part as the screen lifts, the way the brackets part on the home page. */
-.booted .boot-piece-left {
-  transform: translateX(-90%);
+.booted .boot-ring {
+  opacity: 0;
+  transition: opacity 500ms ease 200ms;
+}
+.booted .boot-piece {
+  animation: boot-out 600ms cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+/* Reverse of the assembly order. */
+.booted .boot-piece-dot-bottom {
+  animation-delay: 0s;
+}
+.booted .boot-piece-dot-top {
+  animation-delay: 0.05s;
 }
 .booted .boot-piece-right {
-  transform: translateX(90%);
+  animation-delay: 0.2s;
+}
+.booted .boot-piece-left {
+  animation-delay: 0.3s;
 }
 @keyframes boot-in {
   from {
@@ -81,13 +98,22 @@
     transform: translateX(var(--from));
   }
 }
+@keyframes boot-out {
+  to {
+    opacity: 0;
+    transform: translateX(var(--from));
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .boot,
+  .booted .boot,
   .boot-piece {
     transition-duration: 1ms;
+    transition-delay: 0s;
   }
-  .boot-piece {
+  .boot-piece,
+  .booted .boot-piece {
     animation: none;
   }
 }

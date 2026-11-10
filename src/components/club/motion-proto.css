@@ -1,0 +1,111 @@
+/* Prototype: the premium motion layer. On only with ?motion=1 (ClubSite puts
+   html.motion on for the session), so it can be compared against the current site. */
+
+/* 1. Page change: the old page dims and softens away, the new one rises out of a blur,
+   and the page title glides from where the last one stood. */
+html.motion::view-transition-old(page) {
+  animation: mp-leave 240ms var(--ease-leave) both;
+}
+html.motion::view-transition-new(page) {
+  animation: mp-arrive 700ms var(--ease-arrive) 60ms both;
+}
+.motion main h1:not(.bh-name) {
+  view-transition-name: page-title;
+}
+html.motion::view-transition-group(page-title) {
+  animation-duration: 550ms;
+  animation-timing-function: var(--ease-arrive);
+}
+@keyframes mp-leave {
+  to {
+    opacity: 0;
+    filter: blur(6px);
+    transform: scale(0.985);
+  }
+}
+@keyframes mp-arrive {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(1.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 2. Headings and record rows rise out of their own bottom edge as they enter,
+     the way the hero's name does. Scroll-linked, so nothing waits or replays. */
+  @supports (animation-timeline: view()) {
+    .motion main :is(h1, h2):not(.bh *),
+    .motion .ev-record > li {
+      animation: mp-line linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+
+  /* 3. Photos settle in from a blur once loaded, and lean in under the pointer. */
+  .motion :is(.er-photo, .ev-entry-photo, .ev-next-photo) img {
+    transition:
+      transform 900ms var(--ease-arrive),
+      filter 700ms ease,
+      opacity 700ms ease;
+  }
+  .motion :is(.er-photo, .ev-entry-photo, .ev-next-photo) img:not([data-loaded]) {
+    opacity: 0;
+    filter: blur(14px);
+    transform: scale(1.06);
+  }
+  .motion :is(.er-event, .ev-entry, .ev-next-link):hover img {
+    transform: scale(1.06);
+  }
+  .motion .ev-entry-body {
+    transition: transform 500ms var(--ease-arrive);
+  }
+  .motion .ev-entry:hover .ev-entry-body {
+    transform: translateX(0.5rem);
+  }
+  .motion [dir="rtl"] .ev-entry:hover .ev-entry-body {
+    transform: translateX(-0.5rem);
+  }
+
+  /* 4. The header steps aside while reading down and comes back on the way up. */
+  .motion .club-header {
+    transition:
+      transform 500ms var(--ease-arrive),
+      opacity 300ms ease;
+  }
+  .motion[data-header-away] .club-header {
+    transform: translateY(calc(-100% - 1.5rem));
+    opacity: 0;
+    transition:
+      transform 300ms var(--ease-leave),
+      opacity 200ms ease;
+  }
+}
+
+/* Once the page has scrolled, the header tightens and its glass firms up. */
+.motion .club-header-row,
+.motion .club-header-surface {
+  transition:
+    padding 300ms var(--ease-arrive),
+    background-color 300ms ease,
+    box-shadow 300ms ease;
+}
+.motion[data-scrolled] .club-header-row {
+  padding-block: 0.3rem;
+}
+.motion[data-scrolled] .club-header-surface {
+  background: color-mix(in oklab, var(--background) 84%, transparent);
+  box-shadow: 0 16px 36px -22px color-mix(in oklab, var(--brand-blue) 55%, transparent);
+}
+
+@keyframes mp-line {
+  from {
+    opacity: 0;
+    transform: translateY(0.8em);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(-25% -5% -25% -5%);
+  }
+}

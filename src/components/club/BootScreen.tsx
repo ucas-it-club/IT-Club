@@ -18,7 +18,7 @@ declare global {
  * It is plain markup plus one inline script, so it paints from the first byte
  * of the document and runs before React hydrates. The script eases the counter
  * toward 90%, waits for `window.__bootDone()` (ClubSite calls it once content
- * is ready), then runs to 100 and lifts away. Once per session: a visitor who
+ * is ready), then runs to 100 and plays its assembly backwards. Once per session: a visitor who
  * already saw it never sees it again, and without JavaScript it never covers
  * the page. Everything it hides is real content already in the document.
  */

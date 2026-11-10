@@ -1,4 +1,3 @@
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { dateParts } from "@/lib/club/event-timing";
 import { contentImageUrls } from "@/lib/club/google-drive";
 import { local } from "@/lib/club/model";
@@ -6,16 +5,14 @@ import { itemPage } from "@/lib/club/paths";
 import { useClub } from "./club-context";
 import { ClubLink } from "./ClubContent";
 import { ContentImage } from "./ContentImage";
-import "./events-page.css";
 
 /**
- * News reads like the events page: the newest story as a full-width band, the
- * rest as a written record grouped by year, every entry with its own photo.
+ * News reads like the events page: a written record grouped by year and month,
+ * newest first, every entry with its own photo.
  */
 export function NewsPage() {
   const { lang, data } = useClub();
   const ar = lang === "ar";
-  const Arrow = ar ? ArrowLeft : ArrowRight;
   const news = [...data.news]
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
     .map((item) => ({
@@ -26,11 +23,10 @@ export function NewsPage() {
       src: contentImageUrls(item)[0],
       path: itemPage("news", item, data),
     }));
-  const [lead, ...rest] = news;
   // Year, then month: the month is what stays with you while you scroll, the year is a
   // plain divider above its months.
-  const years: { year: string; months: { month: string; stories: typeof rest }[] }[] = [];
-  for (const story of rest) {
+  const years: { year: string; months: { month: string; stories: typeof news }[] }[] = [];
+  for (const story of news) {
     const year = story.date?.year ?? "—";
     const month = story.date?.month ?? "—";
     let y = years.find((group) => group.year === year);
@@ -46,36 +42,7 @@ export function NewsPage() {
     <section className="ev-chronicle" aria-labelledby="nw-heading">
       <header className="ev-head">
         <h1 id="nw-heading">{ar ? "الأخبار" : "News"}</h1>
-        <p>
-          {ar
-            ? "ما ينشره النادي من أخبار وإعلانات، الأحدث أولًا."
-            : "What the club has to report, newest first."}
-        </p>
       </header>
-
-      {lead && (
-        <div className="ev-next">
-          <ClubLink path={lead.path} className="ev-next-link">
-            <span className="ev-next-inner">
-              <span className="ev-next-text">
-                <span className="ev-next-title">{lead.title}</span>
-                <span className="ev-next-facts">
-                  {[lead.date && `${lead.date.day} ${lead.date.month} ${lead.date.year}`, lead.meta]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-                <span className="ev-more">
-                  {ar ? "اقرأ الخبر" : "Read the story"}
-                  <Arrow size={18} aria-hidden="true" />
-                </span>
-              </span>
-              <span className="ev-next-photo">
-                <ContentImage src={lead.src} alt={lead.title} lang={lang} />
-              </span>
-            </span>
-          </ClubLink>
-        </div>
-      )}
 
       {years.map(({ year, months }) => (
         <div key={year} className="nw-year" role="group" aria-label={year}>

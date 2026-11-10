@@ -1,16 +1,11 @@
 /* Loading screen to home hero hand-over (HeroOpening). */
 
 /* While the hand-over runs, the loading screen is swapped out at once instead of
-   lifting: the opening's navy cover, logo and shape sit exactly where its own
+   playing its own exit: the opening's navy cover, logo and shape sit exactly where its own
    navy, logo and ring were, so nothing visibly changes. */
 .hero-opening.booted .boot {
-  transform: none;
   visibility: hidden;
   transition: none;
-}
-.hero-opening.booted .boot-piece-left,
-.hero-opening.booted .boot-piece-right {
-  transform: none;
 }
 
 .ho {

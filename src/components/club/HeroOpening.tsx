@@ -76,7 +76,8 @@ export function HeroOpening() {
       // Sit exactly where the loading screen's logo is, before it fades.
       const logo = node.querySelector<HTMLElement>(".ho-logo")!;
       const r = document.querySelector("#boot .boot-logo")?.getBoundingClientRect();
-      const size = r?.width || Math.min(224, Math.max(144, innerWidth * 0.28));
+      const size =
+        r?.width || Math.min(224, Math.max(96, Math.min(innerWidth * 0.28, innerHeight * 0.4)));
       logo.style.width = `${size}px`;
       logo.style.left = `${r?.width ? r.left : (innerWidth - size) / 2}px`;
       logo.style.top = `${r?.width ? r.top : (innerHeight - size) / 2}px`;

@@ -41,6 +41,12 @@ export function ContentImage({
       loading="lazy"
       decoding="async"
       onError={() => setFailed((urls) => [...urls, source])}
+      // For the ?motion=1 prototype: photos settle in from a blur once they have loaded.
+      // A photo cached before hydration never fires load, so the ref marks it too.
+      ref={(img) => {
+        if (img?.complete) img.dataset["loaded"] = "";
+      }}
+      onLoad={(e) => (e.currentTarget.dataset["loaded"] = "")}
       className={className}
     />
   );

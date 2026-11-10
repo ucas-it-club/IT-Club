@@ -1,6 +1,5 @@
 import { forwardRef, type HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
-import "./hero-section-4.css";
 
 /** Adds the supplied hero effect without replacing the existing page content. */
 export const HeroSection = forwardRef<HTMLElement, HTMLAttributes<HTMLElement>>(
