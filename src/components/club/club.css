@@ -718,3 +718,37 @@ html.js .club-reveal.is-shown {
 .club-site .club-nav-link[aria-current="page"] {
   color: transparent;
 }
+
+/* ---------- Navbar brand: the logo tilts gently, the name takes the gradient ---------- */
+.club-site .club-brand-text {
+  background-image: var(--sheen-band-text), var(--sheen-text);
+  background-size: 200% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  background-position: 100% 0, 0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  transition: color 250ms ease;
+}
+@media (hover: hover) {
+  .club-site .club-header-brand:hover .club-brand-text {
+    color: transparent;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .club-site .club-header-brand:hover .club-brand-text {
+    background-position: 0 0, 0 0;
+    transition:
+      color 250ms ease,
+      background-position 800ms var(--ease-out);
+  }
+  /* A slow tilt and settle, played once on the way in; it does not replay on the way out. */
+  .club-site .club-header-brand:hover img {
+    animation: club-logo-sway 1100ms ease-in-out;
+  }
+}
+@keyframes club-logo-sway {
+  40% {
+    rotate: 12deg;
+    scale: 1.06;
+  }
+}

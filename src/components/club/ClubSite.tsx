@@ -106,7 +106,7 @@ function SiteHeader({ status }: { status: boolean }) {
               className="h-9 w-8 object-contain"
               alt="UCAS IT CLUB"
             />
-            <span className="text-sm font-black">UCAS IT CLUB</span>
+            <span className="club-brand-text text-sm font-black">UCAS IT CLUB</span>
           </ClubLink>
           <nav
             aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}
