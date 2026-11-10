@@ -61,7 +61,7 @@ export function PrivacyNotice({ ar }: { ar: boolean }) {
         <button
           type="button"
           onClick={dismiss}
-          className="club-action inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-brand-gradient px-5 py-2.5 font-bold text-white shadow-glow-blue transition-transform hover:-translate-y-0.5"
+          className="club-action inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-brand-gradient px-5 py-2.5 font-bold text-white shadow-card transition-transform hover:-translate-y-0.5"
         >
           <X size={15} aria-hidden="true" />
           {ar ? "حسنًا" : "Got it"}

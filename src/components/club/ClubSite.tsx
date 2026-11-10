@@ -9,10 +9,12 @@ import { readTheme, THEME_COOKIE, writePrefCookie } from "@/lib/club/prefs";
 import { ClubProvider } from "./ClubProvider";
 import { useClub } from "./club-context";
 import { ClubLink, Heading } from "./ClubContent";
-import { FloatingBackground } from "./FloatingBackground";
 import { FloatingJoin } from "./FloatingJoin";
+import { IconSwap } from "./IconSwap";
 import { PrivacyNotice } from "./PrivacyNotice";
 import { SiteFooter } from "./SiteFooter";
+import { SiteBackground } from "./SiteBackground";
+import { SiteStatus } from "./SiteStatus";
 
 const AdminPanel = lazy(() =>
   import("./AdminPanel").then((module) => ({ default: module.AdminPanel })),
@@ -71,12 +73,23 @@ function useTheme() {
   return { dark, toggle };
 }
 
-function SiteHeader() {
+function SiteHeader({ status }: { status: boolean }) {
   const location = useLocation();
   const { lang, loading, error, data, settings } = useClub();
   const [open, setOpen] = useState(false);
+  // The mobile panel stays mounted for as long as its exit takes, so it can
+  // shrink away instead of vanishing between two frames.
+  const [panelOpen, setPanelOpen] = useState(false);
   const { dark, toggle } = useTheme();
   const ar = lang === "ar";
+  useEffect(() => {
+    if (open) {
+      setPanelOpen(true);
+      return;
+    }
+    const timer = setTimeout(() => setPanelOpen(false), 320);
+    return () => clearTimeout(timer);
+  }, [open]);
   const links =
     loading || error
       ? navigationItems
@@ -104,7 +117,7 @@ function SiteHeader() {
                 key={path}
                 path={path}
                 navigation
-                className="club-nav-link rounded-full px-3 py-2 text-sm font-bold aria-[current=page]:bg-brand-gradient"
+                className="club-nav-link rounded-full px-3 py-2 text-sm font-bold"
               >
                 {ar ? arabic : english}
               </ClubLink>
@@ -138,7 +151,10 @@ function SiteHeader() {
                 ar ? (dark ? "الوضع الفاتح" : "الوضع الداكن") : dark ? "Light theme" : "Dark theme"
               }
             >
-              {dark ? <Sun size={18} /> : <Moon size={18} />}
+              <IconSwap
+                on={dark ? <Sun size={18} /> : null}
+                off={dark ? null : <Moon size={18} />}
+              />
             </button>
             <button
               type="button"
@@ -147,18 +163,22 @@ function SiteHeader() {
               aria-label={ar ? "القائمة" : "Menu"}
               className="rounded-xl p-2 xl:hidden"
             >
-              {open ? <X /> : <Menu />}
+              <IconSwap on={open ? <X /> : null} off={open ? null : <Menu />} />
             </button>
           </div>
         </div>
-        {open && (
-          <nav className="grid grid-cols-2 gap-2 border-t border-border p-4 xl:hidden">
+        {panelOpen && (
+          <nav
+            className="club-mobile-nav xl:hidden"
+            data-state={open ? "open" : "closed"}
+            aria-hidden={!open}
+          >
             {links.map(([path, arabic, english]) => (
               <span key={path} onClick={() => setOpen(false)}>
                 <ClubLink
                   path={path}
                   navigation
-                  className="club-nav-link block rounded-xl p-3 text-sm font-bold aria-[current=page]:bg-brand-gradient"
+                  className="club-nav-link block rounded-xl p-3 text-sm font-bold"
                 >
                   {ar ? arabic : english}
                 </ClubLink>
@@ -167,6 +187,8 @@ function SiteHeader() {
           </nav>
         )}
       </div>
+      {/* Sticks with the navbar, hanging from its bottom edge. */}
+      {status && <SiteStatus />}
     </header>
   );
 }
@@ -209,11 +231,11 @@ function Shell({ children }: { children: ReactNode }) {
   }, []);
   return (
     <div dir={lang === "ar" ? "rtl" : "ltr"} className="club-site relative isolate min-h-screen">
-      {!isAdmin && <FloatingBackground />}
+      {!isAdmin && <SiteBackground />}
       <a href="#club-main" className="sr-only focus:not-sr-only">
         {lang === "ar" ? "انتقل للمحتوى" : "Skip to content"}
       </a>
-      <SiteHeader />
+      <SiteHeader status={!isAdmin} />
       <main
         id="club-main"
         tabIndex={-1}

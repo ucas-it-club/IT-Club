@@ -53,7 +53,7 @@ export function Heading({ ar, en, children }: { ar: string; en: string; children
   return (
     <div className="mb-10 text-center">
       <p className="text-sm font-bold text-primary">UCAS IT CLUB</p>
-      <h1 className="mt-3 text-3xl font-black sm:text-5xl text-gradient-brand">
+      <h1 className="mt-3 text-3xl font-black text-primary sm:text-5xl">
         {lang === "ar" ? ar : en}
       </h1>
       {children && (
@@ -208,7 +208,7 @@ export function ContentGrid({
   return items.length ? (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((item, index) => (
-        <Reveal key={item.id} delay={(index % 3) * 110}>
+        <Reveal key={item.id} index={index}>
           <ContentCard item={item} kind={kind} compact={compact} />
         </Reveal>
       ))}

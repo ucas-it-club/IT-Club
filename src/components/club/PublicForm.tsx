@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { BrandButton } from "./BrandButton";
 import { PageHeading } from "./PageHeading";
+import { SuccessPulse } from "./SuccessPulse";
 import { useClub } from "./club-context";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -146,14 +147,16 @@ export function PublicForm({ join }: { join: boolean }) {
         {!ready ? (
           <p role="status">{ar ? "جارٍ تجهيز النموذج…" : "Preparing the form…"}</p>
         ) : success ? (
-          <div
-            role="status"
-            className="rounded-2xl bg-brand-gradient-soft p-6 text-primary font-bold"
-          >
-            {ar
-              ? "تهانينا على وصول طلب الإنضمام قريبا سيتم مراجعة طلبك و إرسالة رسالة القبول"
-              : "Your submission has been saved successfully. Thank you."}
-          </div>
+          <SuccessPulse on={success}>
+            <div
+              role="status"
+              className="rounded-2xl bg-brand-gradient-soft p-6 text-primary font-bold"
+            >
+              {ar
+                ? "تهانينا على وصول طلب الإنضمام قريبا سيتم مراجعة طلبك و إرسالة رسالة القبول"
+                : "Your submission has been saved successfully. Thank you."}
+            </div>
+          </SuccessPulse>
         ) : join && !registration.open ? (
           <p
             role="status"

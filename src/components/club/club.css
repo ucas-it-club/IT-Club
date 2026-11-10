@@ -1,12 +1,13 @@
 /* Club-only interactions reuse the existing theme palette. */
 .club-site :is(button, .club-action, .club-nav-link) {
   transition:
-    transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    background-color 240ms ease,
-    border-color 240ms ease,
-    color 240ms ease,
-    box-shadow 240ms ease,
-    filter 240ms ease;
+    transform var(--dur-press) var(--ease-out),
+    scale var(--dur-press) var(--ease-out),
+    background-color 240ms var(--ease-out),
+    border-color 240ms var(--ease-out),
+    color 240ms var(--ease-out),
+    box-shadow 240ms var(--ease-out),
+    filter 240ms var(--ease-out);
 }
 
 .club-site :is(button, a):focus-visible {
@@ -19,10 +20,8 @@
 }
 .club-header-surface {
   border: 1px solid var(--border);
-  border-radius: 32px;
-  background: color-mix(in oklab, var(--background) 94%, transparent);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 10px 28px -18px color-mix(in oklab, var(--brand-blue) 40%, transparent);
+  border-radius: var(--radius-4xl);
+  background: var(--background);
   overflow: hidden;
 }
 .club-header-brand {
@@ -79,16 +78,6 @@
   border: 1px solid transparent;
 }
 
-.club-site .club-nav-link:not([aria-current="page"]):hover {
-  color: var(--primary);
-  background: var(--secondary);
-}
-
-.club-site .club-nav-link[aria-current="page"] {
-  color: white;
-  border-color: transparent;
-  box-shadow: 0 3px 10px color-mix(in oklab, var(--brand-blue) 15%, transparent);
-}
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .club-site :is(button:not(:disabled), .club-action):hover {
@@ -96,11 +85,16 @@
   }
 }
 
+/* Press feedback: the control shrinks at once and comes straight back. The
+   shrink is the `scale` property, so it never fights the lift above. */
 .club-site :is(button:not(:disabled), .club-action):active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0);
+  scale: var(--press-scale);
 }
 
-.club-site .club-header :is(button, a):is(:hover, :active) {
+/* The header is dense: its buttons lift on nothing, but they still answer a
+   press. */
+.club-site .club-header :is(button, a):hover:not(:active) {
   transform: none;
 }
 
@@ -109,6 +103,7 @@
   .club-site :is(button, .club-action, .club-nav-link) {
     transition: none;
     transform: none;
+    scale: none;
   }
 }
 
@@ -125,7 +120,61 @@
 .club-project-filters :is(input, button[role="combobox"]) {
   min-height: 3.5rem;
   padding-inline: 1.25rem;
-  border-radius: 1rem;
+  border-radius: var(--radius);
+}
+
+/* ---------- Icon swap ---------- */
+
+/* Two icons trade places: the one leaving blurs away, the one arriving
+   sharpens into place. Both stay mounted, so nothing pops. */
+.club-icon-swap {
+  display: inline-grid;
+  place-items: center;
+}
+.club-icon-swap > span {
+  grid-area: 1 / 1;
+  transition:
+    opacity 200ms var(--ease-out),
+    filter 200ms var(--ease-out),
+    scale 200ms var(--ease-out);
+}
+.club-icon-swap > span[data-on] {
+  opacity: 1;
+  filter: none;
+  scale: 1;
+}
+.club-icon-swap > span:not([data-on]) {
+  opacity: 0;
+  filter: blur(4px);
+  scale: 0.8;
+}
+
+/* ---------- Mobile panel ---------- */
+
+.club-mobile-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  border-top: 1px solid var(--border);
+  padding: 1rem;
+}
+.club-mobile-nav[data-state="open"] {
+  animation: club-nav-in var(--dur-pop) var(--ease-out) both;
+}
+.club-mobile-nav[data-state="closed"] {
+  animation: club-nav-out var(--dur-pop-exit) var(--ease-in) both;
+}
+@keyframes club-nav-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}
+@keyframes club-nav-out {
+  to {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
 }
 
 /* ---------- Scroll reveal ---------- */
@@ -135,8 +184,11 @@
    itself, so a no-JS document reads normally. */
 .club-reveal {
   transition:
-    opacity 620ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 620ms cubic-bezier(0.16, 1, 0.3, 1);
+    opacity var(--dur-enter) var(--ease-out),
+    transform var(--dur-enter) var(--ease-out);
+  /* Rows arrive one after another, 30ms apart. Past the eighth the rest come
+     together, so nothing waits more than a quarter of a second. */
+  transition-delay: calc(min(var(--i, 0), 8) * var(--stagger));
 }
 html.js .club-reveal:not(.is-shown) {
   opacity: 0;
@@ -154,9 +206,9 @@ html.js .club-reveal.is-shown {
    respond to the same hover without its own listener. */
 .club-card {
   transition:
-    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 320ms ease,
-    border-color 320ms ease;
+    transform var(--dur-enter) var(--ease-out),
+    box-shadow var(--dur-enter) var(--ease-out),
+    border-color var(--dur-enter) var(--ease-out);
 }
 @media (hover: hover) {
   .club-card:hover,
@@ -173,23 +225,26 @@ html.js .club-reveal.is-shown {
   }
 }
 .club-card-media {
-  transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 520ms var(--ease-out);
 }
 
-/* The thin brand rule that wipes in across a card or section heading. */
+/* The thin brand rule that wipes in across a card or section heading. It
+   grows by scale, not by width, so the layout never moves. */
 .club-rule::after {
   content: "";
   display: block;
   height: 3px;
-  width: 0;
+  width: 4rem;
   margin-top: 0.75rem;
   border-radius: 999px;
   background-image: linear-gradient(100deg, var(--brand-blue), var(--brand-green));
-  transition: width 760ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scaleX(0);
+  transform-origin: inline-start;
+  transition: transform 760ms var(--ease-out);
 }
 .club-reveal.is-shown .club-rule::after,
 .club-rule.is-shown::after {
-  width: 4rem;
+  transform: scaleX(1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -208,7 +263,7 @@ html.js .club-reveal.is-shown {
 /* The privacy strip slides up once, after hydration; it is fixed, so it shifts
    no layout while it arrives. */
 .club-notice {
-  animation: club-notice-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: club-notice-in var(--dur-enter) var(--ease-out) both;
 }
 @keyframes club-notice-in {
   from {
@@ -238,7 +293,7 @@ html.js .club-reveal.is-shown {
   filter: drop-shadow(0 18px 32px color-mix(in oklab, var(--brand-blue) 28%, transparent));
 }
 .club-hero-logo {
-  animation: club-hero-float 7s ease-in-out infinite;
+  animation: club-hero-float 7s var(--ease-in-out) infinite;
   will-change: transform;
 }
 @keyframes club-hero-float {
@@ -277,7 +332,7 @@ html.js .club-reveal.is-shown {
   }
 }
 .club-card-cta svg {
-  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 260ms var(--ease-out);
 }
 [dir="rtl"] .club-card-cta {
   --club-cta-shift: -4px;
@@ -297,9 +352,9 @@ html.js .club-reveal.is-shown {
   position: relative;
   isolation: isolate;
   white-space: nowrap;
-  border-radius: 1rem;
+  border-radius: var(--radius);
   padding: 0.55rem 0.85rem;
-  color: #fff;
+  color: white;
   background: linear-gradient(
     110deg,
     var(--brand-blue),
@@ -324,4 +379,342 @@ html.js .club-reveal.is-shown {
   border-bottom: 1px solid var(--brand-green);
   border-right: 1px solid var(--brand-green);
   z-index: -1;
+}
+
+/* ---------- Submit success pulse ---------- */
+
+/* One short pulse: the confirmation swells once and settles, so the reader
+   looks down at it. It is not a decoration loop. */
+.club-pulse-once {
+  animation: club-pulse-once 300ms var(--ease-out);
+}
+@keyframes club-pulse-once {
+  0% {
+    scale: 1;
+  }
+  50% {
+    scale: 1.06;
+  }
+  100% {
+    scale: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .club-pulse-once {
+    animation: none;
+  }
+}
+
+/* ---------- Status line under the navbar ----------
+   No fill: lines on the two sides and the bottom, rounded like the navbar, hanging from
+   the flat part of its bottom edge. It sits inside the sticky header, so it stays with the
+   navbar; a light blur keeps its text readable over what scrolls beneath. */
+.club-site {
+  --status-h: 0px;
+}
+.club-site:has(.club-status) {
+  --status-h: 2.75rem;
+}
+.hero-opening .club-status {
+  opacity: 0;
+}
+.club-status {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  height: var(--status-h);
+  /* Starts where the navbar's bottom corners end, so the lines meet its flat edge. */
+  margin-inline: 2rem;
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 1.5rem 1.5rem;
+  text-align: center;
+  /* Solid, like the navbar above it: nothing scrolling beneath shows through the text. */
+  background: var(--background);
+  transition: opacity 600ms ease;
+}
+.club-status > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding-inline: 0.75rem;
+}
+.club-status > div + div {
+  border-inline-start: 1px solid var(--border);
+}
+.club-status dt {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+.club-status dd {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--foreground);
+}
+.club-status-num {
+  font-variant-numeric: tabular-nums;
+}
+/* A phone keeps the two figures that change; the rest is on the page itself. */
+@media (max-width: 767.98px) {
+  .club-site:has(.club-status) {
+    --status-h: 2.5rem;
+  }
+  .club-status {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-inline: 1.25rem;
+    border-radius: 0 0 1.25rem 1.25rem;
+  }
+  .club-status > div:not(:nth-child(2), :nth-child(3)) {
+    display: none;
+  }
+  .club-status > div:nth-child(3) {
+    border-inline-start: 1px solid var(--border);
+  }
+}
+
+/* ---------- Site background: grid, brand glows, and lights running along the lines ---------- */
+.club-bg {
+  --grid: 56px;
+  --bg-line: color-mix(in oklab, var(--foreground) 6%, transparent);
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  pointer-events: none;
+  direction: ltr;
+  /* The grid and its lights fade out toward the edges. */
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 100%);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 100%);
+}
+.club-bg-lines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--bg-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--bg-line) 1px, transparent 1px);
+  background-size: var(--grid) var(--grid);
+}
+.club-bg-glow {
+  position: absolute;
+  border-radius: 50%;
+}
+.club-bg-glow-a {
+  top: -8rem;
+  right: -8rem;
+  width: 34rem;
+  height: 34rem;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 16%, transparent), transparent);
+}
+.club-bg-glow-b {
+  top: 45%;
+  left: -10rem;
+  width: 38rem;
+  height: 38rem;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--accent) 13%, transparent), transparent);
+}
+.club-bg-glow-c {
+  bottom: -9rem;
+  right: 22%;
+  width: 30rem;
+  height: 30rem;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 11%, transparent), transparent);
+}
+/* A light with a short tail, centred on a grid line (lines are 1px at multiples of --grid). */
+.club-bg-dot {
+  position: absolute;
+  --c: var(--primary);
+  --len: 5rem;
+  opacity: 0.8;
+  will-change: transform;
+}
+.club-bg-dot::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 10px 2px var(--c);
+}
+.club-bg-dot[data-axis="x"] {
+  top: calc(var(--line) * var(--grid) - 0.5px);
+  left: 0;
+  width: var(--len);
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--c));
+  animation: club-dot-x var(--dur) linear var(--delay) infinite;
+}
+.club-bg-dot[data-axis="x"]::after {
+  right: -3px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+}
+.club-bg-dot[data-axis="y"] {
+  left: calc(var(--line) * var(--grid) - 0.5px);
+  top: 0;
+  width: 2px;
+  height: var(--len);
+  background: linear-gradient(to bottom, transparent, var(--c));
+  animation: club-dot-y var(--dur) linear var(--delay) infinite;
+}
+.club-bg-dot[data-axis="y"]::after {
+  bottom: -3px;
+  left: -2px;
+  width: 6px;
+  height: 6px;
+}
+/* Travelling the other way: flip the light so its tail still trails behind it. */
+.club-bg-dot[data-axis="x"][data-rev] {
+  scale: -1 1;
+  animation-direction: reverse;
+}
+.club-bg-dot[data-axis="y"][data-rev] {
+  scale: 1 -1;
+  animation-direction: reverse;
+}
+@keyframes club-dot-x {
+  from {
+    transform: translateX(-10vw);
+  }
+  to {
+    transform: translateX(110vw);
+  }
+}
+@keyframes club-dot-y {
+  from {
+    transform: translateY(-10vh);
+  }
+  to {
+    transform: translateY(110vh);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .club-bg-dot {
+    display: none;
+  }
+}
+
+/* ---------- Sheen: the hover from the quote card ----------
+   Buttons: the brand gradient fades in under the label and a light band sweeps across.
+   Text links: the words take the gradient and the band sweeps through them. */
+.club-site {
+  --sheen-fill: linear-gradient(
+    100deg,
+    var(--brand-blue) 0%,
+    oklch(0.53 0.13 195) 50%,
+    oklch(0.53 0.15 138) 100%
+  );
+  --sheen-text: var(--sheen-fill);
+  /* Mid-ramp hue for icons and rules beside gradient text. */
+  --sheen-accent: oklch(0.53 0.13 195);
+  --sheen-band: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.35) 50%, transparent 65%);
+  --sheen-band-text: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.9) 50%, transparent 62%);
+}
+/* Text on the dark page needs the lighter end of each hue. */
+.dark .club-site {
+  --sheen-accent: oklch(0.8 0.12 190);
+  --sheen-text: linear-gradient(100deg, var(--primary), oklch(0.8 0.12 190) 50%, oklch(0.84 0.15 140));
+}
+
+.club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled))::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  background: var(--sheen-fill);
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled))::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--sheen-band);
+  transform: translateX(-110%);
+  pointer-events: none;
+}
+.club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)):active::before {
+  opacity: 1;
+}
+@media (hover: hover) {
+  .club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)):hover:not(:disabled) {
+    color: #fff;
+    border-color: transparent;
+  }
+  .club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)):hover:not(:disabled)::before {
+    opacity: 1;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)):hover:not(:disabled)::after {
+    transform: translateX(110%);
+    transition: transform 800ms var(--ease-out);
+  }
+}
+
+.club-site :is(.club-sheen-text, .er-all, .er-more, .club-nav-link) {
+  background-image: var(--sheen-band-text), var(--sheen-text);
+  background-size: 200% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  background-position: 100% 0, 0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  transition: color 250ms ease;
+}
+@media (hover: hover) {
+  .club-site :is(.club-sheen-text, .er-all, .er-more, .club-nav-link):hover {
+    color: transparent;
+  }
+  .club-site :is(.club-sheen-text, .er-all, .er-more, .club-nav-link):hover svg {
+    color: var(--sheen-accent);
+  }
+  .club-site .er-more:hover {
+    border-bottom-color: var(--sheen-accent);
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .club-site :is(.club-sheen-text, .er-all, .er-more, .club-nav-link):hover {
+    background-position: 0 0, 0 0;
+    transition:
+      color 250ms ease,
+      background-position 800ms var(--ease-out);
+  }
+}
+
+/* Nav tabs: no pill. On hover, and always on the current page, the label takes the gradient
+   and a gradient line sits under the tab. */
+.club-site .club-nav-link::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0.75rem;
+  bottom: 0.3rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--sheen-text);
+  transform: scaleX(0);
+  transition: transform 300ms var(--ease-out);
+}
+.club-site .club-nav-link[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+@media (hover: hover) {
+  .club-site .club-nav-link:hover::after {
+    transform: scaleX(1);
+  }
+}
+.club-site .club-nav-link[aria-current="page"] {
+  color: transparent;
 }

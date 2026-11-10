@@ -1,9 +1,6 @@
 /* Contact page: one full-width band of flat brand colour per channel.
    Motion is limited to colour and a small arrow nudge on hover. */
 
-.contact {
-  --contact-ease: cubic-bezier(0.16, 1, 0.3, 1);
-}
 .contact a {
   text-decoration: none;
 }
@@ -44,8 +41,8 @@
 }
 .contact-band {
   --band-bg: var(--navy);
-  --band-ink: #fff;
-  --band-soft: color-mix(in oklab, #fff 78%, var(--band-bg));
+  --band-ink: white;
+  --band-soft: color-mix(in oklab, white 78%, var(--band-bg));
 }
 .contact-band-instagram {
   --band-bg: var(--navy);
@@ -65,7 +62,7 @@
   border-block: 1px solid var(--border);
 }
 .dark .contact-band-instagram {
-  --band-bg: #1a2c47;
+  --band-bg: var(--navy-band);
 }
 
 .contact-band-link {
@@ -73,10 +70,10 @@
   background: var(--band-bg);
   color: var(--band-ink);
   text-decoration: none;
-  transition: background-color 250ms var(--contact-ease);
+  transition: background-color 250ms var(--ease-out);
 }
 .contact-band-link:hover {
-  background: color-mix(in oklab, var(--band-bg) 88%, #000);
+  background: color-mix(in oklab, var(--band-bg) 88%, black);
 }
 .contact-band-email .contact-band-link:hover {
   background: var(--muted);
@@ -127,7 +124,7 @@
   font-size: 1.0625rem;
 }
 .contact-band-action svg {
-  transition: transform 300ms var(--contact-ease);
+  transition: transform 300ms var(--ease-out);
 }
 .contact-band-link:hover .contact-band-action svg {
   transform: translate(3px, -3px);

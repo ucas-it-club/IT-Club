@@ -42,7 +42,7 @@ export function PrivacyPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-4xl font-black sm:text-5xl text-gradient-brand">
+      <h1 className="text-4xl font-black text-primary sm:text-5xl">
         {ar ? "الخصوصية والكوكيز" : "Privacy & cookies"}
       </h1>
 
@@ -105,7 +105,7 @@ export function PrivacyPage() {
       {email && (
         <a
           href={`mailto:${email}`}
-          className="club-action mt-6 inline-flex items-center gap-2 rounded-full bg-brand-gradient px-6 py-3 font-bold text-white shadow-glow-blue transition-transform hover:-translate-y-0.5"
+          className="club-action mt-6 inline-flex items-center gap-2 rounded-full bg-brand-gradient px-6 py-3 font-bold text-white shadow-card transition-transform hover:-translate-y-0.5"
         >
           {email}
         </a>

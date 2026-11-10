@@ -38,7 +38,7 @@ export function ContentReel({
 }) {
   const { lang, data } = useClub();
   const ar = lang === "ar";
-  const count = (v: number) => v.toLocaleString(ar ? "ar-EG" : "en-US");
+  const count = (v: number) => v.toLocaleString("en-US");
   const root = useRef<HTMLElement>(null);
   const jump = useRef<(index: number) => void>(() => {});
   const [live, setLive] = useState<boolean>();
@@ -72,9 +72,12 @@ export function ContentReel({
         const [from, to] = [Number(el.dataset["from"]), Number(el.dataset["to"])];
         el.toggleAttribute("data-on", on >= from && on <= to);
       });
-      node
-        .querySelectorAll<HTMLElement>(".er-cap")
-        .forEach((el, i) => el.toggleAttribute("data-on", i === on));
+      const caps = node.querySelectorAll<HTMLElement>(".er-cap");
+      caps.forEach((el, i) => el.toggleAttribute("data-on", i === on));
+      const onScreen = node.querySelector(".er-on-date");
+      const date = caps[on]?.dataset["date"];
+
+      if (onScreen && date && onScreen.textContent !== date) onScreen.textContent = date;
     };
 
     // The stretch of page the strip travels over: from the moment the stage sticks
@@ -139,16 +142,64 @@ export function ContentReel({
     };
   }, [live, ar, design]);
 
-  // One tab per month, not per item: the tab stays lit while its month's items pass.
-  const months: { key: string; label: string; from: number; to: number }[] = [];
-  items.forEach((item, index) => {
-    const parts = dateParts(item.date, lang);
-    const key = parts ? `${parts.month} ${parts.year}` : "";
-    const prev = months[months.length - 1];
+  // One tab per month of the year (Jan to Dec), lit while its month's items pass; a
+  // month with nothing in it stays on the row, dimmed. Items run oldest first. More than
+  // one year runs from the first month to the last instead.
+  const stamp = items.map((item) =>
+    /^\d{4}-\d{2}/.test(item.date ?? "") ? item.date!.slice(0, 7) : "",
+  );
+  const known = stamp.filter(Boolean).sort();
+  const [y0, m0] = (known[0] ?? "").split("-").map(Number);
+  const [y1, m1] = (known[known.length - 1] ?? "").split("-").map(Number);
+  const oneYear = y0 === y1;
+  const tabs: { key: string; label: string; from: number; to: number }[] = [];
 
-    if (prev && prev.key === key) prev.to = index;
-    else months.push({ key, label: parts?.month ?? "", from: index, to: index });
-  });
+  if (y0 && y1 && m0 && m1)
+    for (let y = y0, m = oneYear ? 1 : m0; y < y1 || (y === y1 && m <= (oneYear ? 12 : m1));) {
+      const key = `${y}-${String(m).padStart(2, "0")}`;
+      const hits = stamp.flatMap((k, i) => (k === key ? [i] : []));
+      const label =
+        lang === "ar"
+          ? (dateParts(`${key}-01`, lang)?.month ?? key)
+          : new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(
+              new Date(Date.UTC(y, m - 1, 1)),
+            );
+
+      tabs.push({
+        key,
+        label,
+        from: hits.length ? hits[0]! : -1,
+        to: hits.length ? hits[hits.length - 1]! : -1,
+      });
+      if (m === 12) [y, m] = [y + 1, 1];
+      else m += 1;
+    }
+
+  const frames = items.reduce((sum, item) => sum + contentImageUrls(item).length, 0);
+  const fullDate = (item: Content) => {
+    const d = dateParts(item.date, lang);
+
+    return d ? `${d.day} ${d.month} ${d.year}` : "";
+  };
+  const unit = (n: number) =>
+    kind === "news"
+      ? ar
+        ? "خبر"
+        : n === 1
+          ? "story"
+          : "stories"
+      : ar
+        ? "فعالية"
+        : n === 1
+          ? "event"
+          : "events";
+  const meta = [
+    `${count(frames)} ${ar ? "صورة" : "photos"}`,
+    `${count(items.length)} ${unit(items.length)}`,
+    oneYear ? String(y0 ?? "") : y0 && y1 ? `${y0}–${y1}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <section
@@ -163,11 +214,40 @@ export function ContentReel({
         <div className="er-stage">
           <header className="er-head">
             <h2 id={`er-${kind}`}>{title}</h2>
+            <p className="er-meta">{meta}</p>
             <ClubLink path={kind} className="er-all">
               {allLabel}
               <Arrow size={18} aria-hidden="true" />
             </ClubLink>
           </header>
+
+          <div
+            className="er-nav"
+            role="group"
+            aria-label={title}
+            style={{ "--er-months": tabs.length } as CSSProperties}
+          >
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                disabled={tab.from < 0}
+                data-from={tab.from}
+                data-to={tab.to}
+                onClick={() => jump.current(tab.from)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <p className="er-status" aria-hidden="true">
+            <span>
+              {ar ? "على الشاشة" : "On screen"}{" "}
+              <b className="er-on-date">{items[0] ? fullDate(items[0]) : ""}</b>
+            </span>
+            <span>{ar ? "اختر شهرًا للانتقال إليه" : "Choose a month to jump to it"}</span>
+          </p>
 
           <ol className="er-strip">
             {items.map((item, index) => {
@@ -181,7 +261,9 @@ export function ContentReel({
                   className="er-event"
                   style={
                     contentImageUrls(item)[0]
-                      ? ({ "--photo": `url(${JSON.stringify(contentImageUrls(item)[0])})` } as CSSProperties)
+                      ? ({
+                          "--photo": `url(${JSON.stringify(contentImageUrls(item)[0])})`,
+                        } as CSSProperties)
                       : undefined
                   }
                   onFocus={() => jump.current(index)}
@@ -205,57 +287,45 @@ export function ContentReel({
             })}
           </ol>
 
-          {/* In `full` the captions stay put and change as the photographs pass, so no title
-              ever slides off the edge or under the tabs. The list above is the real, readable
-              one; this copy is for the eye only. */}
+          {/* In `full` the details stay put and change as the photographs pass, so no title
+              ever slides off the edge. The list above is the real, readable one; this copy is
+              for the eye only. */}
           <div className="er-caps" aria-hidden="true">
             {items.map((item, index) => {
               const name = local(item, "title", lang);
-              const date = dateParts(item.date, lang);
-              const src = contentImageUrls(item)[0];
+              const n = contentImageUrls(item).length;
 
               return (
                 <div
                   key={item.id}
                   className="er-cap"
                   data-on={index === 0 ? "" : undefined}
-                  style={src ? ({ "--photo": `url(${JSON.stringify(src)})` } as CSSProperties) : undefined}
+                  data-date={fullDate(item)}
                 >
-                  {date && (
-                    <time dateTime={item.date} className="er-date">
-                      {count(index + 1)} / {count(items.length)} · {date.day} {date.month}{" "}
-                      {date.year}
-                    </time>
-                  )}
-                  <ClubLink path={itemPage(kind, item, data)} className="er-title" tabIndex={-1}>
-                    {name}
+                  <div className="er-cap-main">
+                    <ClubLink path={itemPage(kind, item, data)} className="er-title" tabIndex={-1}>
+                      {name}
+                    </ClubLink>
+                    <p className="er-cap-meta">
+                      {[
+                        fullDate(item),
+                        n ? `${count(n)} ${ar ? "صورة" : n === 1 ? "photo" : "photos"}` : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                  <ClubLink path={itemPage(kind, item, data)} className="er-more" tabIndex={-1}>
+                    {n > 1
+                      ? ar
+                        ? `كل الصور (${count(n)})`
+                        : `All ${count(n)} photos`
+                      : ar
+                        ? "افتح"
+                        : "Open"}
+                    <Arrow size={18} aria-hidden="true" />
                   </ClubLink>
                 </div>
-              );
-            })}
-          </div>
-
-          <div className="er-nav" role="group" aria-label={title}>
-            {months.map((group) => {
-              const item = items[group.from]!;
-
-              return (
-                <button
-                  key={group.from}
-                  type="button"
-                  aria-label={group.label}
-                  data-from={group.from}
-                  data-to={group.to}
-                  onClick={() => jump.current(group.from)}
-                >
-                  <img
-                    className="er-nav-thumb"
-                    src={contentImageUrls(item)[0]}
-                    alt=""
-                    loading="lazy"
-                  />
-                  <span className="er-nav-month">{group.label}</span>
-                </button>
               );
             })}
           </div>

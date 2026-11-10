@@ -185,7 +185,7 @@ export function EventDetail({
                 {displayStatus === "past" ? (ar ? "سابقة" : "Past") : ar ? "قادمة" : "Upcoming"}
               </span>
             )}
-            <h1 className="text-xl font-black text-gradient-brand sm:text-3xl">
+            <h1 className="text-xl font-black text-primary sm:text-3xl">
               {lang === "en" ? event.title_en || event.title : event.title}
             </h1>
             <section aria-labelledby={`event-about-${event.id}`}>

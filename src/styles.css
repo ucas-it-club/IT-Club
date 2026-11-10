@@ -30,8 +30,9 @@
   font-weight: 200 1000;
   font-display: swap;
   src: url("./assets/fonts/cairo-arabic.woff2") format("woff2");
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF,
-    U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E,
+    U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
 }
 
 @font-face {
@@ -40,8 +41,9 @@
   font-weight: 200 1000;
   font-display: swap;
   src: url("./assets/fonts/cairo-latin.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
-    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 /*
@@ -96,6 +98,10 @@
   --brand-green: oklch(0.73 0.17 136.1);
   --brand-gray: oklch(0.675 0.004 247.9);
   --navy: oklch(0.283 0.068 254.4);
+  /* The navy behind the full-bleed bands. In dark mode the navy would sit on
+     a dark page with almost no contrast between them, so the bands lift one
+     step: same hue, a little lighter. */
+  --navy-band: var(--navy);
 
   --background: oklch(0.99 0.003 250);
   --foreground: var(--navy);
@@ -109,8 +115,11 @@
   --secondary-foreground: var(--navy);
   --muted: oklch(0.962 0.012 250);
   --muted-foreground: oklch(0.55 0.02 250);
-  --accent: var(--brand-green);
-  --accent-foreground: oklch(0.99 0.003 250);
+  /* The accent is the surface a menu item lights up on, so it is a pale
+     brand tint with dark ink on it: brand green as a fill behind near-white
+     text was 2.3:1. The saturated green stays --brand-green. */
+  --accent: oklch(0.955 0.03 145);
+  --accent-foreground: var(--navy);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.99 0.003 250);
   --border: oklch(0.915 0.015 250);
@@ -138,9 +147,8 @@
   --input: #405670;
   --ring: #78b7f3;
   --destructive: #ff8585;
-}
-.dark .text-gradient-brand {
-  background-image: linear-gradient(120deg, #78b7f3 10%, #86cd62 90%);
+  /* A lighter shade of the same navy so the bands still read against the page. */
+  --navy-band: #1a2c47;
 }
 
 @layer base {
@@ -169,6 +177,23 @@
     overflow-x: hidden;
   }
 
+  /* Headings balance their lines, paragraphs take the odd rag away. Both
+     matter in Arabic: a single stranded particle on the last line reads as a
+     mistake. */
+  :is(h1, h2, h3, h4, h5, h6) {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Numbers that change or sit in a column line up: dates, times and
+     tables. The digits are the same in both languages. */
+  :is(time, table) {
+    font-variant-numeric: tabular-nums;
+  }
+
   ::selection {
     background-color: color-mix(in oklab, var(--brand-blue) 25%, transparent);
   }
@@ -182,21 +207,17 @@
 
 /* ---------- Brand utilities ---------- */
 
-@utility text-gradient-brand {
-  background-image: linear-gradient(120deg, var(--brand-blue) 10%, var(--brand-green) 90%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 @utility bg-brand-gradient {
-  /* Mid stop holds chroma ~0.15; a plain blue->green oklab lerp sags to 0.082 (muddy teal).
-     100deg keeps the ramp on the long axis so pills show both brand ends, not the middle. */
+  /* The ramp carries white text, so every stop has to clear 4.5:1 against
+     white: the brand blue is 5.9:1, the deep teal 4.7:1, the deep green 5:1.
+     A plain blue->green lerp sags to 0.082 chroma (muddy teal), and 100deg
+     keeps the ramp on the long axis so pills show both brand ends, not the
+     middle. */
   background-image: linear-gradient(
     100deg,
     var(--brand-blue) 0%,
-    oklch(0.62 0.15 190) 50%,
-    var(--brand-green) 100%
+    oklch(0.53 0.13 195) 50%,
+    oklch(0.53 0.15 138) 100%
   );
   /* Without this the ramp is sized to the padding box but painted over the
      border box, so a transparent border shows the next repeat tile as a slit. */
@@ -212,37 +233,10 @@
   background-origin: border-box;
 }
 
-@utility shadow-glow-blue {
-  box-shadow:
-    0 12px 40px -12px color-mix(in oklab, var(--brand-blue) 45%, transparent),
-    0 4px 12px -4px color-mix(in oklab, var(--brand-blue) 25%, transparent);
-}
-
-@utility shadow-glow-green {
-  box-shadow:
-    0 12px 40px -12px color-mix(in oklab, var(--brand-green) 45%, transparent),
-    0 4px 12px -4px color-mix(in oklab, var(--brand-green) 25%, transparent);
-}
-
 @utility shadow-card {
   box-shadow:
     0 1px 2px oklch(0.283 0.068 254.4 / 4%),
     0 12px 32px -12px oklch(0.283 0.068 254.4 / 12%);
-}
-
-@utility bg-grid-pattern {
-  background-image:
-    linear-gradient(
-      to left,
-      color-mix(in oklab, var(--brand-blue) 7%, transparent) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      to bottom,
-      color-mix(in oklab, var(--brand-blue) 7%, transparent) 1px,
-      transparent 1px
-    );
-  background-size: 44px 44px;
 }
 
 /* ---------- Keyframe animations ---------- */
@@ -269,22 +263,36 @@
 }
 
 .animate-stage-in {
-  animation: stage-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: stage-in var(--dur-enter) var(--ease-out) both;
 }
 
 .animate-drift {
-  animation: drift 9s ease-in-out infinite;
+  animation: drift 9s var(--ease-in-out) infinite;
 }
 
-/* Motion tokens: one easing and timing for page changes. */
+/* Motion tokens: one easing and one set of durations for the whole site.
+   --ease-out/--ease-in-out/--ease-in deliberately re-use Tailwind's own token
+   names, so every `ease-*` utility on the site picks up the site's curve too —
+   Tailwind's defaults sit in the theme layer, this block is unlayered, and an
+   unlayered declaration always wins a custom-property cascade.
+   The old --ease-arrive/--ease-leave pair and the --ev-ease/--contact-ease
+   copies are gone; everything now reads these. */
 :root {
-  --ease-leave: cubic-bezier(0.55, 0, 1, 0.45);
-  --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
-  --dur-leave: 0.22s;
-  --dur-arrive: 0.6s;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* entrances */
+  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1); /* moves that stay on screen */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1); /* exits only */
+  --dur-press: 120ms;
+  --dur-pop: 180ms; /* menus, popovers, selects, tooltips */
+  --dur-pop-exit: calc(var(--dur-pop) * 0.8);
+  --dur-enter: 400ms;
+  --dur-exit: 320ms; /* about a fifth shorter than enter */
+  --stagger: 30ms; /* list rows */
+  --press-scale: 0.97;
 }
 
-/* Page change: the header stays still while the page content leaves and arrives. */
+/* Page change: the header stays still while the page content leaves and
+   arrives. The new page starts before the old one has gone, so the two
+   overlap instead of leaving a blank frame between them. */
 .club-header {
   view-transition-name: site-header;
 }
@@ -296,10 +304,10 @@
   animation: none;
 }
 ::view-transition-old(page) {
-  animation: page-leave var(--dur-leave) var(--ease-leave) both;
+  animation: page-leave var(--dur-exit) var(--ease-in) both;
 }
 ::view-transition-new(page) {
-  animation: page-arrive var(--dur-arrive) var(--ease-arrive) 80ms both;
+  animation: page-arrive var(--dur-enter) var(--ease-out) 120ms both;
 }
 @keyframes page-leave {
   to {
@@ -314,11 +322,29 @@
   }
 }
 
+/* Radix overlays: menus, popovers, selects and tooltips all open on the same
+   timing and grow out of the trigger that opened them (Radix writes the
+   trigger's position into --radix-*-content-transform-origin). The exit runs
+   a fifth shorter and accelerates away, so the menu never lingers. */
+[data-radix-popper-content-wrapper] > [data-state="open"] {
+  --tw-ease: var(--ease-out);
+  --tw-animation-duration: var(--dur-pop);
+}
+[data-radix-popper-content-wrapper] > [data-state="closed"] {
+  --tw-ease: var(--ease-in);
+  --tw-animation-duration: var(--dur-pop-exit);
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+
+  /* A press still reads, but it does not move. */
+  :is(button, [role="button"], summary):active {
+    scale: none !important;
   }
 
   *,

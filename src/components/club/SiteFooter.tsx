@@ -16,14 +16,13 @@ const sections: [string, string, string][] = [
 ];
 
 const socials = [
-  ["facebook", Facebook],
-  ["instagram", Instagram],
-  ["linkedin", Linkedin],
-  ["github", Github],
+  ["facebook", Facebook, "فيسبوك", "Facebook"],
+  ["instagram", Instagram, "إنستغرام", "Instagram"],
+  ["linkedin", Linkedin, "لينكدإن", "LinkedIn"],
+  ["github", Github, "غيت هب", "GitHub"],
 ] as const;
 
-const itemClass =
-  "inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-primary";
+const itemClass = "club-sheen-text inline-flex items-center gap-2 text-muted-foreground";
 
 function Column({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -54,22 +53,6 @@ export function SiteFooter() {
                 ? "النادي التكنولوجي في الكلية الجامعية للعلوم التطبيقية. مجتمع طلابي يديره طلبته."
                 : "The technology club at the University College of Applied Sciences. A student community, run by its students."}
             </p>
-            {links.length > 0 && (
-              <div className="mt-6 flex gap-2">
-                {links.map(([key, Icon]) => (
-                  <a
-                    key={key}
-                    href={safeUrl(settings[key])}
-                    target="_blank"
-                    rel="noopener noreferrer me"
-                    aria-label={key}
-                    className="rounded-full border border-border bg-card p-2.5 text-primary shadow-card transition-transform hover:-translate-y-0.5 hover:border-primary/50"
-                  >
-                    <Icon size={18} />
-                  </a>
-                ))}
-              </div>
-            )}
           </div>
 
           <Column title={ar ? "الأقسام" : "Sections"}>
@@ -97,9 +80,18 @@ export function SiteFooter() {
                 {email}
               </a>
             )}
-            <Link to={hrefOf(lang, "contact")} className={itemClass}>
-              {ar ? "صفحة التواصل" : "Contact page"}
-            </Link>
+            {links.map(([key, Icon, a, e]) => (
+              <a
+                key={key}
+                href={safeUrl(settings[key])}
+                target="_blank"
+                rel="noopener noreferrer me"
+                className={itemClass}
+              >
+                <Icon size={16} aria-hidden="true" />
+                {ar ? a : e}
+              </a>
+            ))}
           </Column>
 
           <Column title={ar ? "تصميم وتطوير" : "Designed & developed"}>
@@ -117,7 +109,7 @@ export function SiteFooter() {
               href={collegeUrl[lang]}
               target="_blank"
               rel="noopener"
-              className="underline-offset-4 transition-colors hover:text-primary hover:underline"
+              className="club-sheen-text text-muted-foreground"
             >
               {ar ? "الكلية الجامعية للعلوم التطبيقية" : "University College of Applied Sciences"}
             </a>

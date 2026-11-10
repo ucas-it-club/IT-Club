@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ElementType,
+  type ReactNode,
+} from "react";
 
 /**
  * Reveal content once it scrolls into view.
@@ -13,13 +20,13 @@ import { useEffect, useRef, useState, type ElementType, type ReactNode } from "r
  */
 export function Reveal({
   children,
-  delay = 0,
+  index = 0,
   as: Tag = "div",
   className = "",
 }: {
   children: ReactNode;
-  /** Stagger step in milliseconds; keep under ~400ms total across a group. */
-  delay?: number;
+  /** Place in the group. Rows arrive --stagger apart, up to eight steps. */
+  index?: number;
   as?: ElementType;
   className?: string;
 }) {
@@ -50,7 +57,7 @@ export function Reveal({
     <Tag
       ref={ref}
       className={`club-reveal ${shown ? "is-shown" : ""} ${className}`}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      style={index ? ({ "--i": index } as CSSProperties) : undefined}
     >
       {children}
     </Tag>

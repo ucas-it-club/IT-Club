@@ -17,7 +17,7 @@ export function CountUp({
 }: {
   value: number | null;
   duration?: number;
-  /** Digits to count in, e.g. "ar-EG" for Arabic-Indic numerals. */
+  /** Digits to count in. The site uses English digits in both languages. */
   locale?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);

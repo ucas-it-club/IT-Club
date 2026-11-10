@@ -56,7 +56,7 @@ export function NewsDetail({
         </figure>
 
         <header className="lg:col-start-1 lg:row-start-1">
-          <h1 className="text-xl font-black text-gradient-brand sm:text-3xl">{title}</h1>
+          <h1 className="text-xl font-black text-primary sm:text-3xl">{title}</h1>
 
           <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm font-bold text-muted-foreground">
             {news.date && (

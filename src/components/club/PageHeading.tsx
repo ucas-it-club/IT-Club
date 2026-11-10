@@ -15,7 +15,7 @@ export function PageHeading({
   return (
     <div className="mb-10 text-center">
       <p className="text-sm font-bold text-primary">UCAS IT CLUB</p>
-      <h1 className="mt-3 text-3xl font-black sm:text-5xl text-gradient-brand">
+      <h1 className="mt-3 text-3xl font-black text-primary sm:text-5xl">
         {lang === "ar" ? ar : en}
       </h1>
       {children && (

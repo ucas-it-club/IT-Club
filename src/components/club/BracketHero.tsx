@@ -14,6 +14,7 @@ import dotBottom from "@/assets/logo/dot-bottom.webp";
 import { HeroOpening } from "./HeroOpening";
 import { weakDevice } from "@/lib/club/device";
 import { CountUp } from "./CountUp";
+import { buildScrub } from "./hero-story";
 
 /**
  * Home hero: the club name between the logo's two brackets.
@@ -288,7 +289,8 @@ export function BracketHero() {
         // With the loading screen, HeroOpening brings the brackets and the name in.
         // Without it, the brackets start together in the middle as the logo and
         // part to their places. Percent offsets, because the parallax owns x/y.
-        if (!opening) {
+        // Coming back mid-story (back button) the scroll story owns the name; no entrance.
+        if (!opening && window.scrollY < 40) {
           const row = node.querySelector<HTMLElement>(".bh-row")!.getBoundingClientRect();
           const cx = row.left + row.width / 2;
           const cy = row.top + row.height / 2;
@@ -398,94 +400,9 @@ export function BracketHero() {
           .to(left, { x: toLeft, duration: 1, ease: "power2.inOut" }, 0)
           .to(right, { x: toRight, duration: 1, ease: "power2.inOut" }, 0);
 
+        // Every line is tied to the scroll position, so no speed can skip a panel.
         if (story) {
-          tl.to({}, { duration: 3 }, 1);
-          type Step = "name" | "motto" | "who" | "numbers" | "join";
-          // Every step's lines rise from behind their own bottom edge, like the
-          // name's words do inside .bh-mask: yPercent and a bottom clip move together.
-          const lines: Record<Step, string> = {
-            name: ".bh-word",
-            motto: ".bh-motto span",
-            who: ".bh-who .bh-title, .bh-who .bh-text, .bh-who .bh-majors li",
-            numbers: ".bh-numbers .bh-facts > div, .bh-numbers .bh-reg",
-            join: ".bh-motto span, .bh-actions",
-          };
-          const box: Record<Step, string> = {
-            name: ".bh-name",
-            motto: ".bh-join",
-            who: ".bh-who",
-            numbers: ".bh-numbers",
-            join: ".bh-join",
-          };
-          // The clip reaches past each line's box so Arabic ascenders and descenders
-          // are never cut; the bottom inset still covers the whole line when hidden.
-          const below = { yPercent: 100, clipPath: "inset(-30% -5% 130% -5%)" };
-          const shown = { yPercent: 0, clipPath: "inset(-30% -5% -30% -5%)" };
-          const above = { yPercent: -100, clipPath: "inset(130% -5% -30% -5%)" };
-          let current: Step = "name";
-          let running: gsap.core.Timeline | undefined;
-
-          // One step at a time: the outgoing box sinks, then the next one rises. A new
-          // step cuts the running one short, and every other box is hidden at once, so
-          // a fast scroll never leaves two boxes, or a half-risen one, on screen.
-          const go = self.add("go", (next: Step) => {
-            if (next === current) return;
-            const prev = current;
-            current = next;
-            running?.kill();
-            gsap.set([...new Set(Object.values(box))].filter((b) => b !== box[prev]).join(", "), {
-              visibility: "hidden",
-            });
-            const t = (running = gsap.timeline());
-            if (prev === "name")
-              t.to(".bh-word", { yPercent: -115, duration: 0.4, stagger: 0.03, ease: "power2.in" });
-            else t.to(lines[prev], { ...above, duration: 0.4, stagger: 0.03, ease: "power2.in" });
-            t.set(box[prev], { visibility: "hidden" })
-              .set(box[next], { visibility: "visible", opacity: 1 })
-              // The motto alone sits centred between the brackets: no room kept for the buttons.
-              .set(
-                ".bh-actions",
-                next === "motto" ? { display: "none" } : { clearProps: "display" },
-              );
-            if (next === "name")
-              t.fromTo(
-                ".bh-word",
-                { yPercent: 115 },
-                { yPercent: 0, duration: 1, stagger: 0.08, ease: "expo.out" },
-              );
-            else
-              t.fromTo(lines[next], below, {
-                ...shown,
-                duration: 1,
-                stagger: 0.08,
-                ease: "expo.out",
-              });
-            if (next === "numbers")
-              q<HTMLElement>("[data-count]").forEach((el) => {
-                const proxy = { v: 0 };
-                t.to(
-                  proxy,
-                  {
-                    v: Number(el.dataset["count"]),
-                    duration: 1,
-                    ease: "power2.out",
-                    onUpdate: () => {
-                      el.textContent = Math.round(proxy.v).toLocaleString("en-US");
-                    },
-                  },
-                  "<",
-                );
-              });
-          }) as (next: Step) => void;
-
-          ScrollTrigger.create({
-            trigger: ".bh-track",
-            start: "top top",
-            end: "bottom bottom",
-            onUpdate: ({ progress: p }) =>
-              go(p < 0.1 ? "name" : p < 0.4 ? "who" : p < 0.7 ? "numbers" : "join"),
-          });
-
+          buildScrub(gsap, node, tl);
           return;
         }
 

@@ -4,17 +4,17 @@
 /* 1. Page change: the old page dims and softens away, the new one rises out of a blur,
    and the page title glides from where the last one stood. */
 html.motion::view-transition-old(page) {
-  animation: mp-leave 240ms var(--ease-leave) both;
+  animation: mp-leave 240ms var(--ease-in) both;
 }
 html.motion::view-transition-new(page) {
-  animation: mp-arrive 700ms var(--ease-arrive) 60ms both;
+  animation: mp-arrive 700ms var(--ease-out) 60ms both;
 }
 .motion main h1:not(.bh-name) {
   view-transition-name: page-title;
 }
 html.motion::view-transition-group(page-title) {
   animation-duration: 550ms;
-  animation-timing-function: var(--ease-arrive);
+  animation-timing-function: var(--ease-out);
 }
 @keyframes mp-leave {
   to {
@@ -46,7 +46,7 @@ html.motion::view-transition-group(page-title) {
   /* 3. Photos settle in from a blur once loaded, and lean in under the pointer. */
   .motion :is(.er-photo, .ev-entry-photo, .ev-next-photo) img {
     transition:
-      transform 900ms var(--ease-arrive),
+      transform 900ms var(--ease-out),
       filter 700ms ease,
       opacity 700ms ease;
   }
@@ -59,7 +59,7 @@ html.motion::view-transition-group(page-title) {
     transform: scale(1.06);
   }
   .motion .ev-entry-body {
-    transition: transform 500ms var(--ease-arrive);
+    transition: transform 500ms var(--ease-out);
   }
   .motion .ev-entry:hover .ev-entry-body {
     transform: translateX(0.5rem);
@@ -71,14 +71,14 @@ html.motion::view-transition-group(page-title) {
   /* 4. The header steps aside while reading down and comes back on the way up. */
   .motion .club-header {
     transition:
-      transform 500ms var(--ease-arrive),
+      transform 500ms var(--ease-out),
       opacity 300ms ease;
   }
   .motion[data-header-away] .club-header {
     transform: translateY(calc(-100% - 1.5rem));
     opacity: 0;
     transition:
-      transform 300ms var(--ease-leave),
+      transform 300ms var(--ease-in),
       opacity 200ms ease;
   }
 }
@@ -87,7 +87,7 @@ html.motion::view-transition-group(page-title) {
 .motion .club-header-row,
 .motion .club-header-surface {
   transition:
-    padding 300ms var(--ease-arrive),
+    padding 300ms var(--ease-out),
     background-color 300ms ease,
     box-shadow 300ms ease;
 }

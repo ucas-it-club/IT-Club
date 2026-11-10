@@ -16,6 +16,7 @@
   --er-ink: var(--foreground);
   --er-soft: var(--muted-foreground);
   --er-accent: oklch(0.5 0.15 138);
+  --er-on: #fff;
   --er-tile: var(--muted);
   --er-rule: var(--border);
   --er-cap-fade: color-mix(in oklab, var(--background) 85%, transparent);
@@ -25,28 +26,12 @@
   --er-ink: #fff;
   --er-soft: rgb(255 255 255 / 0.6);
   --er-accent: oklch(0.85 0.15 136);
+  --er-on: oklch(0.2 0.04 254);
   --er-tile: rgb(255 255 255 / 0.08);
   --er-rule: rgb(255 255 255 / 0.14);
   --er-cap-fade: oklch(0.2 0.05 254 / 0.75);
 }
-.er::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(60rem 28rem at 10% 15%, oklch(0.6 0.15 250 / 0.12), transparent 70%),
-    radial-gradient(48rem 26rem at 95% 85%, oklch(0.7 0.16 136 / 0.12), transparent 70%);
-  mask-image: linear-gradient(transparent, #000 7rem, #000 calc(100% - 7rem), transparent);
-}
-.dark .er::before {
-  background:
-    linear-gradient(to left, rgb(255 255 255 / 0.04) 1px, transparent 1px) 0 0 / 44px 44px,
-    linear-gradient(to bottom, rgb(255 255 255 / 0.04) 1px, transparent 1px) 0 0 / 44px 44px,
-    radial-gradient(60rem 28rem at 10% 15%, oklch(0.45 0.15 250 / 0.45), transparent 70%),
-    radial-gradient(48rem 26rem at 95% 85%, oklch(0.55 0.16 136 / 0.25), transparent 70%),
-    linear-gradient(180deg, #16263d, oklch(0.17 0.04 254));
-}
+/* No band of its own: the section sits on the page's background, as part of the story. */
 .er + .er {
   border-top: 1px solid var(--er-rule);
 }
@@ -142,7 +127,9 @@
   outline-offset: 3px;
   border-radius: 0.25rem;
 }
-.er-nav {
+.er-nav,
+.er-status,
+.er-meta {
   display: none;
 }
 .er-caps {
@@ -287,57 +274,137 @@
     box-shadow: inset 0 -2px 0 var(--er-accent);
   }
 
-  /* full: one photograph across nearly the whole screen at a time, its caption in a bar
-     below. The photo is held still in the middle of its scroll (see ContentReel). */
+  /* full: the story's own section. Title and the year's months across the top, one
+     photograph at a time held still in the middle of its scroll (see ContentReel), its
+     details under it. Sits on the page's background, no band, no blur. */
   .js .er[data-design="full"]:not([data-mode="static"]) .er-track {
     height: calc((var(--er-n) * 80 + 100) * 1svh);
   }
-  /* Starts below the floating header, so the photograph never runs under it. */
+  /* Starts below the floating header, so nothing runs under it. */
   .js .er[data-design="full"]:not([data-mode="static"]) .er-stage {
-    top: 5rem;
-    display: block;
-    height: calc(100svh - 5rem);
-    padding-block: 0;
-  }
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-strip {
+    top: calc(5rem + var(--status-h, 0px));
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
     gap: 0;
-    height: 100%;
+    height: calc(100svh - 5rem - var(--status-h, 0px));
+    padding-block: 0.5rem 0.75rem;
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-head {
+    position: static;
+    flex: none;
+    align-items: baseline;
+    padding-inline: var(--er-edge);
+    padding-block: 0 1rem;
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-head h2 {
+    font-size: clamp(2rem, 4.2vw, 3.5rem);
+    line-height: 1.25;
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-meta {
+    display: block;
+    margin-inline-start: auto;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--er-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-all {
+    font-size: 0.875rem;
+  }
+  /* The year as a ruled row of months: lit while its month passes, dimmed when empty. */
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-nav {
+    position: static;
+    flex: none;
+    display: grid;
+    grid-template-columns: repeat(var(--er-months, 12), minmax(0, 1fr));
+    gap: 0;
+    direction: ltr;
+    margin-inline: var(--er-edge);
+    padding: 0;
+    border-block: 1px solid var(--er-rule);
+  }
+  /* Months run left to right with the photographs, in Arabic too. */
+  [dir="rtl"] .js .er[data-design="full"]:not([data-mode="static"]) .er-nav,
+  [dir="rtl"] .er[data-design="full"]:not([data-mode="static"]) .er-nav {
+    direction: ltr;
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-nav button {
+    display: block;
+    padding: 0.65rem 0.6rem;
+    border: 0;
+    border-radius: 0;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-align: start;
+    text-transform: uppercase;
+    color: var(--er-ink);
+    transition:
+      background-color 250ms ease,
+      color 250ms ease;
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-nav button + button {
+    border-inline-start: 1px solid var(--er-rule);
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-nav button:disabled {
+    color: var(--er-soft);
+    opacity: 0.45;
+    cursor: default;
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-nav button:not(:disabled):hover {
+    background: color-mix(in oklab, var(--er-accent) 16%, transparent);
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-nav button[data-on] {
+    background: var(--er-accent);
+    color: var(--er-on);
+  }
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-status {
+    flex: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-inline: var(--er-edge);
+    padding-block: 0.6rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--er-soft);
+  }
+  [dir="rtl"] .er[data-design="full"]:not([data-mode="static"]) .er-status {
+    direction: rtl;
+  }
+  .er-status b {
+    font-weight: 800;
+    color: var(--er-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  /* The strip takes what is left; each photograph is fitted whole inside it. */
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-strip {
+    flex: 1 1 0;
+    gap: 0;
+    height: auto;
+    min-height: 0;
     padding-inline: 0;
   }
   .js .er[data-design="full"]:not([data-mode="static"]) .er-event {
     display: grid;
     flex: 0 0 calc(100vw - var(--sbw, 0px));
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
     gap: 0;
     height: 100%;
   }
-  /* The whole photograph, never cropped top or bottom: it is fitted inside the area and
-     the space beside it is filled with a blurred copy of itself. */
   .js .er[data-design="full"]:not([data-mode="static"]) .er-photo {
-    position: relative;
-    isolation: isolate;
     aspect-ratio: auto;
     min-height: 0;
     border-radius: 0;
-  }
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-photo::before {
-    content: "";
-    position: absolute;
-    inset: -2rem;
-    z-index: -1;
-    background: var(--photo, none) center / cover;
-    filter: blur(32px) saturate(1.3);
-    opacity: 0.55;
+    background: transparent;
   }
   .js .er[data-design="full"]:not([data-mode="static"]) .er-photo img {
     object-fit: contain;
   }
-  /* The captions stay put while the photographs slide, and swap as each one passes the
-     middle. The list's own text is kept for readers but not drawn here. */
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-event {
-    grid-template-rows: minmax(0, 1fr);
-    padding-bottom: 8.5rem;
-  }
+  /* The list's own text is kept for readers but not drawn here. */
   .js .er[data-design="full"]:not([data-mode="static"]) .er-text {
     position: absolute;
     width: 1px;
@@ -346,32 +413,30 @@
     clip-path: inset(50%);
     padding: 0;
   }
+  /* Details of the photograph on screen: they stay put and change as each one passes. */
   .js .er[data-design="full"]:not([data-mode="static"]) .er-caps {
-    position: absolute;
-    inset: auto 0 0;
+    position: relative;
+    flex: none;
     display: block;
-    height: 8.5rem;
+    height: 7rem;
+    margin-inline: var(--er-edge);
+    border-top: 1px solid var(--er-rule);
     overflow: clip;
   }
-  /* Each caption is lit by its own photograph, blurred, so every event brings its own
-     colour instead of one flat band. */
   .js .er[data-design="full"]:not([data-mode="static"]) .er-cap {
     position: absolute;
     inset: 0;
-    isolation: isolate;
-    display: grid;
-    align-content: center;
-    justify-items: start;
-    gap: 0.125rem;
-    padding-inline: var(--er-edge) calc(var(--er-edge) + 26rem);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
     opacity: 0;
-    transform: translateY(0.75rem);
+    transform: translateY(0.5rem);
     pointer-events: none;
     transition:
-      opacity 350ms ease,
-      transform 350ms ease;
+      opacity 300ms var(--ease-out),
+      transform 300ms var(--ease-out);
   }
-  /* The stage lays out left to right; each caption keeps the page's own direction. */
   html[dir="rtl"] .er[data-design="full"] .er-cap {
     direction: rtl;
   }
@@ -380,53 +445,34 @@
     transform: none;
     pointer-events: auto;
   }
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-cap::before {
-    content: "";
-    position: absolute;
-    inset: -2rem 0 0;
-    z-index: -1;
-    background:
-      linear-gradient(180deg, transparent, var(--er-cap-fade)),
-      var(--photo, none) center / cover;
-    filter: blur(28px) saturate(1.5);
-    opacity: 0.55;
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-cap-main {
+    min-width: 0;
   }
   /* Whole titles: a clamp or a clip cuts Arabic marks and the second line. */
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-title {
+  .js .er[data-design="full"]:not([data-mode="static"]) .er-cap .er-title {
     display: block;
     overflow: visible;
-    font-size: clamp(1.0625rem, 1.5vw, 1.375rem);
-    line-height: 1.7;
+    font-size: clamp(1.25rem, 2.2vw, 2rem);
+    font-weight: 900;
+    line-height: 1.4;
   }
-  /* The heading stays for screen readers; the link joins the bar. */
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-head {
-    position: absolute;
-    bottom: 3rem;
-    inset-inline-end: var(--er-edge);
-    padding-inline: 0;
+  .er-cap-meta {
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--er-soft);
+    font-variant-numeric: tabular-nums;
   }
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-head h2 {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  /* The tabs run left to right like the photographs do, in Arabic too, and sit at the
-     left under the "all" link. */
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-nav {
-    position: absolute;
-    bottom: 0.5rem;
-    left: var(--er-edge);
-    inset-inline-end: auto;
-    direction: ltr;
-    padding-inline: 0;
-    gap: 0.35rem 1.25rem;
-  }
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-head {
-    left: var(--er-edge);
-    inset-inline-end: auto;
-    direction: ltr;
+  .er-more {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.15rem;
+    border-bottom: 1px solid var(--er-soft);
+    font-size: 0.875rem;
+    font-weight: 800;
+    color: var(--er-ink);
   }
 }

@@ -135,7 +135,7 @@ export function AboutPage() {
           href={collegeUrl[lang]}
           target="_blank"
           rel="noopener"
-          className="font-bold text-primary underline-offset-4 hover:underline"
+          className="club-sheen-text font-bold text-primary"
         >
           {ar ? "الكلية الجامعية للعلوم التطبيقية" : "University College of Applied Sciences"}
         </a>
@@ -155,7 +155,7 @@ export function AboutPage() {
               ? "سيُنشر النص الرسمي المعتمد قريبًا."
               : "The approved official statement will be published here.";
           return (
-            <Reveal key={key} delay={index * 110}>
+            <Reveal key={key} index={index}>
               <article className="club-card h-full rounded-3xl border border-border bg-card p-8 shadow-card">
                 <span className="inline-flex rounded-2xl bg-brand-gradient-soft p-3 text-primary">
                   <Icon className="h-6 w-6" />
@@ -201,7 +201,7 @@ export function AboutPage() {
             </>
           );
           return (
-            <Reveal key={key} delay={index * 90}>
+            <Reveal key={key} index={index}>
               {settings.teamVisible !== false ? (
                 <ClubLink
                   path="members"
@@ -225,7 +225,7 @@ export function AboutPage() {
       {goals.length ? (
         <ol className="grid gap-4 sm:grid-cols-2">
           {goals.map((goal, index) => (
-            <Reveal key={index} as="li" delay={(index % 2) * 110}>
+            <Reveal key={index} as="li" index={index}>
               <div className="club-card flex h-full gap-4 rounded-3xl bg-brand-gradient-soft p-6">
                 <strong
                   aria-hidden="true"
@@ -249,7 +249,7 @@ export function AboutPage() {
         {categories.map(([key, arabic, english], index) => {
           const Icon = [Smartphone, Globe, Gamepad2, Palette][index]!;
           return (
-            <Reveal key={key} delay={index * 80}>
+            <Reveal key={key} index={index}>
               <div className="club-card group h-full rounded-3xl border border-border bg-card p-6 shadow-card">
                 <span className="inline-flex rounded-2xl bg-brand-gradient-soft p-3 text-primary transition-colors group-hover:bg-brand-gradient group-hover:text-white">
                   <Icon className="h-7 w-7" />
@@ -352,13 +352,13 @@ export function DetailPage({ kind, id }: { kind: ContentCollection; id: string }
       >
         <ol className="flex flex-wrap items-center gap-2">
           <li>
-            <ClubLink path="" className="hover:text-primary underline-offset-4 hover:underline">
+            <ClubLink path="" className="club-sheen-text">
               {siteName[lang]}
             </ClubLink>
           </li>
           <li aria-hidden="true">/</li>
           <li>
-            <ClubLink path={kind} className="hover:text-primary underline-offset-4 hover:underline">
+            <ClubLink path={kind} className="club-sheen-text">
               {labels[kind][ar ? 0 : 1]}
             </ClubLink>
           </li>
