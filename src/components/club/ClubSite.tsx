@@ -1,8 +1,7 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Globe, Menu, Moon, Sun, X } from "lucide-react";
+import { Menu, Moon, Sun, X } from "lucide-react";
 import logo from "@/assets/ucas-logo.webp";
-import { brandButtonClass } from "./brand-button-styles";
 import { collections, isUnavailableSection, type ContentCollection } from "@/lib/club/model";
 import { otherLangHref, pageOf } from "@/lib/club/paths";
 import { readTheme, THEME_COOKIE, writePrefCookie } from "@/lib/club/prefs";
@@ -127,16 +126,15 @@ function SiteHeader({ status }: { status: boolean }) {
             <Link
               to={otherLangHref(location.pathname)}
               hrefLang={ar ? "en" : "ar"}
-              className={brandButtonClass("ghost", "sm", "club-language-button")}
+              className="club-icon-button club-language-button"
               aria-label={ar ? "Switch to English" : "التبديل للعربية"}
             >
-              <Globe size={16} aria-hidden="true" />
               <span lang={ar ? "en" : "ar"}>{ar ? "EN" : "عربي"}</span>
             </Link>
             <button
               type="button"
               onClick={toggle}
-              className="club-theme-button rounded-full p-2.5"
+              className="club-icon-button"
               aria-label={
                 ar
                   ? dark

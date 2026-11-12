@@ -39,6 +39,7 @@ import { ContentImage } from "./ContentImage";
 import { CountUp } from "./CountUp";
 import { EventDetail } from "./EventDetail";
 import { NewsDetail } from "./NewsDetail";
+import { HomeNews } from "./HomeNews";
 import { Reveal } from "./Reveal";
 import { RichText } from "./RichText";
 import { useClub } from "./club-context";
@@ -56,9 +57,6 @@ export function HomePage() {
     // Oldest first, so the months run forward as you scroll.
     .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   const hasReel = reel.length > 1;
-  const newsReel = data.news
-    .filter(hasPhoto)
-    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
   return (
     <>
@@ -96,28 +94,7 @@ export function HomePage() {
         </section>
       )}
 
-      {newsReel.length > 1 ? (
-        <ContentReel
-          kind="news"
-          items={newsReel}
-          title={ar ? "من أخبار النادي" : "Club news"}
-          allLabel={ar ? "كل الأخبار" : "All news"}
-        />
-      ) : (
-        <section className="mt-16">
-          <Reveal>
-            <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
-              <h2 className="club-rule text-2xl font-black">
-                {ar ? "من أخبار النادي" : "Club news"}
-              </h2>
-              <ClubLink path="news" className="text-sm font-bold text-primary">
-                {ar ? "كل الأخبار" : "All news"}
-              </ClubLink>
-            </div>
-          </Reveal>
-          <ContentGrid items={data.news.slice(0, 3)} kind="news" compact />
-        </section>
-      )}
+      <HomeNews />
     </>
   );
 }

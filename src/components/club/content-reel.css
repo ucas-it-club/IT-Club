@@ -127,9 +127,7 @@
   outline-offset: 3px;
   border-radius: 0.25rem;
 }
-.er-nav,
-.er-status,
-.er-meta {
+.er-nav {
   display: none;
 }
 .er-caps {
@@ -301,16 +299,8 @@
     font-size: clamp(2rem, 4.2vw, 3.5rem);
     line-height: 1.25;
   }
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-meta {
-    display: block;
-    margin-inline-start: auto;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--er-soft);
-    font-variant-numeric: tabular-nums;
-  }
   .js .er[data-design="full"]:not([data-mode="static"]) .er-all {
+    margin-inline-start: auto;
     font-size: 0.875rem;
   }
   /* The year as a ruled row of months: lit while its month passes, dimmed when empty. */
@@ -321,7 +311,7 @@
     grid-template-columns: repeat(var(--er-months, 12), minmax(0, 1fr));
     gap: 0;
     direction: ltr;
-    margin-inline: var(--er-edge);
+    margin: 0 var(--er-edge) clamp(1rem, 3vh, 1.75rem);
     padding: 0;
     border-block: 1px solid var(--er-rule);
   }
@@ -356,29 +346,13 @@
   .js .er[data-design="full"]:not([data-mode="static"]) .er-nav button:not(:disabled):hover {
     background: color-mix(in oklab, var(--er-accent) 16%, transparent);
   }
+  /* The month on screen wears the same brand gradient as a hovered tab (the sheen in club.css). */
   .js .er[data-design="full"]:not([data-mode="static"]) .er-nav button[data-on] {
-    background: var(--er-accent);
-    color: var(--er-on);
+    background: transparent;
+    color: #fff;
   }
-  .js .er[data-design="full"]:not([data-mode="static"]) .er-status {
-    flex: none;
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-inline: var(--er-edge);
-    padding-block: 0.6rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--er-soft);
-  }
-  [dir="rtl"] .er[data-design="full"]:not([data-mode="static"]) .er-status {
-    direction: rtl;
-  }
-  .er-status b {
-    font-weight: 800;
-    color: var(--er-ink);
-    font-variant-numeric: tabular-nums;
+  .js .club-site .er[data-design="full"]:not([data-mode="static"]) .er-nav button[data-on]::before {
+    opacity: 1;
   }
   /* The strip takes what is left; each photograph is fitted whole inside it. */
   .js .er[data-design="full"]:not([data-mode="static"]) .er-strip {
@@ -455,14 +429,6 @@
     font-size: clamp(1.25rem, 2.2vw, 2rem);
     font-weight: 900;
     line-height: 1.4;
-  }
-  .er-cap-meta {
-    margin-top: 0.25rem;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--er-soft);
-    font-variant-numeric: tabular-nums;
   }
   .er-more {
     display: inline-flex;

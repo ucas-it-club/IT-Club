@@ -34,17 +34,27 @@
 .club-nav-bar {
   padding: 0;
 }
-.club-language-button {
-  background: var(--secondary);
-  color: var(--primary);
-  padding-inline: 12px;
+/* Plain square buttons: no fill at rest, a soft wash on hover. */
+.club-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding-inline: 8px;
+  border-radius: 8px;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 800;
+  transition: background-color 150ms ease, color 150ms ease;
 }
-.club-theme-button {
-  color: var(--primary);
-  background: var(--secondary);
-}
-.club-theme-button:hover {
+.club-icon-button:hover {
   background: var(--muted);
+  color: var(--primary);
+}
+.club-icon-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 @media (min-width: 1280px) {
   .club-header-brand {
@@ -61,9 +71,6 @@
   }
   .club-header-actions {
     padding-inline-start: 5px;
-  }
-  .club-language-button svg {
-    display: none;
   }
 }
 
@@ -624,12 +631,12 @@ html.js .club-reveal.is-shown {
   --sheen-text: linear-gradient(100deg, var(--primary), oklch(0.8 0.12 190) 50%, oklch(0.84 0.15 140));
 }
 
-.club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)) {
+.club-site :is(.club-sheen, .er-nav button:not(:disabled)) {
   position: relative;
   isolation: isolate;
   overflow: hidden;
 }
-.club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled))::before {
+.club-site :is(.club-sheen, .er-nav button:not(:disabled))::before {
   content: "";
   position: absolute;
   inset: -1px;
@@ -638,7 +645,7 @@ html.js .club-reveal.is-shown {
   opacity: 0;
   transition: opacity 300ms ease;
 }
-.club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled))::after {
+.club-site :is(.club-sheen, .er-nav button:not(:disabled))::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -646,20 +653,20 @@ html.js .club-reveal.is-shown {
   transform: translateX(-110%);
   pointer-events: none;
 }
-.club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)):active::before {
+.club-site :is(.club-sheen, .er-nav button:not(:disabled)):active::before {
   opacity: 1;
 }
 @media (hover: hover) {
-  .club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)):hover:not(:disabled) {
+  .club-site :is(.club-sheen, .er-nav button:not(:disabled)):hover:not(:disabled) {
     color: #fff;
     border-color: transparent;
   }
-  .club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)):hover:not(:disabled)::before {
+  .club-site :is(.club-sheen, .er-nav button:not(:disabled)):hover:not(:disabled)::before {
     opacity: 1;
   }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .club-site :is(.club-sheen, .club-theme-button, .er-nav button:not(:disabled)):hover:not(:disabled)::after {
+  .club-site :is(.club-sheen, .er-nav button:not(:disabled)):hover:not(:disabled)::after {
     transform: translateX(110%);
     transition: transform 800ms var(--ease-out);
   }

@@ -8,13 +8,6 @@
   outline: 3px solid var(--brand-blue);
   outline-offset: 4px;
 }
-.contact-fine {
-  margin-top: 3rem;
-  max-width: 60ch;
-  font-size: 0.8125rem;
-  line-height: 2;
-  color: var(--muted-foreground);
-}
 
 .contact-head h1 {
   font-size: clamp(2.5rem, 7vw, 5rem);
@@ -40,49 +33,100 @@
   margin-top: clamp(2.5rem, 6vw, 4rem);
 }
 .contact-band {
+  /* Rest: one calm navy family, a hair lighter per band. Hover: the platform's own colour. */
   --band-bg: var(--navy);
   --band-ink: white;
   --band-soft: color-mix(in oklab, white 78%, var(--band-bg));
+  --fill: var(--navy);
+  --fill-ink: white;
+  --fill-soft: color-mix(in oklab, white 88%, transparent);
 }
 .contact-band-instagram {
-  --band-bg: var(--navy);
+  --fill: linear-gradient(45deg, #e6683c, #dc2743 45%, #bc1888);
 }
 .contact-band-facebook {
-  --band-bg: var(--brand-blue);
+  --band-bg: color-mix(in oklab, var(--navy) 94%, white);
+  --fill: #1877f2;
 }
 .contact-band-linkedin {
-  --band-bg: var(--brand-green);
-  --band-ink: var(--navy);
-  --band-soft: color-mix(in oklab, var(--navy) 80%, var(--band-bg));
+  --band-bg: color-mix(in oklab, var(--navy) 88%, white);
+  --fill: #0a66c2;
 }
 .contact-band-email {
-  --band-bg: var(--background);
-  --band-ink: var(--foreground);
-  --band-soft: var(--muted-foreground);
-  border-block: 1px solid var(--border);
+  --band-bg: color-mix(in oklab, var(--navy) 82%, white);
+  --fill: var(--brand-green);
+  --fill-ink: var(--navy);
+  --fill-soft: color-mix(in oklab, var(--navy) 80%, transparent);
 }
-.dark .contact-band-instagram {
+.dark .contact-band {
   --band-bg: var(--navy-band);
+}
+.dark .contact-band-facebook {
+  --band-bg: color-mix(in oklab, var(--navy-band) 94%, white);
+}
+.dark .contact-band-linkedin {
+  --band-bg: color-mix(in oklab, var(--navy-band) 88%, white);
+}
+.dark .contact-band-email {
+  --band-bg: color-mix(in oklab, var(--navy-band) 82%, white);
 }
 
 .contact-band-link {
+  position: relative;
   display: block;
+  overflow: hidden;
   background: var(--band-bg);
   color: var(--band-ink);
   text-decoration: none;
-  transition: background-color 250ms var(--ease-out);
+  transition: color 250ms var(--ease-out);
 }
-.contact-band-link:hover {
-  background: color-mix(in oklab, var(--band-bg) 88%, black);
+/* The platform colour grows from the icon's centre (the inner row is 72rem max, 1rem padding,
+   icon 40px wide) until it covers the band. */
+.contact-band-link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--fill);
+  --ix: calc((100% - min(100%, 72rem)) / 2 + 1rem + 20px);
+  clip-path: circle(0 at var(--ix) 50%);
+  transition: clip-path 500ms var(--ease-out);
 }
-.contact-band-email .contact-band-link:hover {
-  background: var(--muted);
+[dir="rtl"] .contact-band-link::before {
+  clip-path: circle(0 at calc(100% - var(--ix)) 50%);
 }
 .contact-band-link:focus-visible {
   outline-offset: -6px;
   outline-color: var(--band-ink);
 }
+@media (hover: hover) {
+  .contact-band-link:hover,
+  .contact-band-link:focus-visible {
+    color: var(--fill-ink);
+    --band-soft: var(--fill-soft);
+  }
+  .contact-band-link:hover::before,
+  .contact-band-link:focus-visible::before {
+    clip-path: circle(100vw at var(--ix) 50%);
+  }
+  [dir="rtl"] .contact-band-link:hover::before,
+  [dir="rtl"] .contact-band-link:focus-visible::before {
+    clip-path: circle(100vw at calc(100% - var(--ix)) 50%);
+  }
+}
+/* Touch has no hover: show the platform colour all the time, no animation. */
+@media (hover: none) {
+  .contact-band-link {
+    color: var(--fill-ink);
+    --band-soft: var(--fill-soft);
+  }
+  .contact-band-link::before,
+  [dir="rtl"] .contact-band-link::before {
+    clip-path: none;
+    transition: none;
+  }
+}
 .contact-band-inner {
+  position: relative;
   display: flex;
   align-items: center;
   gap: clamp(1rem, 3vw, 2rem);
@@ -148,6 +192,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .contact-band-link,
+  .contact-band-link::before,
   .contact-band-action svg {
     transition: none;
   }

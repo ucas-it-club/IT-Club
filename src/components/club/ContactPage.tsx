@@ -62,7 +62,6 @@ export function ContactPage() {
     <section className="contact" aria-labelledby="contact-heading">
       <header className="contact-head">
         <h1 id="contact-heading">{ar ? "خلّينا على تواصل" : "Let’s stay in touch"}</h1>
-        <p>{ar ? "اختر المنصة، والباقي علينا." : "Pick a platform. We’ll take it from there."}</p>
       </header>
       <ul className="contact-bands">
         {bands.map(({ key, name, Icon, href, action, note }) => (
@@ -89,11 +88,6 @@ export function ContactPage() {
           </li>
         ))}
       </ul>
-      <p className="contact-fine">
-        {ar
-          ? "على لينكدإن، افتح صفحة النادي ثم اختر Message. قد تطلب منك المنصة تسجيل الدخول."
-          : "On LinkedIn, open our page and choose Message. The platform may ask you to sign in."}
-      </p>
     </section>
   );
 }

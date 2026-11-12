@@ -74,10 +74,6 @@ export function ContentReel({
       });
       const caps = node.querySelectorAll<HTMLElement>(".er-cap");
       caps.forEach((el, i) => el.toggleAttribute("data-on", i === on));
-      const onScreen = node.querySelector(".er-on-date");
-      const date = caps[on]?.dataset["date"];
-
-      if (onScreen && date && onScreen.textContent !== date) onScreen.textContent = date;
     };
 
     // The stretch of page the strip travels over: from the moment the stage sticks
@@ -175,31 +171,11 @@ export function ContentReel({
       else m += 1;
     }
 
-  const frames = items.reduce((sum, item) => sum + contentImageUrls(item).length, 0);
   const fullDate = (item: Content) => {
     const d = dateParts(item.date, lang);
 
     return d ? `${d.day} ${d.month} ${d.year}` : "";
   };
-  const unit = (n: number) =>
-    kind === "news"
-      ? ar
-        ? "خبر"
-        : n === 1
-          ? "story"
-          : "stories"
-      : ar
-        ? "فعالية"
-        : n === 1
-          ? "event"
-          : "events";
-  const meta = [
-    `${count(frames)} ${ar ? "صورة" : "photos"}`,
-    `${count(items.length)} ${unit(items.length)}`,
-    oneYear ? String(y0 ?? "") : y0 && y1 ? `${y0}–${y1}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
   return (
     <section
@@ -214,7 +190,6 @@ export function ContentReel({
         <div className="er-stage">
           <header className="er-head">
             <h2 id={`er-${kind}`}>{title}</h2>
-            <p className="er-meta">{meta}</p>
             <ClubLink path={kind} className="er-all">
               {allLabel}
               <Arrow size={18} aria-hidden="true" />
@@ -240,14 +215,6 @@ export function ContentReel({
               </button>
             ))}
           </div>
-
-          <p className="er-status" aria-hidden="true">
-            <span>
-              {ar ? "على الشاشة" : "On screen"}{" "}
-              <b className="er-on-date">{items[0] ? fullDate(items[0]) : ""}</b>
-            </span>
-            <span>{ar ? "اختر شهرًا للانتقال إليه" : "Choose a month to jump to it"}</span>
-          </p>
 
           <ol className="er-strip">
             {items.map((item, index) => {
@@ -306,14 +273,6 @@ export function ContentReel({
                     <ClubLink path={itemPage(kind, item, data)} className="er-title" tabIndex={-1}>
                       {name}
                     </ClubLink>
-                    <p className="er-cap-meta">
-                      {[
-                        fullDate(item),
-                        n ? `${count(n)} ${ar ? "صورة" : n === 1 ? "photo" : "photos"}` : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
                   </div>
                   <ClubLink path={itemPage(kind, item, data)} className="er-more" tabIndex={-1}>
                     {n > 1

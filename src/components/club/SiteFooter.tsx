@@ -22,6 +22,16 @@ const socials = [
   ["github", Github, "غيت هب", "GitHub"],
 ] as const;
 
+const credits = [
+  ["https://www.linkedin.com/in/haladalloul/", "هلا دلول", "Hala Dalloul", Linkedin],
+  [
+    "https://github.com/Abdalrahman-py",
+    "عبدالرحمن الشيخ خليل",
+    "Abdalrahman Elshaikh Khalil",
+    Github,
+  ],
+] as const;
+
 const itemClass = "club-sheen-text inline-flex items-center gap-2 text-muted-foreground";
 
 function Column({ title, children }: { title: string; children: React.ReactNode }) {
@@ -95,10 +105,18 @@ export function SiteFooter() {
           </Column>
 
           <Column title={ar ? "تصميم وتطوير" : "Designed & developed"}>
-            <span className="text-muted-foreground">{ar ? "هلا دلول" : "Hala Dalloul"}</span>
-            <span className="text-muted-foreground">
-              {ar ? "عبدالرحمن الشيخ خليل" : "Abdalrahman Elshaikh Khalil"}
-            </span>
+            {credits.map(([url, a, e, Icon]) => (
+              <a
+                key={url}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={itemClass}
+              >
+                <Icon size={16} aria-hidden="true" />
+                {ar ? a : e}
+              </a>
+            ))}
           </Column>
         </div>
 
