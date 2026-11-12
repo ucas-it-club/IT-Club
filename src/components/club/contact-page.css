@@ -10,7 +10,7 @@
 }
 
 .contact-head h1 {
-  font-size: clamp(2.5rem, 7vw, 5rem);
+  font-size: clamp(2rem, 5.5vw, 3.75rem);
   font-weight: 900;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -54,9 +54,7 @@
 }
 .contact-band-email {
   --band-bg: color-mix(in oklab, var(--navy) 82%, white);
-  --fill: var(--brand-green);
-  --fill-ink: var(--navy);
-  --fill-soft: color-mix(in oklab, var(--navy) 80%, transparent);
+  --fill: linear-gradient(100deg, var(--brand-green), var(--brand-blue));
 }
 .dark .contact-band {
   --band-bg: var(--navy-band);
@@ -87,7 +85,7 @@
   position: absolute;
   inset: 0;
   background: var(--fill);
-  --ix: calc((100% - min(100%, 72rem)) / 2 + 1rem + 20px);
+  --ix: calc((100% - min(100%, 72rem)) / 2 + 1rem + 16px);
   clip-path: circle(0 at var(--ix) 50%);
   transition: clip-path 500ms var(--ease-out);
 }
@@ -132,7 +130,7 @@
   gap: clamp(1rem, 3vw, 2rem);
   max-width: 72rem;
   margin-inline: auto;
-  padding: clamp(1.75rem, 4vw, 2.75rem) 1rem;
+  padding: clamp(1.25rem, 3vw, 2rem) 1rem;
 }
 .contact-band-inner > svg {
   flex: none;
@@ -144,18 +142,18 @@
   flex: 1;
 }
 .contact-band-name {
-  font-size: clamp(1.75rem, 5vw, 3.5rem);
+  font-size: clamp(1.375rem, 4vw, 2.5rem);
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.025em;
   justify-self: start;
 }
 .contact-band-email .contact-band-name {
-  font-size: clamp(1.125rem, 3.4vw, 2.25rem);
+  font-size: clamp(1rem, 2.8vw, 1.75rem);
   overflow-wrap: anywhere;
 }
 .contact-band-note {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   line-height: 1.8;
   color: var(--band-soft);
 }
@@ -165,7 +163,7 @@
   align-items: center;
   gap: 0.5rem;
   font-weight: 800;
-  font-size: 1.0625rem;
+  font-size: 1rem;
 }
 .contact-band-action svg {
   transition: transform 300ms var(--ease-out);

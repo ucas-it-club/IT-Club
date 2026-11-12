@@ -72,7 +72,7 @@ export function ContactPage() {
               className="contact-band-link"
             >
               <span className="contact-band-inner">
-                <Icon size={40} aria-hidden />
+                <Icon size={32} aria-hidden />
                 <span className="contact-band-text">
                   <span className="contact-band-name" dir="ltr">
                     {name}
@@ -81,7 +81,7 @@ export function ContactPage() {
                 </span>
                 <span className="contact-band-action">
                   {ar ? action[0] : action[1]}
-                  <Arrow size={20} aria-hidden />
+                  <Arrow size={18} aria-hidden />
                 </span>
               </span>
             </a>
