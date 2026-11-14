@@ -257,9 +257,10 @@ export function BracketHero() {
     let cancelled = false;
 
     void (async () => {
-      const loaded = await Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).catch(
-        () => null,
-      );
+      const loaded = await Promise.all([
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+      ]).catch(() => null);
 
       if (cancelled) return;
       if (!loaded) {
@@ -375,14 +376,20 @@ export function BracketHero() {
 
         const tl = gsap.timeline({
           defaults: { ease: "none" },
-          scrollTrigger: {
-            trigger: ".bh-track",
-            start: "top top",
-            end: "bottom bottom",
-            // Catches up over a moment instead of following the wheel exactly: the glide.
-            scrub: 0.45,
-            invalidateOnRefresh: true,
-          },
+          // The story plays on a timer, after the entrance has settled. Without it
+          // (?intro=0) the old scroll-scrubbed story stays.
+          ...(story
+            ? { delay: opening ? 5 : 4.2 }
+            : {
+                scrollTrigger: {
+                  trigger: ".bh-track",
+                  start: "top top",
+                  end: "bottom bottom",
+                  // Catches up over a moment instead of following the wheel exactly: the glide.
+                  scrub: 1.1,
+                  invalidateOnRefresh: true,
+                },
+              }),
         });
         const swap = (out: string, into: string, at: number) => {
           tl.to(out, { opacity: 0, y: -40, duration: 0.5, ease: "power2.in" }, at)
@@ -400,9 +407,23 @@ export function BracketHero() {
           .to(left, { x: toLeft, duration: 1, ease: "power2.inOut" }, 0)
           .to(right, { x: toRight, duration: 1, ease: "power2.inOut" }, 0);
 
-        // Every line is tied to the scroll position, so no speed can skip a panel.
+        // The panels change on their own clock, whatever the scroll does, and the
+        // story loops. It pauses while the hero is off screen.
         if (story) {
-          buildScrub(gsap, node, tl);
+          buildScrub(gsap, node, tl, true);
+          // The arms close again as the last panel leaves.
+          tl.to(left, { x: 0, duration: 1, ease: "power2.inOut" }, 8.5).to(
+            right,
+            { x: 0, duration: 1, ease: "power2.inOut" },
+            8.5,
+          );
+          tl.repeat(-1).timeScale(0.65);
+          ScrollTrigger.create({
+            trigger: node,
+            start: "top bottom",
+            end: "bottom top",
+            onToggle: (self) => (self.isActive ? tl.play() : tl.pause()),
+          });
           return;
         }
 
@@ -452,7 +473,13 @@ export function BracketHero() {
     : ["Mobile apps", "Mobile games", "Web", "Multimedia"];
 
   return (
-    <section ref={root} className="bh" data-mode={mode} data-variant={variant ?? undefined}>
+    <section
+      ref={root}
+      className="bh"
+      data-mode={mode}
+      data-timed={story ? "" : undefined}
+      data-variant={variant ?? undefined}
+    >
       <div className="bh-track">
         <div className="bh-stage" dir="ltr">
           {(variant === "wall" || variant === "shelf") && (

@@ -192,7 +192,12 @@ export function ContentReel({
             <h2 id={`er-${kind}`}>{title}</h2>
             <ClubLink path={kind} className="er-all">
               {allLabel}
-              <Arrow size={18} aria-hidden="true" />
+              {/* Always points away from the words: left in Arabic, right in English. */}
+              {ar ? (
+                <ArrowLeft size={18} aria-hidden="true" />
+              ) : (
+                <ArrowRight size={18} aria-hidden="true" />
+              )}
             </ClubLink>
           </header>
 

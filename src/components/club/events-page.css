@@ -20,7 +20,7 @@
 }
 
 .ev-head h1 {
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-size: clamp(1.625rem, 4.5vw, 3.5rem);
   font-weight: 900;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -293,4 +293,9 @@
   .ev-next-photo img {
     transition: none;
   }
+}
+
+/* First block under the page heading sits 16px below it. */
+.ev-head + :is(.nw-year, .ev-year) {
+  margin-top: 1rem;
 }

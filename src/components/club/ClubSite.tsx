@@ -237,7 +237,7 @@ function Shell({ children }: { children: ReactNode }) {
       <main
         id="club-main"
         tabIndex={-1}
-        className={`mx-auto max-w-6xl px-4 animate-stage-in ${page === "" ? "pt-4 pb-12 sm:pt-5 sm:pb-16" : "py-12 sm:py-16"}`}
+        className={`mx-auto max-w-6xl px-4 animate-stage-in ${page === "" ? "pt-4 pb-12 sm:pt-5 sm:pb-16" : "py-2"}`}
       >
         {children}
       </main>

@@ -51,8 +51,12 @@ function counts(
   });
 }
 
-/** Extends the scrubbed master timeline `tl` (the arms already open over 0-1). */
-export function buildScrub(gsap: G, node: HTMLElement, tl: gsap.core.Timeline) {
+/**
+ * Extends the master timeline `tl` (the arms already open over 0-1). With `loop`, it
+ * also closes the story (last panel out, arms back, name back in) so the end state
+ * equals the start and the timeline can repeat.
+ */
+export function buildScrub(gsap: G, node: HTMLElement, tl: gsap.core.Timeline, loop = false) {
   tl.to(lines.name, { yPercent: -115, duration: 0.5, stagger: 0.08, ease: "power2.in" }, 0.4);
 
   const seg = (step: Exclude<Step, "name">, enter: number, exit?: number) => {
@@ -74,6 +78,21 @@ export function buildScrub(gsap: G, node: HTMLElement, tl: gsap.core.Timeline) {
   seg("who", 1.1, 3.2);
   seg("numbers", 3.5, 5.2);
   seg("join", 5.5);
-  // Hold on the last panel.
-  tl.to({}, { duration: 0 }, 7.2);
+  if (!loop) {
+    tl.to({}, { duration: 0 }, 8);
+    return;
+  }
+  tl.to(lines.join, { ...above, duration: 0.5, stagger: 0.05, ease: "power2.in" }, 8).set(
+    box.join,
+    { autoAlpha: 0 },
+    8.85,
+  );
+  tl.fromTo(
+    lines.name,
+    { yPercent: 115 },
+    { yPercent: 0, duration: 0.9, stagger: 0.08, ease: "power3.out", immediateRender: false },
+    9.6,
+  );
+  // Rest on the name before the next round.
+  tl.to({}, { duration: 0 }, 12);
 }

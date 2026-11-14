@@ -41,10 +41,10 @@
   min-height: calc(100svh - var(--bh-top));
   padding-inline: clamp(1rem, 3vw, 2rem);
 }
-.bh[data-mode="live"] .bh-track {
+.bh[data-mode="live"]:not([data-timed]) .bh-track {
   height: 420svh;
 }
-.bh[data-mode="live"] .bh-stage {
+.bh[data-mode="live"]:not([data-timed]) .bh-stage {
   position: sticky;
   top: var(--bh-top);
   height: calc(100svh - var(--bh-top));
@@ -691,4 +691,9 @@
   .bh[data-mode="static"] .bh-actions {
     margin-top: 1rem;
   }
+}
+
+/* Scrubbed layers get their own compositor layer so scrolling doesn't repaint them. */
+.bh[data-mode="live"] :is(.bh-arm, .bh-word, .bh-who .bh-title, .bh-who .bh-text, .bh-who .bh-majors li, .bh-numbers .bh-facts > div, .bh-numbers .bh-reg, .bh-motto span, .bh-actions) {
+  will-change: transform;
 }
