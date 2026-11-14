@@ -650,11 +650,35 @@
     gap: 1.5rem;
     padding-block: 0.5rem 2.5rem;
   }
+  /* A hairline the width of the brackets closes off the name. Below the name the brackets
+     are uneven (the left dot hangs low, the right one rides high); the line gives the text
+     a level edge to sit under instead. A pseudo-element, so the row's box, which the
+     entrance measures, stays the same. The left dot ends 0.185 arm below its bracket. */
   .bh[data-mode="static"] .bh-row {
+    --bh-rule: calc(var(--arm) * 0.185 + 1.5rem);
+    position: relative;
     min-height: 0;
+  }
+  .bh[data-mode="static"] .bh-row::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + var(--bh-rule));
+    border-top: 1px solid var(--border);
+  }
+  .bh[data-mode="static"] .bh-who {
+    margin-top: calc(var(--arm) * 0.185 + 2.5rem);
   }
   .bh[data-mode="static"] .bh-panel {
     animation: none;
+    width: 100%;
+  }
+  /* From tablet width the panels keep to the column between the brackets, lined up with
+     the name instead of running under the brackets. Phones need the full width. */
+  @media (min-width: 640px) {
+    .bh[data-mode="static"] .bh-panel {
+      max-width: min(32rem, calc(100% - 2 * var(--arm) - 2 * clamp(0.75rem, 3vw, 3rem)));
+    }
   }
   .bh[data-mode="static"] .bh-title {
     font-size: 1.25rem;
@@ -663,8 +687,14 @@
     margin-top: 0.5rem;
     font-size: 1rem;
     line-height: 1.8;
+    /* Even lines, not one full line and a stub: a stub makes the block look lopsided. */
+    text-wrap: balance;
   }
+  /* Two by two, so the fields never leave one pill alone on a line. */
   .bh[data-mode="static"] .bh-majors {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    justify-content: center;
     gap: 0.4rem;
     margin-top: 1rem;
   }
@@ -672,11 +702,22 @@
     padding: 0.3rem 0.8rem;
     font-size: 0.85rem;
   }
+  /* The numbers as one ruled strip, a hairline between each, joined to the panel above. */
+  .bh[data-mode="static"] .bh-numbers {
+    margin-top: -0.25rem;
+  }
   .bh[data-mode="static"] .bh-facts {
-    gap: 0.75rem;
+    gap: 0;
+    border-block: 1px solid var(--border);
+  }
+  .bh[data-mode="static"] .bh-facts > div {
+    padding-block: 0.85rem 0.75rem;
+  }
+  .bh[data-mode="static"] .bh-facts > div + div {
+    border-inline-start: 1px solid var(--border);
   }
   .bh[data-mode="static"] .bh-facts dt {
-    font-size: clamp(2rem, 10vw, 3.25rem);
+    font-size: clamp(2rem, 8vw, 2.75rem);
   }
   .bh[data-mode="static"] .bh-facts dd {
     margin-top: 0.25rem;

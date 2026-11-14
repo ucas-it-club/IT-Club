@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { dateParts, eventDisplayStatus } from "@/lib/club/event-timing";
-import { local } from "@/lib/club/model";
+import { collegeUrl, local } from "@/lib/club/model";
+import ucasIcon from "@/assets/ucas-college-icon.webp";
 import { useClub } from "./club-context";
 
 /**
@@ -37,10 +38,6 @@ export function SiteStatus() {
   const nextDate = dateParts(next?.date, lang);
 
   const cells: [string, React.ReactNode][] = [
-    [
-      ar ? "الكلية" : "College",
-      ar ? "الكلية الجامعية للعلوم التطبيقية" : "University College of Applied Sciences",
-    ],
     [ar ? "الوقت في غزة" : "Time in Gaza", <span className="club-status-num">{time}</span>],
     [
       ar ? "زوار الموقع" : "Site visitors",
@@ -60,6 +57,21 @@ export function SiteStatus() {
 
   return (
     <dl className="club-status" dir={ar ? "rtl" : "ltr"}>
+      {/* The college: its own icon and name, linking to its site. */}
+      <div className="club-status-college">
+        <dt>{ar ? "الكلية" : "College"}</dt>
+        <dd>
+          <a
+            href={collegeUrl[lang]}
+            target="_blank"
+            rel="noopener"
+            title={ar ? "الكلية الجامعية للعلوم التطبيقية" : "University College of Applied Sciences"}
+          >
+            <img src={ucasIcon} alt="" width={36} height={96} decoding="async" />
+            UCAS
+          </a>
+        </dd>
+      </div>
       {cells.map(([label, value]) => (
         <div key={label}>
           <dt>{label}</dt>

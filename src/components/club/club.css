@@ -470,21 +470,40 @@ html.js .club-reveal.is-shown {
 .club-status-num {
   font-variant-numeric: tabular-nums;
 }
-/* A phone keeps the two figures that change; the rest is on the page itself. */
+.club-status-college a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8125rem;
+  font-weight: 900;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--foreground);
+  transition: color 200ms ease;
+}
+.club-status-college a:hover {
+  color: var(--primary);
+}
+.club-status-college img {
+  width: auto;
+  /* Fits the value line under the label. */
+  height: 1.05rem;
+}
+/* A phone shows all four cells, two by two. */
 @media (max-width: 767.98px) {
   .club-site:has(.club-status) {
-    --status-h: 2.5rem;
+    --status-h: 5rem;
   }
   .club-status {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-inline: 1.25rem;
     border-radius: 0 0 1.25rem 1.25rem;
   }
-  .club-status > div:not(:nth-child(2), :nth-child(3)) {
-    display: none;
+  .club-status > div:nth-child(odd) {
+    border-inline-start: 0;
   }
-  .club-status > div:nth-child(3) {
-    border-inline-start: 1px solid var(--border);
+  .club-status > div:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
   }
 }
 
