@@ -5,6 +5,7 @@ import { itemPage } from "@/lib/club/paths";
 import { useClub } from "./club-context";
 import { ClubLink } from "./ClubContent";
 import { ContentImage } from "./ContentImage";
+import { HomeStories, topNews } from "./HomeNews";
 
 /**
  * News reads like the events page: a written record grouped by year and month,
@@ -43,6 +44,12 @@ export function NewsPage() {
       <header className="ev-head">
         <h1 id="nw-heading">{ar ? "الأخبار" : "News"}</h1>
       </header>
+      <HomeStories
+        kind="news"
+        items={topNews(data.news)}
+        title={ar ? "أبرز الأخبار" : "Top news"}
+        single
+      />
 
       {years.map(({ year, months }) => (
         <div key={year} className="nw-year" role="group" aria-label={year}>

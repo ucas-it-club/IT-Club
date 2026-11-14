@@ -322,6 +322,159 @@
   }
 }
 
+/* Home stories taking turns (HomeStories): the page stays still while the cards
+   run as a strip. A card changing place glides into it; the new story slides in
+   from off screen on the large card's side and the last one slides off the other
+   side (reversed when going back). */
+/* Only the cards are captured; the rest of the page stays live underneath. */
+html[data-vt="stories"],
+html[data-vt="stories"] .club-header,
+html[data-vt="stories"] .club-site main {
+  view-transition-name: none;
+}
+/* A sliding card fades out just outside the cards' edges, so at rest nothing is
+   clipped. --hs-line is where it is fully gone (negative: outside the cards) and the
+   fade runs from there back to the cards' edge. Over a phone-width card that is the
+   page gutter; where the arrows sit outside, it is the gap before them. The fade
+   shows the page itself, not a colour laid over it. */
+/* In a layer, so the md:/min-[85rem]: utilities on the element can override it. */
+@layer components {
+  .hs-stage {
+    --hs-line: -16px;
+    --hs-fade: 16px;
+  }
+}
+/* The same line in page coordinates, set from .hs-stage when a slide starts. */
+html[data-vt="stories"]::view-transition {
+  mask-image: linear-gradient(
+    to right,
+    transparent var(--hs-l, 0px),
+    #000 calc(var(--hs-l, 0px) + var(--hs-f, 16px)),
+    #000 calc(var(--hs-r, 100vw) - var(--hs-f, 16px)),
+    transparent var(--hs-r, 100vw)
+  );
+}
+/* Arrows over the card ride above the sliding cards; arrows outside stay in the page. */
+.hs-side {
+  view-transition-name: var(--hs-arrow, none);
+}
+@media (min-width: 48rem) {
+  .hs-out-md {
+    view-transition-name: none !important;
+  }
+}
+@media (min-width: 85rem) {
+  .hs-out-xl {
+    view-transition-name: none !important;
+  }
+}
+html[data-vt="stories"]::view-transition-group(*.hs-card) {
+  animation-duration: 800ms;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+html[data-vt="stories"]::view-transition-new(*.hs-from-left):only-child,
+html[data-vt="stories"][data-vt-dir="back"]::view-transition-new(*.hs-from-right):only-child {
+  animation: hs-in-left 800ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+html[data-vt="stories"]::view-transition-new(*.hs-from-right):only-child,
+html[data-vt="stories"][data-vt-dir="back"]::view-transition-new(*.hs-from-left):only-child {
+  animation: hs-in-right 800ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+html[data-vt="stories"]::view-transition-old(*.hs-from-left):only-child,
+html[data-vt="stories"][data-vt-dir="back"]::view-transition-old(*.hs-from-right):only-child {
+  animation: hs-out-right 800ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+html[data-vt="stories"]::view-transition-old(*.hs-from-right):only-child,
+html[data-vt="stories"][data-vt-dir="back"]::view-transition-old(*.hs-from-left):only-child {
+  animation: hs-out-left 800ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+@keyframes hs-in-left {
+  from {
+    transform: translateX(calc(-100% - 3rem));
+  }
+}
+@keyframes hs-in-right {
+  from {
+    transform: translateX(calc(100% + 3rem));
+  }
+}
+@keyframes hs-out-left {
+  to {
+    transform: translateX(calc(-100% - 3rem));
+  }
+}
+@keyframes hs-out-right {
+  to {
+    transform: translateX(calc(100% + 3rem));
+  }
+}
+.hs-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+}
+.hs-btn:hover {
+  color: var(--primary);
+  background: var(--muted);
+}
+/* Prev/next on the sides of the photo, centred on its height. */
+.hs-side {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  translate: 0 -50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+}
+/* A dot is a 36px target around a small mark; the current one widens into the timer. */
+.hs-dot {
+  display: inline-grid;
+  place-items: center;
+  height: 2.25rem;
+  padding-inline: 0.25rem;
+}
+.hs-dot > span {
+  position: relative;
+  overflow: hidden;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--border);
+}
+.hs-dot[data-on] > span {
+  width: 1.75rem;
+}
+.hs-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--primary);
+  transform-origin: left;
+  animation: hs-fill var(--hs-period) linear both;
+}
+[dir="rtl"] .hs-fill {
+  transform-origin: right;
+}
+[data-paused] .hs-fill {
+  animation-play-state: paused;
+}
+@keyframes hs-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hs-fill {
+    animation: none;
+  }
+}
+
 /* Radix overlays: menus, popovers, selects and tooltips all open on the same
    timing and grow out of the trigger that opened them (Radix writes the
    trigger's position into --radix-*-content-transform-origin). The exit runs

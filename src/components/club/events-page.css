@@ -25,95 +25,6 @@
   line-height: 1.15;
   letter-spacing: -0.02em;
 }
-.ev-more {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 800;
-  color: var(--ev-link);
-}
-
-.club-site:has(.ev-next) {
-  overflow-x: clip;
-}
-/* Full-bleed band, like the contact page's. */
-.ev-next {
-  width: calc(100vw - var(--sbw, 0px));
-  margin-inline: calc(50% - 50vw + var(--sbw, 0px) / 2);
-  margin-top: clamp(2.5rem, 6vw, 4rem);
-}
-.ev-next-link {
-  display: block;
-  background: var(--navy);
-  color: white;
-  transition: background-color 250ms var(--ease-out);
-}
-.dark .ev-next-link {
-  background: var(--navy-band);
-}
-.ev-next li + li .ev-next-link {
-  border-top: 1px solid rgb(255 255 255 / 0.15);
-}
-.ev-next-link:hover {
-  background: color-mix(in oklab, var(--navy-band) 88%, black);
-}
-.ev-next-link:focus-visible {
-  outline-color: white;
-  outline-offset: -6px;
-}
-.ev-next-inner {
-  display: grid;
-  gap: clamp(1.25rem, 3vw, 2rem);
-  align-items: center;
-  max-width: 72rem;
-  margin-inline: auto;
-  padding: clamp(2rem, 5vw, 3.5rem) 1rem;
-}
-.ev-next-text {
-  display: grid;
-  gap: 0.75rem;
-  justify-items: start;
-  min-width: 0;
-}
-/* The photo sits beside the words in a wide band, and above them in a narrow one. */
-@media (min-width: 48rem) {
-  .ev-next-inner:has(.ev-next-photo) {
-    grid-template-columns: minmax(0, 1fr) clamp(12rem, 24vw, 20rem);
-  }
-}
-.ev-next-photo {
-  display: block;
-  overflow: hidden;
-  aspect-ratio: 16 / 10;
-  border-radius: var(--radius);
-  background: rgb(0 0 0 / 0.25);
-}
-.ev-next-photo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 500ms var(--ease-out);
-}
-.ev-next-link:hover .ev-next-photo img {
-  transform: scale(1.03);
-}
-.ev-next-title {
-  font-size: clamp(1.375rem, 3vw, 2.25rem);
-  font-weight: 900;
-  line-height: 1.4;
-  text-wrap: balance;
-}
-.ev-next-facts {
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: rgb(255 255 255 / 0.8);
-}
-.ev-next .ev-more {
-  margin-top: 0.5rem;
-  color: oklch(0.85 0.15 136);
-}
-
 .ev-year {
   display: grid;
   grid-template-columns: 11rem minmax(0, 1fr);
@@ -223,7 +134,7 @@
 }
 .ev-entry {
   display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
+  grid-template-columns: 14rem minmax(0, 1fr);
   gap: 1.25rem;
   align-items: center;
   padding-block: 1.25rem;
@@ -231,15 +142,14 @@
 .ev-entry-photo {
   display: block;
   overflow: hidden;
-  aspect-ratio: 4 / 3;
   border-radius: var(--radius-md);
   background: var(--muted);
 }
 .ev-entry-photo img {
   display: block;
+  /* The whole photograph, at its own ratio. */
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   transition: transform 500ms var(--ease-out);
 }
 .ev-entry:hover .ev-entry-photo img {
@@ -281,16 +191,14 @@
     --ev-rail: 1.25rem;
   }
   .ev-entry {
-    grid-template-columns: 4.75rem minmax(0, 1fr);
+    grid-template-columns: 8rem minmax(0, 1fr);
     gap: 0.875rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ev-entry-title,
-  .ev-next-link,
-  .ev-entry-photo img,
-  .ev-next-photo img {
+  .ev-entry-photo img {
     transition: none;
   }
 }

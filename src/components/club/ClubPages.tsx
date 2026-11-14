@@ -31,7 +31,6 @@ import { eventDisplayStatus } from "@/lib/club/event-timing";
 import { contentImageUrls } from "@/lib/club/google-drive";
 import { siteName } from "@/lib/club/seo";
 import { BracketHero } from "./BracketHero";
-import { ContentReel } from "./ContentReel";
 import { ClubLink, ContentGrid, Empty, Heading, linkClass } from "./ClubContent";
 import { EventsPage } from "./EventsPage";
 import { NewsPage } from "./NewsPage";
@@ -39,7 +38,7 @@ import { ContentImage } from "./ContentImage";
 import { CountUp } from "./CountUp";
 import { EventDetail } from "./EventDetail";
 import { NewsDetail } from "./NewsDetail";
-import { HomeNews } from "./HomeNews";
+import { HomeNews, HomeStories, topEvents } from "./HomeNews";
 import { Reveal } from "./Reveal";
 import { RichText } from "./RichText";
 import { useClub } from "./club-context";
@@ -47,52 +46,18 @@ import { useClub } from "./club-context";
 export function HomePage() {
   const { lang, data, visitorCount } = useClub();
   const ar = lang === "ar";
-  const now = new Date();
-  const past = data.events.filter((item) => eventDisplayStatus(item, now) === "past");
-  const upcoming = data.events.filter((item) => eventDisplayStatus(item, now) !== "past");
-  const preview = (upcoming.length ? upcoming : past).slice(0, 3);
-  const hasPhoto = (item: Content) => contentImageUrls(item).length > 0;
-  const reel = past
-    .filter(hasPhoto)
-    // Oldest first, so the months run forward as you scroll.
-    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  const hasReel = reel.length > 1;
 
   return (
     <>
       <BracketHero />
 
-      {hasReel && (
-        <ContentReel
-          kind="events"
-          items={reel}
-          title={ar ? "فعاليات نفّذها النادي" : "Events the club has run"}
-          allLabel={ar ? "كل الفعاليات" : "All events"}
-        />
-      )}
-
-      {/* The reel already shows past events; the grid stays for upcoming ones. */}
-      {(upcoming.length > 0 || !hasReel) && (
-        <section className="mt-16">
-          <Reveal>
-            <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
-              <h2 className="club-rule text-2xl font-black">
-                {ar
-                  ? upcoming.length
-                    ? "الفعاليات القادمة"
-                    : "فعاليات نفّذها النادي"
-                  : upcoming.length
-                    ? "Upcoming events"
-                    : "Events the club has run"}
-              </h2>
-              <ClubLink path="events" className="text-sm font-bold text-primary">
-                {ar ? "كل الفعاليات" : "All events"}
-              </ClubLink>
-            </div>
-          </Reveal>
-          <ContentGrid items={preview} kind="events" compact />
-        </section>
-      )}
+      <HomeStories
+        kind="events"
+        items={topEvents(data.events)}
+        title={ar ? "فعاليات النادي" : "Club events"}
+        allLabel={ar ? "كل الفعاليات" : "All events"}
+        flip
+      />
 
       <HomeNews />
     </>

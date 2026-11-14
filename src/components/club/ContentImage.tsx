@@ -8,7 +8,9 @@ export function ContentImage({
   alt,
   lang,
   className,
+  loading = "lazy",
 }: {
+  loading?: "lazy" | "eager";
   src?: string | undefined;
   alt: string;
   lang: Lang;
@@ -38,7 +40,7 @@ export function ContentImage({
       }
       width={1200}
       height={630}
-      loading="lazy"
+      loading={loading}
       decoding="async"
       onError={() => setFailed((urls) => [...urls, source])}
       // For the ?motion=1 prototype: photos settle in from a blur once they have loaded.

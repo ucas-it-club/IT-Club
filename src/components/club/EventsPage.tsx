@@ -1,11 +1,11 @@
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { contentImageUrls } from "@/lib/club/google-drive";
 import { local } from "@/lib/club/model";
-import { dateParts, eventDisplayStatus, formatEventTime } from "@/lib/club/event-timing";
+import { dateParts, eventDisplayStatus } from "@/lib/club/event-timing";
 import { itemPage } from "@/lib/club/paths";
 import { useClub } from "./club-context";
 import { ClubLink } from "./ClubContent";
 import { ContentImage } from "./ContentImage";
+import { HomeStories, topEvents } from "./HomeNews";
 
 function useEvents() {
   const { lang, data } = useClub();
@@ -19,16 +19,14 @@ function useEvents() {
       title: local(item, "title", lang),
       type: both(item.eventType, item.eventType_en),
       by: both(item.presenterName, item.presenterName_en),
-      time: formatEventTime(item.eventTime, lang),
       date: dateParts(item.date, lang),
       src: contentImageUrls(item)[0],
-      upcoming: eventDisplayStatus(item, now) === "upcoming",
+      past: eventDisplayStatus(item, now) === "past",
       path: itemPage("events", item, data),
     }));
-  // Upcoming events read soonest first; past ones newest first.
-  const upcoming = events.filter((e) => e.upcoming).reverse();
-  const past = events.filter((e) => !e.upcoming);
-  return { ar, lang, upcoming, past };
+  // Upcoming and running events lead in the large card above; the record is the past.
+  const past = events.filter((e) => e.past);
+  return { ar, lang, past };
 }
 
 function Head({ ar }: { ar: boolean }) {
@@ -39,10 +37,10 @@ function Head({ ar }: { ar: boolean }) {
   );
 }
 
-/** The next events as full-width bands, the rest as a written record by year. */
+/** The top events taking turns in one large card, the past as a written record by year. */
 export function EventsPage() {
-  const { ar, lang, upcoming, past } = useEvents();
-  const Arrow = ar ? ArrowLeft : ArrowRight;
+  const { ar, lang, past } = useEvents();
+  const top = topEvents(useClub().data.events);
   // Year, then month: the month stays with you while you scroll, the year is a plain
   // divider above its months.
   const years: { year: string; months: { month: string; events: typeof past }[] }[] = [];
@@ -61,33 +59,14 @@ export function EventsPage() {
   return (
     <section className="ev-chronicle" aria-labelledby="ev-heading">
       <Head ar={ar} />
-      {upcoming.length > 0 && (
-        <ol className="ev-next">
-          {upcoming.map((e) => (
-            <li key={e.item.id}>
-              <ClubLink path={e.path} className="ev-next-link">
-                <span className="ev-next-inner">
-                  <span className="ev-next-text">
-                    <span className="ev-next-title">{e.title}</span>
-                    <span className="ev-next-facts">
-                      {[e.date && `${e.date.day} ${e.date.month}`, e.time, e.by]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                    <span className="ev-more">
-                      {ar ? "التفاصيل والتسجيل" : "Details and registration"}
-                      <Arrow size={18} aria-hidden="true" />
-                    </span>
-                  </span>
-                  <span className="ev-next-photo">
-                    <ContentImage src={e.src} alt={e.title} lang={lang} />
-                  </span>
-                </span>
-              </ClubLink>
-            </li>
-          ))}
-        </ol>
-      )}
+      {/* Every upcoming event, then the latest run, one large card at a time. */}
+      <HomeStories
+        kind="events"
+        items={top}
+        title={ar ? "أبرز الفعاليات" : "Top events"}
+        single
+        flip
+      />
       {years.map(({ year, months }) => (
         <div key={year} className="nw-year" role="group" aria-label={year}>
           <p className="nw-year-num" aria-hidden="true">
