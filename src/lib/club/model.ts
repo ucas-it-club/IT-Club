@@ -243,12 +243,13 @@ const longText = z.string().trim().min(10).max(1000);
 
 /** Committee application. The sheet stores a missing portfolio or leadership answer as an empty cell. */
 export const applicationSchema = z.object({
-  committee: z.enum(["media", "relations"]),
+  committee: z.enum(["media", "relations", "activities"]),
   fullName: text,
   studentId: z
     .string()
     .trim()
     .regex(/^[0-9]{9}$/),
+  majorYear: z.string().trim().min(2).max(200),
   whatsapp: z.string().regex(/^\+[0-9]{8,16}$/),
   email: z
     .string()
@@ -256,13 +257,41 @@ export const applicationSchema = z.object({
     .email()
     .max(254)
     .regex(/@smail\.ucas\.edu\.ps$/),
-  why: longText,
-  skills: longText,
-  roles: z.array(z.string().min(1).max(60)).min(1).max(12),
-  experience: z.string().trim().min(1).max(1000),
+  why: longText.optional(),
+  contribution: z.string().trim().min(10).max(1000).optional(),
+  skills: longText.optional(),
+  roles: z.array(z.string().min(1).max(100)).min(1).max(12),
+  experience: z.string().trim().max(1000).optional(),
+  hasExperience: z.enum(["yes", "no"]).optional(),
+  commitment: z.enum(["full", "organised", "difficulty", "unsure"]).optional(),
+  hours: z.enum(["lt2", "2to4", "4to6", "gt6", "variable"]).optional(),
+  lateTask: longText.optional(),
+  outsidePreference: longText.optional(),
+  eventIdea: longText.optional(),
+  workshopPrep: longText.optional(),
+  initiative: longText.optional(),
+  teamIssue: longText.optional(),
+  eventChange: longText.optional(),
   portfolio: z.union([z.literal(""), z.string().trim().url().startsWith("https://").max(300)]),
   leadership: z.string().trim().max(1000),
   commit: z.literal("yes"),
+}).superRefine((value, ctx) => {
+  const required = value.committee === "activities"
+    ? ["why", "contribution", "skills", "commitment", "hours", "lateTask", "outsidePreference", "eventIdea", "workshopPrep", "initiative", "teamIssue", "eventChange"]
+    : ["why", "skills", "experience"];
+  for (const key of required) {
+    const answer = value[key as keyof typeof value];
+    if (typeof answer !== "string" || answer.trim().length < 10) {
+      ctx.addIssue({ code: "custom", path: [key], message: "Required answer" });
+    }
+  }
+  if (value.committee === "activities" && !value.hasExperience) {
+    ctx.addIssue({ code: "custom", path: ["hasExperience"], message: "Required answer" });
+  }
+  if (value.committee === "activities" && value.hasExperience === "yes" &&
+      (!value.experience || value.experience.trim().length < 10)) {
+    ctx.addIssue({ code: "custom", path: ["experience"], message: "Required answer" });
+  }
 });
 
 /**

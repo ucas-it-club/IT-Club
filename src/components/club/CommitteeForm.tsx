@@ -37,6 +37,7 @@ export function CommitteeForm() {
   const [cid, setCid] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<Record<string, string[]>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [dial, setDial] = useState("+970");
   const [error, setError] = useState("");
@@ -85,6 +86,7 @@ export function CommitteeForm() {
     );
     for (const el of inputs ?? []) if (!el.reportValidity()) return false;
     for (const q of current.questions) {
+      if (q.showWhen && answers[`${current.scope}:${q.showWhen[0]}`] !== q.showWhen[1]) continue;
       if (q.optional) continue;
       if (q.kind === "chips" && !picked[key(q, current.scope)]?.length) {
         setError(t(["اختر خياراً واحداً على الأقل.", "Pick at least one option."]));
@@ -92,6 +94,10 @@ export function CommitteeForm() {
       }
       if (q.kind === "check" && !checked[key(q, current.scope)]) {
         setError(t(["يجب الموافقة على الالتزام.", "Please accept the commitment."]));
+        return false;
+      }
+      if (q.kind === "radio" && !answers[key(q, current.scope)]) {
+        setError(t(["اختر إجابة للمتابعة.", "Choose an answer to continue."]));
         return false;
       }
     }
@@ -109,6 +115,7 @@ export function CommitteeForm() {
         commit: "yes",
         portfolio: "",
         leadership: "",
+        experience: "",
       };
       // SAFETY: no file inputs, so every entry is a string.
       for (const [k, v] of new FormData(e.currentTarget) as unknown as Iterable<[string, string]>) {
@@ -151,6 +158,7 @@ export function CommitteeForm() {
   function render(q: Question, scope: string) {
     const k = key(q, scope);
     const inputName = scope ? `${scope}__${q.name}` : q.name;
+    if (q.showWhen && answers[`${scope}:${q.showWhen[0]}`] !== q.showWhen[1]) return null;
     if (q.kind === "chips") {
       const on = picked[k] ?? [];
       return (
@@ -195,6 +203,21 @@ export function CommitteeForm() {
           />
           {t(q.label)}
         </label>
+      );
+    if (q.kind === "radio")
+      return (
+        <fieldset key={k} className="sm:col-span-2">
+          <legend className="mb-3 text-sm font-bold">{t(q.label)}</legend>
+          <input type="hidden" name={inputName} value={answers[k] ?? ""} required />
+          <div role="radiogroup" aria-label={t(q.label)} className="flex flex-wrap gap-2">
+            {q.options.map(([value, arLabel, enLabel]) => (
+              <button key={value} type="button" role="radio" aria-checked={answers[k] === value}
+                onClick={() => setAnswers((prev) => ({ ...prev, [k]: value }))}
+                className={cn("rounded-full border px-4 py-2 text-sm font-bold", answers[k] === value ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50")}
+              >{t([arLabel, enLabel])}</button>
+            ))}
+          </div>
+        </fieldset>
       );
     if (q.kind === "phone")
       return (
@@ -387,6 +410,13 @@ export function CommitteeForm() {
           {error}
         </p>
       )}
+
+      <aside className="mt-6 rounded-2xl bg-muted/60 p-4 text-sm leading-7 text-muted-foreground sm:col-span-2">
+        {t([
+          "طبيعة العمل التطوعي: العمل ضمن لجنة الأنشطة هو عمل تطوعي لا يُقدَّم مقابل أجر مادي، بل يقوم على التعاون والعطاء وتحمل المسؤولية، والمساهمة في تطوير البيئة الجامعية وتقديم أنشطة نافعة للطلاب.",
+          "Volunteer work: Activities Committee work is unpaid. It is based on cooperation, giving, responsibility, and contributing to a better university environment through useful activities for students.",
+        ])}
+      </aside>
 
       <div className="mt-8 flex items-center justify-between gap-3">
         {step > 0 ? (
