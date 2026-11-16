@@ -40,11 +40,11 @@ const PrivacyPage = lazy(() =>
 
 const navigationItems = [
   ["", "الرئيسية", "Home"],
-  ["about", "من نحن", "About"],
   ["members", "الفريق", "Team"],
   ["partners", "الشراكات", "Partners"],
   ["events", "الفعاليات", "Events"],
   ["news", "الأخبار", "News"],
+  ["about", "من نحن", "About"],
   ["contact", "تواصل معنا", "Contact"],
 ] as const;
 
