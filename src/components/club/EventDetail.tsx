@@ -196,7 +196,7 @@ export function EventDetail({
                 value={
                   lang === "en" ? event.description_en || event.description : event.description
                 }
-                className="mt-4 text-base leading-loose text-muted-foreground"
+                className="mt-4 text-base leading-loose text-[#172b4d]"
               />
             </section>
 

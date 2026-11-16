@@ -392,8 +392,14 @@ test("an upcoming event remains open before its local end time", () => {
   assert.equal(post(eventSignup()).ok, true);
 });
 
-test("only a validated super admin can create or inspect event tabs", () => {
-  for (const options of [{ authenticated: false }, { adminRole: "editor" }]) {
+test("only validated event administrators can create or inspect event tabs", () => {
+  for (const options of [
+    { authenticated: false },
+    { adminRole: "editor" },
+    { adminRole: "media_editor" },
+    { adminRole: "communications_editor" },
+    { adminRole: "partnerships_editor" },
+  ]) {
     const { post } = eventHarness({}, options);
     assert.equal(linkEvent(post).code, "UNAUTHORIZED");
     assert.equal(
