@@ -13,7 +13,9 @@ import { DialCodeSelect } from "./DialCodeSelect";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { aboutStep, committees, type Pair, type Question } from "@/lib/club/committee-forms";
+import { majors, majorEnglishLabels } from "@/lib/club/model";
 import { useRegistration } from "@/lib/club/registration";
 import { submissionError, submitApplication } from "@/lib/club/sheets";
 import { cn } from "@/lib/utils";
@@ -38,6 +40,7 @@ export function CommitteeForm() {
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [study, setStudy] = useState({ major: "", year: "" });
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [dial, setDial] = useState("+970");
   const [error, setError] = useState("");
@@ -100,6 +103,10 @@ export function CommitteeForm() {
         setError(t(["اختر إجابة للمتابعة.", "Choose an answer to continue."]));
         return false;
       }
+      if (q.kind === "study" && (!study.major || !study.year)) {
+        setError(t(["اختر التخصص والسنة الدراسية للمتابعة.", "Select your major and study year to continue."]));
+        return false;
+      }
     }
     return true;
   }
@@ -116,6 +123,8 @@ export function CommitteeForm() {
         portfolio: "",
         leadership: "",
         experience: "",
+        major: study.major,
+        studyYear: study.year,
       };
       // SAFETY: no file inputs, so every entry is a string.
       for (const [k, v] of new FormData(e.currentTarget) as unknown as Iterable<[string, string]>) {
@@ -159,6 +168,32 @@ export function CommitteeForm() {
     const k = key(q, scope);
     const inputName = scope ? `${scope}__${q.name}` : q.name;
     if (q.showWhen && answers[`${scope}:${q.showWhen[0]}`] !== q.showWhen[1]) return null;
+    if (q.kind === "study")
+      return (
+        <fieldset key={k} className="sm:col-span-2">
+          <legend className="mb-2 text-sm font-bold">{t(q.label)}</legend>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="text-sm font-medium">
+              <span className="mb-1.5 block">{t(["التخصص", "Major"])}</span>
+              <Select name="major" value={study.major} onValueChange={(major) => setStudy((prev) => ({ ...prev, major }))} required>
+                <SelectTrigger aria-label={t(["التخصص", "Major"])}><SelectValue placeholder={t(["اختر التخصص", "Select major"])} /></SelectTrigger>
+                <SelectContent>
+                  {majors.map((major) => <SelectItem key={major} value={major}>{ar ? major : majorEnglishLabels[major]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="text-sm font-medium">
+              <span className="mb-1.5 block">{t(["السنة الدراسية", "Study year"])}</span>
+              <Select name="studyYear" value={study.year} onValueChange={(year) => setStudy((prev) => ({ ...prev, year }))} required>
+                <SelectTrigger aria-label={t(["السنة الدراسية", "Study year"])}><SelectValue placeholder={t(["اختر السنة", "Select year"])} /></SelectTrigger>
+                <SelectContent>
+                  {[["1", "السنة الأولى", "First year"], ["2", "السنة الثانية", "Second year"], ["3", "السنة الثالثة", "Third year"], ["4", "السنة الرابعة", "Fourth year"]].map(([value, arLabel, enLabel]) => <SelectItem key={value} value={value}>{t([arLabel!, enLabel!])}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </label>
+          </div>
+        </fieldset>
+      );
     if (q.kind === "chips") {
       const on = picked[k] ?? [];
       return (
@@ -322,7 +357,7 @@ export function CommitteeForm() {
         <h2 ref={heading} tabIndex={-1} className="mt-2 text-3xl font-extrabold outline-none">
           {t(current.title)}
         </h2>
-        <div
+        {step > 0 && <div
           role="progressbar"
           aria-valuemin={1}
           aria-valuemax={flow.length}
@@ -339,8 +374,8 @@ export function CommitteeForm() {
               )}
             />
           ))}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">{t(progress)}</p>
+        </div>}
+        {step > 0 && <p className="mt-2 text-xs text-muted-foreground">{t(progress)}</p>}
         {step > 1 && <p className="mt-1 text-xs text-muted-foreground">اكتب إجاباتك بالعربية.</p>}
       </header>
 
@@ -364,7 +399,7 @@ export function CommitteeForm() {
                   setError("");
                 }}
                 className={cn(
-                  "relative flex flex-col items-start gap-3 rounded-2xl border-2 p-5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "relative flex flex-col items-center gap-3 rounded-2xl border-2 p-5 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   on
                     ? "border-primary bg-primary/10"
                     : "border-border bg-background hover:border-primary/50",
@@ -388,7 +423,7 @@ export function CommitteeForm() {
             );
           })}
         </div>
-        <p className="text-sm text-muted-foreground sm:col-span-2">
+        <p className="text-center text-sm text-muted-foreground sm:col-span-2">
           {t([
             "تستطيع الرجوع وتغيير اللجنة في أي وقت.",
             "You can come back and switch committee any time.",

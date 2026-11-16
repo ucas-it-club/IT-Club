@@ -43,6 +43,8 @@ const HEADERS = {
     "المبادرة عند ملاحظة نقص",
     "التعامل مع عدم التزام عضو",
     "التعامل مع تغيير مفاجئ",
+    "التخصص المحدد",
+    "السنة الدراسية المحددة",
   ],
   contact: ["معرّف الطلب", "التاريخ", "الاسم", "البريد الإلكتروني", "الرسالة"],
   join: [
@@ -212,9 +214,11 @@ function validateApply_(data) {
   const whatsapp = text_(data, "whatsapp", 9, 17);
   const email = text_(data, "email", 3, 254);
   const portfolio = optional_(data, "portfolio", 300);
-  const majorYear = text_(data, "majorYear", 2, 200);
+  const major = text_(data, "major", 2, 200);
+  const studyYear = text_(data, "studyYear", 1, 1);
   if (
-    !/^[0-9]{9}$/.test(studentId) ||
+    !/^[0-9]{9}$/.test(studentId) || MAJORS.indexOf(major) < 0 ||
+    ["1", "2", "3", "4"].indexOf(studyYear) < 0 ||
     !/^\+[0-9]{8,16}$/.test(whatsapp) ||
     !/^[^\s@]+@smail\.ucas\.edu\.ps$/.test(email) ||
     (portfolio && !/^https:\/\/\S+$/.test(portfolio)) ||
@@ -223,7 +227,7 @@ function validateApply_(data) {
     data.roles.length < 1 ||
     data.roles.length > 12 ||
     data.roles.some(function (role) {
-      return typeof role !== "string" || role.length < 1 || role.length > 60;
+      return typeof role !== "string" || role.length < 1 || role.length > 120;
     })
   )
     fail_("INVALID_INPUT");
@@ -236,11 +240,11 @@ function validateApply_(data) {
     return [committee, text_(data, "fullName", 2, 200), studentId, whatsapp, email,
       text_(data, "why", 10, 1000), text_(data, "skills", 10, 1000), data.roles.join("، "),
       optional_(data, "experience", 1000), portfolio, optional_(data, "leadership", 1000), "نعم",
-      majorYear, text_(data, "contribution", 10, 1000), data.hasExperience === "yes" ? "نعم" : "لا",
+      major + " - " + studyYear, text_(data, "contribution", 10, 1000), data.hasExperience === "yes" ? "نعم" : "لا",
       data.commitment, data.hours, text_(data, "lateTask", 10, 1000),
       text_(data, "outsidePreference", 10, 1000), text_(data, "eventIdea", 10, 1000),
       text_(data, "workshopPrep", 10, 1000), text_(data, "initiative", 10, 1000),
-      text_(data, "teamIssue", 10, 1000), text_(data, "eventChange", 10, 1000)];
+      text_(data, "teamIssue", 10, 1000), text_(data, "eventChange", 10, 1000), major, studyYear];
   }
   return [
     COMMITTEES[committee],
@@ -255,7 +259,7 @@ function validateApply_(data) {
     portfolio,
     optional_(data, "leadership", 1000),
     "نعم",
-    majorYear,
+    major + " - " + studyYear,
     "",
     "",
     "",
@@ -267,6 +271,8 @@ function validateApply_(data) {
     "",
     "",
     "",
+    major,
+    studyYear,
   ];
 }
 function exists_(sheet, column, value) {

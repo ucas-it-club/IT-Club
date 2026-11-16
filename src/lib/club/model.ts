@@ -249,7 +249,8 @@ export const applicationSchema = z.object({
     .string()
     .trim()
     .regex(/^[0-9]{9}$/),
-  majorYear: z.string().trim().min(2).max(200),
+  major: z.enum(majors),
+  studyYear: z.enum(["1", "2", "3", "4"]),
   whatsapp: z.string().regex(/^\+[0-9]{8,16}$/),
   email: z
     .string()

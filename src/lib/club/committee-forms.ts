@@ -7,6 +7,7 @@ export type Question =
   | (Base & { kind: "chips"; options: readonly (readonly [key: string, ...Pair])[] })
   | (Base & { kind: "check" })
   | (Base & { kind: "radio"; options: readonly (readonly [key: string, ...Pair])[] })
+  | (Base & { kind: "study" })
   | (Base & { kind: "phone" });
 export type FormStep = { title: Pair; questions: readonly Question[] };
 export type Committee = { id: string; name: Pair; blurb: Pair; steps: readonly FormStep[] };
@@ -27,7 +28,7 @@ export const aboutStep: FormStep = {
       label: ["الرقم الجامعي", "Student ID"],
       props: { inputMode: "numeric", pattern: "[0-9]{9}", maxLength: 9 },
     },
-    { kind: "text", name: "majorYear", label: ["التخصص والسنة الدراسية", "Major and study year"] },
+    { kind: "study", name: "study", label: ["التخصص والسنة الدراسية", "Major and study year"] },
     { kind: "phone", name: "whatsapp", label: ["رقم الواتساب", "WhatsApp number"] },
     {
       kind: "text",
