@@ -239,6 +239,32 @@ export const joinSchema = z.object({
   message: z.string().trim().min(10).max(4000),
 });
 
+const longText = z.string().trim().min(10).max(1000);
+
+/** Committee application. The sheet stores a missing portfolio or leadership answer as an empty cell. */
+export const applicationSchema = z.object({
+  committee: z.enum(["media", "relations"]),
+  fullName: text,
+  studentId: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{9}$/),
+  whatsapp: z.string().regex(/^\+[0-9]{8,16}$/),
+  email: z
+    .string()
+    .trim()
+    .email()
+    .max(254)
+    .regex(/@smail\.ucas\.edu\.ps$/),
+  why: longText,
+  skills: longText,
+  roles: z.array(z.string().min(1).max(60)).min(1).max(12),
+  experience: z.string().trim().min(1).max(1000),
+  portfolio: z.union([z.literal(""), z.string().trim().url().startsWith("https://").max(300)]),
+  leadership: z.string().trim().max(1000),
+  commit: z.literal("yes"),
+});
+
 /**
  * A collection with nothing in it stays out of navigation and answers 404,
  * rather than being indexed as an empty page. Callers pass only loaded data;

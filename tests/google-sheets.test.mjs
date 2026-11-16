@@ -426,3 +426,103 @@ test("contact deployments reject every event action", () => {
     assert.equal(post({ action, eventId, requestId: id(910), data: {} }).code, "INVALID_INPUT");
   }
 });
+
+const application = {
+  committee: "media",
+  fullName: "Test Student",
+  studentId: "012345678",
+  whatsapp: "+970591234567",
+  email: "test@smail.ucas.edu.ps",
+  why: "I want to help the club grow",
+  skills: "Design and video editing",
+  roles: ["التصميم الجرافيكي", "المونتاج"],
+  experience: "لا",
+  commit: "yes",
+};
+
+function openHarness() {
+  const result = harness();
+  result.props.set("JOIN_SETTINGS", JSON.stringify({ enabled: true, limit: 40 }));
+  return result;
+}
+
+test("committee application stores one row, with empty cells for optional answers", () => {
+  const { context, post } = openHarness();
+  const result = post({ action: "apply", requestId: id(1), data: application });
+  assert.equal(result.ok, true);
+  assert.equal(result.registration.count, 1);
+  const row = vm.runInContext("sheet_('apply').getRange(2,1,1,14).getValues()[0]", context);
+  assert.deepEqual(row.slice(2), [
+    "الإعلام",
+    "Test Student",
+    "012345678",
+    "+970591234567",
+    "test@smail.ucas.edu.ps",
+    application.why,
+    application.skills,
+    "التصميم الجرافيكي، المونتاج",
+    "لا",
+    "", // portfolio left out
+    "", // leadership left out
+    "نعم",
+  ]);
+  const nulls = post({
+    action: "apply",
+    requestId: id(2),
+    data: { ...application, studentId: "012345679", portfolio: null, leadership: null },
+  });
+  assert.equal(nulls.ok, true);
+});
+
+test("committee application: retry is idempotent, one per student per committee, both allowed", () => {
+  const { post } = openHarness();
+  assert.equal(post({ action: "apply", requestId: id(1), data: application }).ok, true);
+  assert.equal(post({ action: "apply", requestId: id(1), data: application }).duplicate, true);
+  assert.equal(
+    post({ action: "apply", requestId: id(2), data: application }).code,
+    "ALREADY_REGISTERED",
+  );
+  const other = post({
+    action: "apply",
+    requestId: id(3),
+    data: { ...application, committee: "relations" },
+  });
+  assert.equal(other.ok, true);
+  assert.equal(other.registration.count, 2);
+});
+
+test("committee application validates every field and respects the closed flag", () => {
+  for (const patch of [
+    { committee: "activities" },
+    { whatsapp: "0591234567" },
+    { whatsapp: "+97059abc" },
+    { email: "test@example.com" },
+    { studentId: "1234" },
+    { portfolio: "http://insecure.example" },
+    { commit: "no" },
+    { roles: [] },
+    { roles: "media" },
+    { why: "short" },
+    { experience: "" },
+    { leadership: 5 },
+  ]) {
+    const { post } = openHarness();
+    assert.equal(
+      post({ action: "apply", requestId: id(1), data: { ...application, ...patch } }).code,
+      "INVALID_INPUT",
+      JSON.stringify(patch),
+    );
+  }
+  assert.equal(
+    harness().post({ action: "apply", requestId: id(1), data: application }).code,
+    "JOIN_CLOSED",
+  );
+});
+
+test("contact deployment rejects committee applications", () => {
+  const { post } = harness("contact");
+  assert.equal(
+    post({ action: "apply", requestId: id(1), data: application }).code,
+    "INVALID_INPUT",
+  );
+});

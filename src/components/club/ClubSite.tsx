@@ -19,7 +19,7 @@ const AdminPanel = lazy(() =>
   import("./AdminPanel").then((module) => ({ default: module.AdminPanel })),
 );
 const JoinForm = lazy(() =>
-  import("./PublicForm").then((module) => ({ default: module.PublicForm })),
+  import("./CommitteeForm").then((module) => ({ default: module.CommitteeForm })),
 );
 const HomePage = lazy(() => import("./ClubPages").then((module) => ({ default: module.HomePage })));
 const AboutPage = lazy(() =>
@@ -299,7 +299,7 @@ export function ContentPage() {
           </div>
         }
       >
-        <JoinForm join />
+        <JoinForm />
       </Suspense>
     );
   if (page === "contact")

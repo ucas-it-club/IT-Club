@@ -5,6 +5,7 @@ const CLUB = {
   supabaseUrl: "https://jxweaxenswbjpxxjmihb.supabase.co",
   contactTab: "رسائل الموقع",
   joinTab: "طلبات الموقع",
+  applyTab: "طلبات اللجان",
 };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAJORS = [
@@ -13,7 +14,24 @@ const MAJORS = [
   "تصميم و برمجة صفحات الويب",
   "تكنولوجيا الوسائط المتعددة",
 ];
+const COMMITTEES = { media: "الإعلام", relations: "العلاقات العامة" };
 const HEADERS = {
+  apply: [
+    "معرّف الطلب",
+    "التاريخ",
+    "اللجنة",
+    "الاسم الكامل",
+    "الرقم الجامعي",
+    "الواتساب",
+    "البريد الإلكتروني",
+    "لماذا الانضمام",
+    "المهارات",
+    "المجالات",
+    "الخبرة",
+    "رابط الأعمال",
+    "القيادة",
+    "التعهد",
+  ],
   contact: ["معرّف الطلب", "التاريخ", "الاسم", "البريد الإلكتروني", "الرسالة"],
   join: [
     "معرّف الطلب",
@@ -63,7 +81,7 @@ function locked_(operation) {
 function sheet_(kind) {
   const contact = kind === "contact";
   const book = SpreadsheetApp.openById(contact ? CLUB.contactSheet : CLUB.joinSheet);
-  const name = contact ? CLUB.contactTab : CLUB.joinTab;
+  const name = contact ? CLUB.contactTab : kind === "apply" ? CLUB.applyTab : CLUB.joinTab;
   let sheet = book.getSheetByName(name);
   if (!sheet) sheet = book.insertSheet(name);
   const headers = HEADERS[kind];
@@ -86,18 +104,20 @@ function settings_() {
   const raw = PropertiesService.getScriptProperties().getProperty("JOIN_SETTINGS");
   return raw ? JSON.parse(raw) : { enabled: false, limit: 40 };
 }
+function rowCount_(sheet) {
+  return sheet.getLastRow() > 1
+    ? sheet
+        .getRange(2, 1, sheet.getLastRow() - 1, 1)
+        .getValues()
+        .filter(function (row) {
+          return !!row[0];
+        }).length
+    : 0;
+}
 function status_() {
   const config = settings_();
-  const sheet = sheet_("join");
-  const count =
-    sheet.getLastRow() > 1
-      ? sheet
-          .getRange(2, 1, sheet.getLastRow() - 1, 1)
-          .getValues()
-          .filter(function (row) {
-            return !!row[0];
-          }).length
-      : 0;
+  // Old applications (join tab) and committee applications (apply tab) share one limit.
+  const count = rowCount_(sheet_("join")) + rowCount_(sheet_("apply"));
   return {
     open: config.enabled && count < config.limit,
     enabled: config.enabled,
@@ -157,6 +177,52 @@ function validate_(kind, data) {
   )
     fail_("INVALID_INPUT");
   return [text_(data, "fullName", 2, 200), email, phone, studentId, major, committee, message];
+}
+/** Optional text: anything missing or null becomes an empty cell. */
+function optional_(data, key, max) {
+  const raw = data[key];
+  if (raw === undefined || raw === null) return "";
+  if (typeof raw !== "string") fail_("INVALID_INPUT");
+  const value = raw.trim();
+  if (value.length > max) fail_("INVALID_INPUT");
+  return value;
+}
+/** Committee application; returns the sheet row after the id and date columns. */
+function validateApply_(data) {
+  const committee = text_(data, "committee", 2, 30);
+  if (!COMMITTEES[committee]) fail_("INVALID_INPUT");
+  const studentId = text_(data, "studentId", 9, 9);
+  const whatsapp = text_(data, "whatsapp", 9, 17);
+  const email = text_(data, "email", 3, 254);
+  const portfolio = optional_(data, "portfolio", 300);
+  if (
+    !/^[0-9]{9}$/.test(studentId) ||
+    !/^\+[0-9]{8,16}$/.test(whatsapp) ||
+    !/^[^\s@]+@smail\.ucas\.edu\.ps$/.test(email) ||
+    (portfolio && !/^https:\/\/\S+$/.test(portfolio)) ||
+    data.commit !== "yes" ||
+    !Array.isArray(data.roles) ||
+    data.roles.length < 1 ||
+    data.roles.length > 12 ||
+    data.roles.some(function (role) {
+      return typeof role !== "string" || role.length < 1 || role.length > 60;
+    })
+  )
+    fail_("INVALID_INPUT");
+  return [
+    COMMITTEES[committee],
+    text_(data, "fullName", 2, 200),
+    studentId,
+    whatsapp,
+    email,
+    text_(data, "why", 10, 1000),
+    text_(data, "skills", 10, 1000),
+    data.roles.join("، "),
+    text_(data, "experience", 1, 1000),
+    portfolio,
+    optional_(data, "leadership", 1000),
+    "نعم",
+  ];
 }
 function exists_(sheet, column, value) {
   if (sheet.getLastRow() < 2) return false;
@@ -370,6 +436,7 @@ function doPost(event) {
     const kind = formKind_();
     const joinActions = [
       "join",
+      "apply",
       "configure",
       "eventRegister",
       "eventSheetStatus",
@@ -432,13 +499,36 @@ function doPost(event) {
         }),
       );
     }
-    if (body.action !== "contact" && body.action !== "join") fail_("INVALID_INPUT");
+    if (body.action !== "contact" && body.action !== "join" && body.action !== "apply")
+      fail_("INVALID_INPUT");
     if (
       typeof body.requestId !== "string" ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.requestId)
     )
       fail_("INVALID_INPUT");
     if (!body.data || typeof body.data !== "object") fail_("INVALID_INPUT");
+    if (body.action === "apply") {
+      const row = validateApply_(body.data);
+      return response_(
+        locked_(function () {
+          const sheet = sheet_("apply");
+          if (exists_(sheet, 1, body.requestId)) return { ok: true, duplicate: true };
+          if (!status_().open) fail_("JOIN_CLOSED");
+          // One application per student per committee; applying to both is allowed.
+          const same =
+            sheet.getLastRow() > 1 &&
+            sheet
+              .getRange(2, 3, sheet.getLastRow() - 1, 3)
+              .getDisplayValues()
+              .some(function (r) {
+                return r[0] === row[0] && r[2] === row[2];
+              });
+          if (same) fail_("ALREADY_REGISTERED");
+          append_(sheet, [body.requestId, new Date().toISOString()].concat(row));
+          return { ok: true, registration: status_() };
+        }),
+      );
+    }
     const values = validate_(body.action, body.data);
     return response_(
       locked_(function () {

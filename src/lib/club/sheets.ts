@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { contactSchema, eventSignupSchema, joinSchema } from "./model";
+import { applicationSchema, contactSchema, eventSignupSchema, joinSchema } from "./model";
 
 export const sheetLinks = {
   contact:
@@ -29,7 +29,10 @@ export class SheetsError extends Error {}
 export const isOpen = (r: Registration) =>
   r.enabled && r.open && r.count < r.limit && r.remaining > 0;
 
-type RequestBody = Record<string, string | number | boolean | Record<string, string | undefined>>;
+type RequestBody = Record<
+  string,
+  string | number | boolean | Record<string, string | string[] | undefined>
+>;
 
 function isStringCode(value: unknown): value is { code: string } {
   return (
@@ -108,6 +111,12 @@ export async function submitToSheet(
 ) {
   const data = (join ? joinSchema : contactSchema).parse(values);
   await request(join ? "join" : "contact", { action: join ? "join" : "contact", requestId, data });
+}
+
+/** Committee join application. Missing optional answers go to the sheet as empty cells. */
+export async function submitApplication(values: unknown, requestId: string) {
+  const data = applicationSchema.parse(values);
+  await request("join", { action: "apply", requestId, data });
 }
 
 const uuidSchema = z.string().uuid();

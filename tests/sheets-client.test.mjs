@@ -235,3 +235,37 @@ test("event registration errors have clear Arabic and English messages", () => {
     /No sheet is linked/,
   );
 });
+
+test("committee application is validated, posted to the join deployment, and strips extras", async () => {
+  const h = harness(() => json({ ok: true }));
+  const application = {
+    committee: "relations",
+    fullName: "  Test Student ",
+    studentId: "012345678",
+    whatsapp: "+970591234567",
+    email: "test@smail.ucas.edu.ps",
+    why: "I want to help the club grow",
+    skills: "Talking to people easily",
+    roles: ["التفاوض"],
+    experience: "لا",
+    portfolio: "",
+    leadership: "",
+    commit: "yes",
+  };
+  await h.api.submitApplication(
+    { ...application, ignored: "must not leave the browser" },
+    requestId,
+  );
+  assert.equal(h.calls.length, 1);
+  assert.match(h.calls[0].url, /AKfycbxV5GRTE/);
+  const body = JSON.parse(h.calls[0].options.body);
+  assert.equal(body.action, "apply");
+  assert.equal(body.requestId, requestId);
+  assert.equal(body.data.fullName, "Test Student");
+  assert.equal("ignored" in body.data, false);
+  await assert.rejects(
+    h.api.submitApplication({ ...application, whatsapp: "0591234567" }, requestId),
+  );
+  await assert.rejects(h.api.submitApplication({ ...application, commit: "no" }, requestId));
+  assert.equal(h.calls.length, 1);
+});
