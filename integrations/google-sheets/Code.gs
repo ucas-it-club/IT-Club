@@ -231,13 +231,13 @@ function validateApply_(data) {
     })
   )
     fail_("INVALID_INPUT");
-  if (committee === "الأنشطة") {
+  if (committee === "activities") {
     if (["yes", "no"].indexOf(data.hasExperience) < 0 ||
         ["full", "organised", "difficulty", "unsure"].indexOf(data.commitment) < 0 ||
         ["lt2", "2to4", "4to6", "gt6", "variable"].indexOf(data.hours) < 0 ||
         !Array.isArray(data.roles) || data.roles.length < 1 || data.roles.length > 12 ||
         (data.hasExperience === "yes" && optional_(data, "experience", 1000).length < 10)) fail_("INVALID_INPUT");
-    return [committee, text_(data, "fullName", 2, 200), studentId, whatsapp, email,
+    return [COMMITTEES[committee], text_(data, "fullName", 2, 200), studentId, whatsapp, email,
       text_(data, "why", 10, 1000), text_(data, "skills", 10, 1000), data.roles.join("، "),
       optional_(data, "experience", 1000), portfolio, optional_(data, "leadership", 1000), "نعم",
       major + " - " + studyYear, text_(data, "contribution", 10, 1000), data.hasExperience === "yes" ? "نعم" : "لا",

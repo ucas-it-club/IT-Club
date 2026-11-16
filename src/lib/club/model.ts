@@ -282,7 +282,8 @@ export const applicationSchema = z.object({
     : ["why", "skills", "experience"];
   for (const key of required) {
     const answer = value[key as keyof typeof value];
-    if (typeof answer !== "string" || answer.trim().length < 10) {
+    const minLength = key === "experience" ? 1 : 10;
+    if (typeof answer !== "string" || answer.trim().length < minLength) {
       ctx.addIssue({ code: "custom", path: [key], message: "Required answer" });
     }
   }

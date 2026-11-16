@@ -242,6 +242,8 @@ test("committee application is validated, posted to the join deployment, and str
     committee: "relations",
     fullName: "  Test Student ",
     studentId: "012345678",
+    major: "تصميم و برمجة تطبيقات الموبايل",
+    studyYear: "2",
     whatsapp: "+970591234567",
     email: "test@smail.ucas.edu.ps",
     why: "I want to help the club grow",

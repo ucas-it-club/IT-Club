@@ -15,6 +15,7 @@ function harness(kind = "join", options = {}) {
     return {
       getSheetId: () => sheetId,
       getLastRow: () => rows.length,
+      getLastColumn: () => Math.max(0, ...rows.map((row) => row.length)),
       setFrozenRows() {},
       setRightToLeft() {},
       getRange(row, col, n, width) {
@@ -431,6 +432,8 @@ const application = {
   committee: "media",
   fullName: "Test Student",
   studentId: "012345678",
+  major: "تصميم و برمجة تطبيقات الموبايل",
+  studyYear: "2",
   whatsapp: "+970591234567",
   email: "test@smail.ucas.edu.ps",
   why: "I want to help the club grow",
@@ -472,6 +475,34 @@ test("committee application stores one row, with empty cells for optional answer
     data: { ...application, studentId: "012345679", portfolio: null, leadership: null },
   });
   assert.equal(nulls.ok, true);
+});
+
+test("activities application saves all answers and separate major/year values", () => {
+  const { context, post } = openHarness();
+  const activity = {
+    ...application,
+    committee: "activities",
+    hasExperience: "yes",
+    experience: "Helped organise a student workshop",
+    roles: ["لا أمتلك تفضيلًا محددًا، ومستعد للتعلم والعمل في مجالات مختلفة."],
+    contribution: "I can organise and communicate with students",
+    commitment: "organised",
+    hours: "2to4",
+    lateTask: "I would inform the team early and agree on a new deadline",
+    outsidePreference: "I would help because the team needs support",
+    eventIdea: "A practical introductory workshop for IT students",
+    workshopPrep: "Confirm the trainer, room, equipment, registration and timing",
+    initiative: "I would raise it with the team and help resolve it",
+    teamIssue: "I would check in privately and coordinate with the lead if needed",
+    eventChange: "I would notify the team and follow the backup plan",
+  };
+  assert.equal(post({ action: "apply", requestId: id(4), data: activity }).ok, true);
+  const row = vm.runInContext("sheet_('apply').getRange(2,1,1,28).getValues()[0]", context);
+  assert.equal(row[2], "الأنشطة");
+  assert.equal(row[14], "تصميم و برمجة تطبيقات الموبايل - 2");
+  assert.equal(row[15], activity.contribution);
+  assert.equal(row[26], activity.major);
+  assert.equal(row[27], activity.studyYear);
 });
 
 test("committee application: retry is idempotent, one per student per committee, both allowed", () => {
