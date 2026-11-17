@@ -31,7 +31,7 @@
 التفعيل:
 
 1. افتحي مشروع Apps Script المرتبط بشيت طلبات اللجان الحالية، واستبدلي الكود بمحتوى `CommitteeApplications.gs`. لا تنشئي شيت جديدة ولا تغيّري معرّف الشيت أو رابط النشر الموجود في `src/lib/club/sheets.ts`.
-   رابط النشر المسجل حاليًا هو `https://script.google.com/macros/s/AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/exec`.
+   رابط النشر المسجل حاليًا هو `https://script.google.com/macros/s/AKfycbwCYy0Q3hh5Ez7k2tUkefoQu29t8Y4bdpVeVzvJoUTXBGnIdvgYXw_Zo0rGREdrYhlE/exec`.
 2. في Project Settings > Script Properties أضيفي `SUPABASE_PUBLISHABLE_KEY` بقيمة المفتاح العام للمشروع المتصل. لا تضعي `service_role` أو كلمة مرور.
 3. شغّلي `setup` مرة واحدة ووافقي على الصلاحيات. سيحافظ على الطلبات الحالية، وينشئ أي تبويب ناقص، ويضيف إعداد التسجيل الافتراضي مغلقًا بحد 40.
 4. من Deploy > Manage deployments، عدّلي النشر الحالي إلى Version: New version وExecute as: Me وWho has access: Anyone. حافظي على معرّف النشر كي يبقى الموقع متصلًا.

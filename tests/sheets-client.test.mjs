@@ -99,7 +99,7 @@ test("committee registration configuration uses its application deployment and a
   assert.equal(h.authCalls(), 1);
   assert.match(
     h.calls[0].url,
-    /AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/,
+    /AKfycbwCYy0Q3hh5Ez7k2tUkefoQu29t8Y4bdpVeVzvJoUTXBGnIdvgYXw_Zo0rGREdrYhlE/,
   );
   const body = JSON.parse(h.calls[0].options.body);
   assert.equal(body.accessToken, "test-session");
@@ -108,7 +108,7 @@ test("committee registration configuration uses its application deployment and a
 
 test("committee registration never falls back to the legacy join deployment", async () => {
   const h = harness((url) =>
-    url.includes("AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA")
+    url.includes("AKfycbwCYy0Q3hh5Ez7k2tUkefoQu29t8Y4bdpVeVzvJoUTXBGnIdvgYXw_Zo0rGREdrYhlE")
       ? json({ ok: false, code: "UNAVAILABLE" })
       : json({
           ok: true,
@@ -119,7 +119,7 @@ test("committee registration never falls back to the legacy join deployment", as
   assert.equal(h.calls.length, 1);
   assert.match(
     h.calls[0].url,
-    /AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/,
+    /AKfycbwCYy0Q3hh5Ez7k2tUkefoQu29t8Y4bdpVeVzvJoUTXBGnIdvgYXw_Zo0rGREdrYhlE/,
   );
 });
 
@@ -145,7 +145,7 @@ test("loading committee applications requires a session and reads from the appli
   assert.equal(h.authCalls(), 1);
   assert.match(
     h.calls[0].url,
-    /AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/,
+    /AKfycbwCYy0Q3hh5Ez7k2tUkefoQu29t8Y4bdpVeVzvJoUTXBGnIdvgYXw_Zo0rGREdrYhlE/,
   );
   assert.equal(JSON.parse(h.calls[0].options.body).action, "listApplications");
   assert.equal(JSON.parse(h.calls[0].options.body).offset, 50);
@@ -312,7 +312,7 @@ test("committee application is validated, posted to the applications deployment,
   assert.equal(h.calls.length, 1);
   assert.match(
     h.calls[0].url,
-    /AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/,
+    /AKfycbwCYy0Q3hh5Ez7k2tUkefoQu29t8Y4bdpVeVzvJoUTXBGnIdvgYXw_Zo0rGREdrYhlE/,
   );
   const body = JSON.parse(h.calls[0].options.body);
   assert.equal(body.action, "apply");
