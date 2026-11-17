@@ -5,12 +5,16 @@ export const sheetLinks = {
   contact:
     "https://docs.google.com/spreadsheets/d/1-k2MvrFu2lvOq0ypMJCo-Zs_Q2lw3MD7_sTNAXUi6rc/edit",
   join: "https://docs.google.com/spreadsheets/d/1v6RYlzZujoRSAHvOwsY_FQ7X5s3UOHW8E9b3SGxzcWg/edit",
+  applications:
+    "https://docs.google.com/spreadsheets/d/1z-4RrH38b2WfFvdgLXzpVbOqf68Jb2-r4JljWbVnj00/edit",
 };
 
 const endpoints = {
   contact:
     "https://script.google.com/a/macros/ucas.edu.ps/s/AKfycbxbRhHH3dTxdsvpAD0TSGFae6mtBmLwf3zUApDqe6VGiNvZrE-M4Ni164_0LDu-e1MTow/exec",
   join: "https://script.google.com/macros/s/AKfycbxV5GRTEe8Y2QEcEPHDFURBXZsZpg6JTZxkya40NJFTBL-sklDQSKrkwmJYmTSQBn1q/exec",
+  applications:
+    "https://script.google.com/macros/s/AKfycbywwY9YhUk-L5iX35CEPTOS-wh3MciafGhqq2nVW3VMVyJawQ3mYIRbJ1fGXZYVzLv4pg/exec",
 };
 
 const registrationSchema = z.object({
@@ -116,7 +120,7 @@ export async function submitToSheet(
 /** Committee join application. Missing optional answers go to the sheet as empty cells. */
 export async function submitApplication(values: unknown, requestId: string) {
   const data = applicationSchema.parse(values);
-  await request("join", { action: "apply", requestId, data });
+  await request("applications", { action: "apply", requestId, data });
 }
 
 const uuidSchema = z.string().uuid();

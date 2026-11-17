@@ -259,7 +259,7 @@ test("committee application is validated, posted to the join deployment, and str
     requestId,
   );
   assert.equal(h.calls.length, 1);
-  assert.match(h.calls[0].url, /AKfycbxV5GRTE/);
+  assert.match(h.calls[0].url, /AKfycbywwY9YhUk-L5iX35CEPTOS/);
   const body = JSON.parse(h.calls[0].options.body);
   assert.equal(body.action, "apply");
   assert.equal(body.requestId, requestId);
