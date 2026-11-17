@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { aboutStep, committees, type Pair, type Question } from "@/lib/club/committee-forms";
-import { majors, majorEnglishLabels } from "@/lib/club/model";
+import { applicationSchema, majors, majorEnglishLabels } from "@/lib/club/model";
 import { useRegistration } from "@/lib/club/registration";
 import { submissionError, submitApplication } from "@/lib/club/sheets";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,40 @@ import { ZodError } from "zod";
 
 type Values = Record<string, string | string[]>;
 type Panel = { id: string; title: Pair; questions: readonly Question[]; scope: string };
+const fieldLabels: Record<string, Pair> = {
+  fullName: ["الاسم الكامل", "Full name"],
+  studentId: ["الرقم الجامعي", "Student ID"],
+  study: ["التخصص والسنة الدراسية", "Major and study year"],
+  whatsapp: ["رقم الواتساب", "WhatsApp number"],
+  email: ["البريد الجامعي", "University email"],
+  why: ["سبب الانضمام", "Why you want to join"],
+  contribution: ["المساهمة", "Contribution"],
+  skills: ["المهارات", "Skills"],
+  roles: ["مجال العمل", "Preferred areas"],
+  experience: ["الخبرة", "Experience"],
+  leadership: ["القيادة", "Leadership"],
+  commitment: ["الالتزام", "Commitment"],
+  hours: ["الساعات الأسبوعية", "Weekly hours"],
+  lateTask: ["التأخر عن التسليم", "Late task"],
+  outsidePreference: ["المهمة خارج التفضيل", "Outside preferred area"],
+  eventIdea: ["فكرة الفعالية", "Event idea"],
+  workshopPrep: ["الاستعداد للورشة", "Workshop preparation"],
+  initiative: ["المبادرة", "Initiative"],
+  teamIssue: ["التعامل مع العضو غير الملتزم", "Team issue"],
+  eventChange: ["التغيير المفاجئ", "Unexpected change"],
+};
+
+/** Which payload fields a question feeds: the study picker sets two. */
+const fieldsOf = (q: Question) => (q.kind === "study" ? ["major", "studyYear"] : [q.name]);
+/** What to tell the applicant when a field fails the same rules the sheet enforces. */
+const hints: Record<string, Pair> = {
+  fullName: ["اكتب الاسم من حرفين إلى 200 حرف.", "Enter your name (2 to 200 characters)."],
+  studentId: ["الرقم الجامعي 9 أرقام بالضبط.", "The student ID is exactly 9 digits."],
+  whatsapp: ["رمز الدولة ثم من 8 إلى 16 رقمًا.", "Country code, then 8 to 16 digits."],
+  email: ["استخدم بريدك الجامعي smail.ucas.edu.ps.", "Use your smail.ucas.edu.ps university email."],
+  portfolio: ["يجب أن يبدأ الرابط بـ https://", "The link must start with https://"],
+};
+const answerHint: Pair = ["اكتب 10 أحرف على الأقل.", "Write at least 10 characters."];
 
 const icons: Record<string, LucideIcon> = { activities: Zap, media: Clapperboard, relations: Handshake };
 const chooseTitle: Pair = ["أي لجنة تريد الانضمام إليها؟", "Which committee do you want to join?"];
@@ -81,6 +115,38 @@ export function CommitteeForm() {
     });
   }
 
+  /** The payload exactly as the sheet receives it, from whatever has been answered so far. */
+  function collect(el: HTMLFormElement): Values {
+    const values: Values = {
+      committee: committee!.id,
+      portfolio: "",
+      leadership: "",
+      experience: "",
+      major: study.major,
+      studyYear: study.year,
+    };
+    // SAFETY: no file inputs, so every entry is a string.
+    for (const [k, v] of new FormData(el) as unknown as Iterable<[string, string]>) {
+      const [scope, name] = k.includes("__") ? k.split("__") : ["", k];
+      if (!scope || scope === cid) values[name!] = v;
+    }
+    values["whatsapp"] = dial + String(values["whatsapp"] ?? "").replace(/^0+/, "");
+    for (const [k, v] of Object.entries(picked))
+      if (k.startsWith(`${cid}:`)) values[k.slice(cid!.length + 1)] = v;
+    // The sheet is read in Arabic, so send the Arabic role names.
+    const labels = new Map(
+      committee!.steps.flatMap((x) =>
+        x.questions.flatMap((q) =>
+          q.kind === "chips" ? q.options.map((o) => [o[0], o[1]] as const) : [],
+        ),
+      ),
+    );
+    values["roles"] = ((values["roles"] as string[] | undefined) ?? []).map(
+      (r) => labels.get(r) ?? r,
+    );
+    return values;
+  }
+
   /** Native validation for this step's fields only; every panel stays mounted so Back keeps answers. */
   function stepValid() {
     setError("");
@@ -112,7 +178,43 @@ export function CommitteeForm() {
         return false;
       }
     }
-    return true;
+    return schemaValid();
+  }
+
+  /**
+   * Hold the applicant on this step until its answers pass the sheet's own rules (the same
+   * schema `submitApplication` parses), so a wrong answer is caught where it is typed.
+   */
+  function schemaValid() {
+    const values = collect(form.current!);
+    // Later steps are still empty; a missing required field would stop the schema before it checks answers.
+    const roles = values["roles"] as string[];
+    const result = applicationSchema.safeParse({ ...values, roles: roles.length ? roles : ["-"] });
+    if (result.success) return true;
+    const wanted = new Set(
+      current.questions
+        .filter((q) => !q.showWhen || answers[`${current.scope}:${q.showWhen[0]}`] === q.showWhen[1])
+        .flatMap(fieldsOf),
+    );
+    const bad = [...new Set(result.error.issues.map((issue) => String(issue.path[0] ?? "")))].filter(
+      (name) => wanted.has(name),
+    );
+    if (!bad.length) return true;
+    const field = (name: string) =>
+      form.current!.querySelector<HTMLInputElement>(
+        `[data-step="${current.id}"] [name="${current.scope ? `${current.scope}__` : ""}${name}"]`,
+      );
+    const input = bad.map(field).find(Boolean);
+    if (input) {
+      // The browser's own bubble points at the field and names the rule.
+      input.setCustomValidity(t(hints[bad[0]!] ?? answerHint));
+      input.reportValidity();
+      input.addEventListener("input", () => input.setCustomValidity(""), { once: true });
+    } else {
+      const names = bad.map((name) => fieldLabels[name]?.[ar ? 0 : 1] ?? name);
+      setError(ar ? `تحقق من: ${names.join("، ")}.` : `Check: ${names.join(", ")}.`);
+    }
+    return false;
   }
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -121,33 +223,7 @@ export function CommitteeForm() {
     if (!last) return go(step + 1);
     setBusy(true);
     try {
-      const values: Values = {
-        committee: committee!.id,
-        portfolio: "",
-        leadership: "",
-        experience: "",
-        major: study.major,
-        studyYear: study.year,
-      };
-      // SAFETY: no file inputs, so every entry is a string.
-      for (const [k, v] of new FormData(e.currentTarget) as unknown as Iterable<[string, string]>) {
-        const [scope, name] = k.includes("__") ? k.split("__") : ["", k];
-        if (!scope || scope === cid) values[name!] = v;
-      }
-      values["whatsapp"] = dial + String(values["whatsapp"] ?? "").replace(/^0+/, "");
-      for (const [k, v] of Object.entries(picked))
-        if (k.startsWith(`${cid}:`)) values[k.slice(cid!.length + 1)] = v;
-      // The sheet is read in Arabic, so send the Arabic role names.
-      const labels = new Map(
-        committee!.steps.flatMap((x) =>
-          x.questions.flatMap((q) =>
-            q.kind === "chips" ? q.options.map((o) => [o[0], o[1]] as const) : [],
-          ),
-        ),
-      );
-      values["roles"] = ((values["roles"] as string[] | undefined) ?? []).map(
-        (r) => labels.get(r) ?? r,
-      );
+      const values = collect(e.currentTarget);
       requestId.current ??= crypto.randomUUID();
       await submitApplication(values, requestId.current);
       setDone(true);
@@ -155,30 +231,8 @@ export function CommitteeForm() {
       setError(
         err instanceof ZodError
           ? (() => {
-              const labels: Record<string, Pair> = {
-                fullName: ["الاسم الكامل", "Full name"],
-                studentId: ["الرقم الجامعي", "Student ID"],
-                study: ["التخصص والسنة الدراسية", "Major and study year"],
-                whatsapp: ["رقم الواتساب", "WhatsApp number"],
-                email: ["البريد الجامعي", "University email"],
-                why: ["سبب الانضمام", "Why you want to join"],
-                contribution: ["المساهمة", "Contribution"],
-                skills: ["المهارات", "Skills"],
-                roles: ["مجال العمل", "Preferred areas"],
-                experience: ["الخبرة", "Experience"],
-                leadership: ["القيادة", "Leadership"],
-                commitment: ["الالتزام", "Commitment"],
-                hours: ["الساعات الأسبوعية", "Weekly hours"],
-                lateTask: ["التأخر عن التسليم", "Late task"],
-                outsidePreference: ["المهمة خارج التفضيل", "Outside preferred area"],
-                eventIdea: ["فكرة الفعالية", "Event idea"],
-                workshopPrep: ["الاستعداد للورشة", "Workshop preparation"],
-                initiative: ["المبادرة", "Initiative"],
-                teamIssue: ["التعامل مع العضو غير الملتزم", "Team issue"],
-                eventChange: ["التغيير المفاجئ", "Unexpected change"],
-              };
               const names = [...new Set(err.issues.map((issue) => String(issue.path[0] ?? "")))]
-                .map((name) => labels[name]?.[ar ? 0 : 1] ?? name)
+                .map((name) => fieldLabels[name]?.[ar ? 0 : 1] ?? name)
                 .filter(Boolean);
               return ar
                 ? `تحققي من: ${names.join("، ") || "الحقول المطلوبة"}.`

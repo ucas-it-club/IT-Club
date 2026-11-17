@@ -255,6 +255,7 @@ export const applicationSchema = z.object({
   email: z
     .string()
     .trim()
+    .toLowerCase()
     .email()
     .max(254)
     .regex(/@smail\.ucas\.edu\.ps$/),

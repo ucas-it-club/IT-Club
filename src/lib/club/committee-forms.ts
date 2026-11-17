@@ -26,7 +26,7 @@ export const aboutStep: FormStep = {
       kind: "text",
       name: "studentId",
       label: ["الرقم الجامعي", "Student ID"],
-      props: { inputMode: "numeric", pattern: "[0-9]{9}", maxLength: 9 },
+      props: { inputMode: "numeric", maxLength: 9 },
     },
     { kind: "study", name: "study", label: ["التخصص والسنة الدراسية", "Major and study year"] },
     { kind: "phone", name: "whatsapp", label: ["رقم الواتساب", "WhatsApp number"] },
@@ -36,8 +36,6 @@ export const aboutStep: FormStep = {
       label: ["البريد الجامعي", "University email"],
       props: {
         type: "email",
-        pattern: "[^@]+@smail\\.ucas\\.edu\\.ps",
-        title: "name@smail.ucas.edu.ps",
         autoComplete: "email",
         dir: "ltr",
       },
