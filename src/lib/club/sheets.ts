@@ -14,7 +14,7 @@ const endpoints = {
     "https://script.google.com/a/macros/ucas.edu.ps/s/AKfycbxbRhHH3dTxdsvpAD0TSGFae6mtBmLwf3zUApDqe6VGiNvZrE-M4Ni164_0LDu-e1MTow/exec",
   join: "https://script.google.com/macros/s/AKfycbxV5GRTEe8Y2QEcEPHDFURBXZsZpg6JTZxkya40NJFTBL-sklDQSKrkwmJYmTSQBn1q/exec",
   applications:
-    "https://script.google.com/macros/s/AKfycbyHYA7f99vKBuH552MeAX1iTfwCdvXueoAhfuZrXmPTGYSG9Dk53VNlNGowtBWfh7QcFQ/exec",
+    "https://script.google.com/macros/s/AKfycbyXZz26h5gOUHxq9g9uuVyGbOIt4K5TbhXmw5x-rI6tjHdNLSc8Ut9jw6xBICH_wM3Z3w/exec",
 };
 
 const registrationSchema = z.object({
