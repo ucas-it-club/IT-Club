@@ -82,6 +82,7 @@ function harness(role = "super_admin") {
     },
     Utilities: { formatDate: () => "2026-11-17 18:00" },
     SpreadsheetApp: {
+      flush() {},
       BandingTheme: { LIGHT_GREY: "grey" },
       WrapStrategy: { WRAP: "wrap", CLIP: "clip" },
       openById(id) {

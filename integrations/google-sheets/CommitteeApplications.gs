@@ -96,7 +96,9 @@ function format_(sheet) {
   COLUMN_WIDTHS.forEach((width, index) => sheet.setColumnWidth(index + 1, width));
   // Plain text everywhere: otherwise Sheets turns "+970…" into a number and drops the plus.
   const body = sheet.getRange(2, 1, rows, columns);
-  body.setNumberFormat("@").setVerticalAlignment("top").setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+  // "normal" resets any centred alignment left on old rows, so text starts at the cell's edge.
+  body.setNumberFormat("@").setHorizontalAlignment("normal").setVerticalAlignment("top")
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
   SINGLE_LINE_COLUMNS.forEach((column) =>
     sheet.getRange(2, column, rows, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP));
   if (!sheet.getFilter()) sheet.getRange(1, 1, Math.max(sheet.getLastRow(), 2), columns).createFilter();
@@ -104,6 +106,22 @@ function format_(sheet) {
     body.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false);
   // Rows saved earlier may carry a fixed height that cuts their text.
   if (sheet.getLastRow() > 1) sheet.autoResizeRows(2, sheet.getLastRow() - 1);
+  SpreadsheetApp.flush();
+}
+/** Read-only: what the first data row really holds, to compare with what format_ should have set. */
+function checkFormat() {
+  const sheet = sheet_("media");
+  const cell = sheet.getRange(2, 8);
+  return {
+    wrap: String(cell.getWrapStrategy()),
+    horizontal: cell.getHorizontalAlignment(),
+    vertical: cell.getVerticalAlignment(),
+    numberFormat: cell.getNumberFormat(),
+    frozenColumns: sheet.getFrozenColumns(),
+    frozenRows: sheet.getFrozenRows(),
+    row2Height: sheet.getRowHeight(2),
+    columnH: sheet.getColumnWidth(8),
+  };
 }
 /** One-off: fixes rows saved before this version (lost "+" on WhatsApp, English committee ids, UTC dates). */
 function repairRows() {
