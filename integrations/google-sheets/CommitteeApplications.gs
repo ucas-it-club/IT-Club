@@ -40,11 +40,6 @@ const LABELS = {
     gt6: "أكثر من 6 ساعات", variable: "حسب طبيعة المهام والفعاليات",
   },
 };
-// Single-line columns (id, date, student id, phone, email) are clipped, never wrapped, and wide
-// enough to show their whole value: a wrapped UUID or phone would stretch the whole row.
-const COLUMN_WIDTHS = [290, 150, 140, 190, 110, 150, 260, 200, 90, 300, 300, 300, 200, 260, 180, 300,
-  120, 200, 160, 300, 300, 300, 300, 300, 300, 300];
-const SINGLE_LINE_COLUMNS = [1, 2, 5, 6, 7];
 function label_(key, value) { return (LABELS[key] && LABELS[key][value]) || value; }
 
 function response_(data) {
@@ -87,41 +82,15 @@ function sheet_(committee) {
 /** Layout only, never data. Run from setup(), not per request: it is slow. */
 function format_(sheet) {
   const columns = APPLICATION_HEADERS.length;
-  const rows = Math.max(sheet.getMaxRows() - 1, 1);
-  sheet.getRange(1, 1, 1, columns).setBackground("#1b3a5c").setFontColor("#ffffff").setFontWeight("bold")
-    .setHorizontalAlignment("center").setVerticalAlignment("middle").setWrap(true);
-  sheet.setRowHeight(1, 48);
+  sheet.getRange(1, 1, 1, columns).setBackground("#1b3a5c").setFontColor("#ffffff").setFontWeight("bold");
   sheet.setFrozenRows(1);
   sheet.setFrozenColumns(0);
-  COLUMN_WIDTHS.forEach((width, index) => sheet.setColumnWidth(index + 1, width));
-  // Plain text everywhere: otherwise Sheets turns "+970…" into a number and drops the plus.
-  const body = sheet.getRange(2, 1, rows, columns);
-  // "normal" resets any centred alignment left on old rows, so text starts at the cell's edge.
-  body.setNumberFormat("@").setHorizontalAlignment("normal").setVerticalAlignment("top")
-    .setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
-  SINGLE_LINE_COLUMNS.forEach((column) =>
-    sheet.getRange(2, column, rows, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP));
-  if (!sheet.getFilter()) sheet.getRange(1, 1, Math.max(sheet.getLastRow(), 2), columns).createFilter();
-  if (sheet.getBandings().length === 0)
-    body.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false);
-  // Rows saved earlier may carry a fixed height that cuts their text.
-  if (sheet.getLastRow() > 1) sheet.autoResizeRows(2, sheet.getLastRow() - 1);
-  SpreadsheetApp.flush();
-}
-/** Read-only: what the first data row really holds, to compare with what format_ should have set. */
-function checkFormat() {
-  const sheet = sheet_("media");
-  const cell = sheet.getRange(2, 8);
-  return {
-    wrap: String(cell.getWrapStrategy()),
-    horizontal: cell.getHorizontalAlignment(),
-    vertical: cell.getVerticalAlignment(),
-    numberFormat: cell.getNumberFormat(),
-    frozenColumns: sheet.getFrozenColumns(),
-    frozenRows: sheet.getFrozenRows(),
-    row2Height: sheet.getRowHeight(2),
-    columnH: sheet.getColumnWidth(8),
-  };
+  // Centred, wrapped, direction left to Sheets: old rows carried a per-cell right-to-left direction
+  // and a left/top alignment, which made text start in one cell and run into the next.
+  // Plain text, or Sheets turns "+970…" into a number and drops the plus.
+  sheet.getRange(1, 1, sheet.getMaxRows(), columns)
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setTextDirection(null).setWrap(true);
+  sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), columns).setNumberFormat("@");
 }
 /** One-off: fixes rows saved before this version (lost "+" on WhatsApp, English committee ids, UTC dates). */
 function repairRows() {
@@ -247,9 +216,8 @@ function studentExists_(sheet, studentId) {
 }
 function append_(sheet, values) {
   const cells = values.map((value) => SpreadsheetApp.newRichTextValue().setText(String(value)).build());
-  const range = sheet.getRange(sheet.getLastRow() + 1, 1, 1, cells.length);
-  range.setNumberFormat("@").setRichTextValues([cells]).setWrap(true).setVerticalAlignment("top");
-  sheet.autoResizeRows(range.getRow(), 1);
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, cells.length).setNumberFormat("@").setRichTextValues([cells])
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setTextDirection(null).setWrap(true);
 }
 function requireAdmin_(token) {
   if (typeof token !== "string" || token.length < 20 || token.length > 10000) fail_("UNAUTHORIZED");
