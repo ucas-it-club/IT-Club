@@ -40,8 +40,11 @@ const LABELS = {
     gt6: "أكثر من 6 ساعات", variable: "حسب طبيعة المهام والفعاليات",
   },
 };
-const COLUMN_WIDTHS = [60, 120, 90, 160, 100, 130, 210, 190, 70, 260, 260, 260, 190, 230, 170, 260,
-  110, 190, 150, 260, 260, 260, 260, 260, 260, 260];
+// A-D are frozen, so they stay narrow. Single-line columns (id, date, student id, phone, email)
+// are clipped, never wrapped: a wrapped UUID or phone would stretch the whole row.
+const COLUMN_WIDTHS = [100, 130, 110, 180, 110, 140, 250, 200, 70, 300, 300, 300, 200, 260, 180, 300,
+  120, 200, 160, 300, 300, 300, 300, 300, 300, 300];
+const SINGLE_LINE_COLUMNS = [1, 2, 5, 6, 7];
 function label_(key, value) { return (LABELS[key] && LABELS[key][value]) || value; }
 
 function response_(data) {
@@ -84,19 +87,23 @@ function sheet_(committee) {
 /** Layout only, never data. Run from setup(), not per request: it is slow. */
 function format_(sheet) {
   const columns = APPLICATION_HEADERS.length;
+  const rows = Math.max(sheet.getMaxRows() - 1, 1);
   sheet.getRange(1, 1, 1, columns).setBackground("#1b3a5c").setFontColor("#ffffff").setFontWeight("bold")
     .setHorizontalAlignment("center").setVerticalAlignment("middle").setWrap(true);
-  sheet.setRowHeight(1, 38);
+  sheet.setRowHeight(1, 48);
   sheet.setFrozenRows(1);
   sheet.setFrozenColumns(4);
   COLUMN_WIDTHS.forEach((width, index) => sheet.setColumnWidth(index + 1, width));
   // Plain text everywhere: otherwise Sheets turns "+970…" into a number and drops the plus.
-  sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), columns)
-    .setNumberFormat("@").setVerticalAlignment("top").setWrap(true);
+  const body = sheet.getRange(2, 1, rows, columns);
+  body.setNumberFormat("@").setVerticalAlignment("top").setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+  SINGLE_LINE_COLUMNS.forEach((column) =>
+    sheet.getRange(2, column, rows, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP));
   if (!sheet.getFilter()) sheet.getRange(1, 1, Math.max(sheet.getLastRow(), 2), columns).createFilter();
   if (sheet.getBandings().length === 0)
-    sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), columns)
-      .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false);
+    body.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false);
+  // Rows saved earlier may carry a fixed height that cuts their text.
+  if (sheet.getLastRow() > 1) sheet.autoResizeRows(2, sheet.getLastRow() - 1);
 }
 /** One-off: fixes rows saved before this version (lost "+" on WhatsApp, English committee ids). */
 function repairRows() {
@@ -105,12 +112,21 @@ function repairRows() {
       const sheet = sheet_(committee);
       const count = sheet.getLastRow() - 1;
       if (count < 1) return;
+      // Read before changing the format: switching a cell to plain text changes what it reports.
       const committeeCells = sheet.getRange(2, 3, count, 1);
-      committeeCells.setNumberFormat("@").setValues(committeeCells.getDisplayValues()
-        .map(function (row) { return [APPLICATIONS.tabs[row[0]] || row[0]]; }));
+      const committeeNames = committeeCells.getDisplayValues()
+        .map(function (row) { return [APPLICATIONS.tabs[row[0]] || row[0]]; });
       const phoneCells = sheet.getRange(2, 6, count, 1);
-      phoneCells.setNumberFormat("@").setValues(phoneCells.getDisplayValues()
-        .map(function (row) { return [/^\d{8,16}$/.test(row[0]) ? "+" + row[0] : row[0]]; }));
+      const shown = phoneCells.getDisplayValues();
+      const formulas = phoneCells.getFormulas();
+      // "+970…" typed into an automatic cell becomes the formula =+970…, which shows only the digits.
+      const phones = shown.map(function (row, index) {
+        const formula = /^=\+?(\d{8,16})$/.exec(formulas[index][0]);
+        const digits = formula ? formula[1] : row[0];
+        return [/^\d{8,16}$/.test(digits) ? "+" + digits : digits];
+      });
+      committeeCells.setNumberFormat("@").setValues(committeeNames);
+      phoneCells.setNumberFormat("@").setValues(phones);
     });
     return { repaired: true };
   });
@@ -209,6 +225,7 @@ function append_(sheet, values) {
   const cells = values.map((value) => SpreadsheetApp.newRichTextValue().setText(String(value)).build());
   const range = sheet.getRange(sheet.getLastRow() + 1, 1, 1, cells.length);
   range.setNumberFormat("@").setRichTextValues([cells]).setWrap(true).setVerticalAlignment("top");
+  sheet.autoResizeRows(range.getRow(), 1);
 }
 function requireAdmin_(token) {
   if (typeof token !== "string" || token.length < 20 || token.length > 10000) fail_("UNAUTHORIZED");

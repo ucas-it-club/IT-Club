@@ -20,6 +20,7 @@ function harness(role = "super_admin") {
       setFrozenRows() {},
       setFrozenColumns() {},
       setRowHeight() {},
+      autoResizeRows() {},
       setColumnWidth() {},
       setRightToLeft() {},
       getRange(row, col, n, width) {
@@ -45,7 +46,11 @@ function harness(role = "super_admin") {
             Array.from({ length: n }, (_, i) =>
               Array.from({ length: width }, (_, j) => rows[row - 1 + i]?.[col - 1 + j] ?? ""),
             ),
-          getDisplayValues: () => range.getValues().map((line) => line.map(String)),
+          // A formula cell like =+970… reports only its digits, as in Sheets.
+          getDisplayValues: () =>
+            range.getValues().map((line) => line.map((cell) => String(cell).replace(/^=\+?(\d+)$/, "$1"))),
+          getFormulas: () =>
+            range.getValues().map((line) => line.map((cell) => (String(cell).startsWith("=") ? String(cell) : ""))),
         }, { get: (target, key) => target[key] ?? (() => range) });
         return range;
       },
@@ -78,6 +83,7 @@ function harness(role = "super_admin") {
     Utilities: { formatDate: () => "2026-11-17 18:00" },
     SpreadsheetApp: {
       BandingTheme: { LIGHT_GREY: "grey" },
+      WrapStrategy: { WRAP: "wrap", CLIP: "clip" },
       openById(id) {
         if (!books.has(id)) books.set(id, new Map());
         const book = books.get(id);
@@ -326,4 +332,13 @@ test("repairRows restores the plus and the Arabic committee name on old rows onl
   app.context.repairRows();
   assert.deepEqual(book.get("العلاقات العامة").rows[1].slice(2, 6), ["العلاقات العامة", "n", "220220642", "+972594890620"]);
   assert.deepEqual(book.get("الإعلام").rows[1].slice(2, 6), ["الإعلام", "n", "220220643", "+970567344834"]);
+});
+
+test("repairRows also fixes phone cells that Sheets stored as a formula (=+970…)", () => {
+  const app = harness();
+  app.context.setup();
+  const book = app.books.values().next().value;
+  book.get("الأنشطة").rows.push(["id-3", "t", "activities", "n", "229000003", "=+970591234567"]);
+  app.context.repairRows();
+  assert.deepEqual(book.get("الأنشطة").rows[1].slice(2, 6), ["الأنشطة", "n", "229000003", "+970591234567"]);
 });
