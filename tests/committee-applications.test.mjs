@@ -342,3 +342,14 @@ test("repairRows also fixes phone cells that Sheets stored as a formula (=+970�
   app.context.repairRows();
   assert.deepEqual(book.get("الأنشطة").rows[1].slice(2, 6), ["الأنشطة", "n", "229000003", "+970591234567"]);
 });
+
+test("repairRows turns old UTC timestamps into the sheet's Gaza-time format", () => {
+  const app = harness();
+  app.context.setup();
+  const book = app.books.values().next().value;
+  book.get("الإعلام").rows.push(["id-4", "2026-11-17T16:11:45.036Z", "الإعلام", "n", "1", "+970567344834"]);
+  book.get("الإعلام").rows.push(["id-5", "2026-11-17 18:10", "الإعلام", "n", "2", "+970567344835"]);
+  app.context.repairRows();
+  assert.equal(book.get("الإعلام").rows[1][1], "2026-11-17 18:00");
+  assert.equal(book.get("الإعلام").rows[2][1], "2026-11-17 18:10", "already-new dates are left alone");
+});

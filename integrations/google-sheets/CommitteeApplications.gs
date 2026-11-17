@@ -40,9 +40,9 @@ const LABELS = {
     gt6: "أكثر من 6 ساعات", variable: "حسب طبيعة المهام والفعاليات",
   },
 };
-// A-D are frozen, so they stay narrow. Single-line columns (id, date, student id, phone, email)
-// are clipped, never wrapped: a wrapped UUID or phone would stretch the whole row.
-const COLUMN_WIDTHS = [100, 130, 110, 180, 110, 140, 250, 200, 70, 300, 300, 300, 200, 260, 180, 300,
+// Single-line columns (id, date, student id, phone, email) are clipped, never wrapped, and wide
+// enough to show their whole value: a wrapped UUID or phone would stretch the whole row.
+const COLUMN_WIDTHS = [290, 150, 140, 190, 110, 150, 260, 200, 90, 300, 300, 300, 200, 260, 180, 300,
   120, 200, 160, 300, 300, 300, 300, 300, 300, 300];
 const SINGLE_LINE_COLUMNS = [1, 2, 5, 6, 7];
 function label_(key, value) { return (LABELS[key] && LABELS[key][value]) || value; }
@@ -92,7 +92,7 @@ function format_(sheet) {
     .setHorizontalAlignment("center").setVerticalAlignment("middle").setWrap(true);
   sheet.setRowHeight(1, 48);
   sheet.setFrozenRows(1);
-  sheet.setFrozenColumns(4);
+  sheet.setFrozenColumns(0);
   COLUMN_WIDTHS.forEach((width, index) => sheet.setColumnWidth(index + 1, width));
   // Plain text everywhere: otherwise Sheets turns "+970…" into a number and drops the plus.
   const body = sheet.getRange(2, 1, rows, columns);
@@ -105,7 +105,7 @@ function format_(sheet) {
   // Rows saved earlier may carry a fixed height that cuts their text.
   if (sheet.getLastRow() > 1) sheet.autoResizeRows(2, sheet.getLastRow() - 1);
 }
-/** One-off: fixes rows saved before this version (lost "+" on WhatsApp, English committee ids). */
+/** One-off: fixes rows saved before this version (lost "+" on WhatsApp, English committee ids, UTC dates). */
 function repairRows() {
   return locked_(function () {
     Object.keys(APPLICATIONS.tabs).forEach(function (committee) {
@@ -113,6 +113,11 @@ function repairRows() {
       const count = sheet.getLastRow() - 1;
       if (count < 1) return;
       // Read before changing the format: switching a cell to plain text changes what it reports.
+      const dateCells = sheet.getRange(2, 2, count, 1);
+      const dates = dateCells.getDisplayValues().map(function (row) {
+        return [/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(row[0])
+          ? Utilities.formatDate(new Date(row[0]), "Asia/Gaza", "yyyy-MM-dd HH:mm") : row[0]];
+      });
       const committeeCells = sheet.getRange(2, 3, count, 1);
       const committeeNames = committeeCells.getDisplayValues()
         .map(function (row) { return [APPLICATIONS.tabs[row[0]] || row[0]]; });
@@ -125,6 +130,7 @@ function repairRows() {
         const digits = formula ? formula[1] : row[0];
         return [/^\d{8,16}$/.test(digits) ? "+" + digits : digits];
       });
+      dateCells.setNumberFormat("@").setValues(dates);
       committeeCells.setNumberFormat("@").setValues(committeeNames);
       phoneCells.setNumberFormat("@").setValues(phones);
     });
