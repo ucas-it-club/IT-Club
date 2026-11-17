@@ -83,7 +83,7 @@ async function request(kind: keyof typeof endpoints, body?: RequestBody) {
 }
 
 export async function loadRegistration(): Promise<Registration> {
-  const value = await request("join");
+  const value = await request("applications");
   const parsed = registrationSchema.safeParse(value.registration);
 
   if (!parsed.success) throw new SheetsError("UNAVAILABLE");

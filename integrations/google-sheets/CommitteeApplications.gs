@@ -59,7 +59,22 @@ function setup() {
   Object.keys(APPLICATIONS.tabs).forEach(sheet_);
   return { ready: true, spreadsheet: book_().getUrl() };
 }
-function doGet() { try { return response_({ ok: true, ready: true }); } catch (error) { return errorResponse_(error); } }
+function rowCount_(sheet) {
+  if (sheet.getLastRow() < 2) return 0;
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getDisplayValues()
+    .filter((row) => !!row[0]).length;
+}
+function status_() {
+  const limit = 40;
+  const count = Object.keys(APPLICATIONS.tabs)
+    .map((committee) => rowCount_(sheet_(committee)))
+    .reduce((total, value) => total + value, 0);
+  return { open: count < limit, enabled: true, limit, count, remaining: Math.max(0, limit - count) };
+}
+function doGet() {
+  try { return response_({ ok: true, registration: status_() }); }
+  catch (error) { return errorResponse_(error); }
+}
 function text_(data, key, min, max) {
   if (typeof data[key] !== "string") fail_("INVALID_INPUT");
   const value = data[key].trim();

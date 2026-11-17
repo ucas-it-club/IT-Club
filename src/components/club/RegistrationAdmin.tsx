@@ -177,7 +177,7 @@ export function RegistrationAdmin({ canEdit }: { canEdit: boolean }) {
       {notice && <p role="status">{notice}</p>}
       <a
         className="inline-block font-bold text-primary underline"
-        href={sheetLinks.join}
+        href={sheetLinks.applications}
         target="_blank"
         rel="noopener noreferrer"
       >
