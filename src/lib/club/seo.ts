@@ -151,6 +151,13 @@ export const pages = {
     },
     en: { title: "Admin | UCAS IT Club", description: "Content management for the UCAS IT Club." },
   },
+  ask: {
+    ar: {
+      title: "Break the Ice | النادي التكنولوجي",
+      description: "أسئلة عشوائية خفيفة لفتح الحديث في فعاليات النادي التكنولوجي.",
+    },
+    en: { title: "Break the Ice | UCAS IT Club", description: "Random ice-breaker questions." },
+  },
   missing: {
     ar: {
       title: "الصفحة غير موجودة | النادي التكنولوجي",

@@ -38,6 +38,8 @@ const PrivacyPage = lazy(() =>
   import("./PrivacyPage").then((module) => ({ default: module.PrivacyPage })),
 );
 
+const AskPage = lazy(() => import("./AskPage").then((module) => ({ default: module.AskPage })));
+
 const navigationItems = [
   ["", "الرئيسية", "Home"],
   ["members", "الفريق", "Team"],
@@ -195,6 +197,8 @@ function Shell({ children }: { children: ReactNode }) {
   const { lang, loading } = useClub();
   const page = pageOf(useLocation().pathname);
   const isAdmin = page.split("/")[0] === "admin";
+  // Unlisted event page: no header, footer, links or notices, so a visitor stays on it.
+  const bare = page === "ask";
   useEffect(() => {
     if (!loading && !window.__bootWaitHero) window.__bootDone?.();
   }, [loading]);
@@ -227,6 +231,12 @@ function Shell({ children }: { children: ReactNode }) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  if (bare)
+    return (
+      <div dir="rtl" className="club-site">
+        <main id="club-main">{children}</main>
+      </div>
+    );
   return (
     <div dir={lang === "ar" ? "rtl" : "ltr"} className="club-site relative isolate min-h-screen">
       {!isAdmin && <SiteBackground />}
@@ -306,6 +316,12 @@ export function ContentPage() {
     return (
       <Suspense fallback={<LoadingView />}>
         <ContactPage />
+      </Suspense>
+    );
+  if (page === "ask")
+    return (
+      <Suspense fallback={null}>
+        <AskPage />
       </Suspense>
     );
   if (page === "privacy")

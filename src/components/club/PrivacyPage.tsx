@@ -48,8 +48,8 @@ export function PrivacyPage() {
 
       <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
         {ar
-          ? "هذا الموقع لا يستخدم إعلانات ولا تتبّعًا ولا تحليلات خارجية. لا نبيع بياناتك ولا نشاركها مع أي جهة تسويقية، ولا نحتاج موافقتك على الكوكيز لأن ما نحفظه هو تفضيلاتك أنت فقط."
-          : "This site runs no advertising, no trackers and no third-party analytics. We do not sell or share your data, and we do not ask for cookie consent because everything stored is your own preference."}
+          ? "هذا الموقع لا يستخدم إعلانات ولا تتبّعًا ولا تحليلات خارجية. لا نبيع بياناتك ولا نشاركها مع أي جهة تسويقية، ولا نحتاج موافقتك على الكوكيز لأن ما نحفظه هو تفضيلاتك أنت فقط. الاستثناء الوحيد صفحة فعالية غير معلنة تعدّ الزيارات والضغطات عبر GoatCounter بلا كوكيز ولا أي هوية."
+          : "This site runs no advertising, no trackers and no third-party analytics. We do not sell or share your data, and we do not ask for cookie consent because everything stored is your own preference. The one exception is an unlisted event page that counts visits and taps through GoatCounter, with no cookies and no identifiers."}
       </p>
 
       <h2 className="mt-12 text-2xl font-black">{ar ? "ما الذي يُحفظ" : "What is stored"}</h2>

@@ -21,7 +21,7 @@ import { loadClubData, refreshClubData } from "./ssr-data";
  */
 
 /** Pages that take no id after them. */
-const fixed = ["about", "join", "contact", "privacy", "admin"];
+const fixed = ["about", "join", "contact", "privacy", "admin", "ask"];
 
 export const isCollection = (page: string): page is ContentCollection =>
   // SAFETY: the cast only satisfies includes' parameter type; the check itself
@@ -58,6 +58,8 @@ export async function loadPage(
   const found = target(page);
 
   if (!found) throw notFound();
+  // The ice-breaker page is Arabic only.
+  if (page === "ask" && lang === "en") throw notFound();
 
   // One address per page: /members is /team. Items are checked below, once
   // their readable name is known.
@@ -144,7 +146,7 @@ export function pageHead(
 
   // SAFETY: hasOwn confirms first is one of copy's keys before the cast.
   const key: PageKey = missing || !Object.hasOwn(copy, first) ? "missing" : (first as PageKey);
-  const noindex = key === "missing" || key === "admin";
+  const noindex = key === "missing" || key === "admin" || key === "ask";
 
   return {
     meta: seo({
