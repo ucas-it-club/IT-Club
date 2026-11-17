@@ -14,7 +14,7 @@ const endpoints = {
     "https://script.google.com/a/macros/ucas.edu.ps/s/AKfycbxbRhHH3dTxdsvpAD0TSGFae6mtBmLwf3zUApDqe6VGiNvZrE-M4Ni164_0LDu-e1MTow/exec",
   join: "https://script.google.com/macros/s/AKfycbxV5GRTEe8Y2QEcEPHDFURBXZsZpg6JTZxkya40NJFTBL-sklDQSKrkwmJYmTSQBn1q/exec",
   applications:
-    "https://script.google.com/macros/s/AKfycbyXZz26h5gOUHxq9g9uuVyGbOIt4K5TbhXmw5x-rI6tjHdNLSc8Ut9jw6xBICH_wM3Z3w/exec",
+    "https://script.google.com/macros/s/AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/exec",
 };
 
 const registrationSchema = z.object({
@@ -83,12 +83,7 @@ async function request(kind: keyof typeof endpoints, body?: RequestBody) {
 }
 
 export async function loadRegistration(): Promise<Registration> {
-  let value;
-  try {
-    value = await request("applications");
-  } catch {
-    value = await request("join");
-  }
+  const value = await request("applications");
   const parsed = registrationSchema.safeParse(value.registration);
 
   if (!parsed.success) throw new SheetsError("UNAVAILABLE");
@@ -103,7 +98,7 @@ export async function configureRegistration(enabled: boolean, limit: number) {
 
   if (error || !data.session) throw new SheetsError("UNAUTHORIZED");
 
-  const value = await request("join", {
+  const value = await request("applications", {
     action: "configure",
     accessToken: data.session.access_token,
     enabled,
@@ -111,6 +106,42 @@ export async function configureRegistration(enabled: boolean, limit: number) {
   });
 
   return registrationSchema.parse(value.registration);
+}
+
+export type CommitteeApplicationRecord = {
+  id: string;
+  submittedAt: string;
+  committee: "media" | "relations" | "activities";
+  committeeName: string;
+  fullName: string;
+  studentId: string;
+  whatsapp: string;
+  email: string;
+  major: string;
+  studyYear: string;
+  answers: Record<string, string>;
+};
+export type CommitteeApplicationPage = {
+  applications: CommitteeApplicationRecord[];
+  total: number;
+};
+
+export async function loadApplications(offset = 0, limit = 50): Promise<CommitteeApplicationPage> {
+  const { supabase } = await import("./supabase");
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) throw new SheetsError("UNAUTHORIZED");
+  const value = await request("applications", {
+    action: "listApplications",
+    accessToken: data.session.access_token,
+    offset,
+    limit,
+  });
+  if (!Array.isArray(value.applications) || !Number.isInteger(value.total))
+    throw new SheetsError("UNAVAILABLE");
+  return {
+    applications: value.applications as CommitteeApplicationRecord[],
+    total: value.total as number,
+  };
 }
 
 export async function submitToSheet(

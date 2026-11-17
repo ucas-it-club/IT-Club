@@ -92,15 +92,66 @@ test("HTML login pages, script errors and network failures cannot report success
   }
 });
 
-test("configuration uses join deployment and authenticated session", async () => {
+test("committee registration configuration uses its application deployment and authenticated session", async () => {
   const registration = { open: true, enabled: true, limit: 40, count: 1, remaining: 39 };
   const h = harness(() => json({ ok: true, registration }));
   await h.api.configureRegistration(true, 40);
   assert.equal(h.authCalls(), 1);
-  assert.match(h.calls[0].url, /AKfycbxV5GRTE/);
+  assert.match(
+    h.calls[0].url,
+    /AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/,
+  );
   const body = JSON.parse(h.calls[0].options.body);
   assert.equal(body.accessToken, "test-session");
   assert.equal(body.action, "configure");
+});
+
+test("committee registration never falls back to the legacy join deployment", async () => {
+  const h = harness((url) =>
+    url.includes("AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA")
+      ? json({ ok: false, code: "UNAVAILABLE" })
+      : json({
+          ok: true,
+          registration: { open: true, enabled: true, limit: 40, count: 1, remaining: 39 },
+        }),
+  );
+  await assert.rejects(() => h.api.loadRegistration());
+  assert.equal(h.calls.length, 1);
+  assert.match(
+    h.calls[0].url,
+    /AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/,
+  );
+});
+
+test("loading committee applications requires a session and reads from the applications deployment", async () => {
+  const record = {
+    id: requestId,
+    submittedAt: "2026-11-17T10:00:00.000Z",
+    committee: "media",
+    committeeName: "الإعلام",
+    fullName: "Test Student",
+    studentId: "012345678",
+    whatsapp: "+970591234567",
+    email: "test@smail.ucas.edu.ps",
+    major: "تصميم و برمجة تطبيقات الموبايل",
+    studyYear: "2",
+    answers: {},
+  };
+  const h = harness(() => json({ ok: true, applications: [record], total: 1 }));
+  assert.deepEqual(JSON.parse(JSON.stringify(await h.api.loadApplications(50, 50))), {
+    applications: [record],
+    total: 1,
+  });
+  assert.equal(h.authCalls(), 1);
+  assert.match(
+    h.calls[0].url,
+    /AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/,
+  );
+  assert.equal(JSON.parse(h.calls[0].options.body).action, "listApplications");
+  assert.equal(JSON.parse(h.calls[0].options.body).offset, 50);
+  const denied = harness(() => json({ ok: true }), { session: null });
+  await assert.rejects(() => denied.api.loadApplications(), /UNAUTHORIZED/);
+  assert.equal(denied.calls.length, 0);
 });
 
 test("event signup sends only validated event fields to the join deployment", async () => {
@@ -236,7 +287,7 @@ test("event registration errors have clear Arabic and English messages", () => {
   );
 });
 
-test("committee application is validated, posted to the join deployment, and strips extras", async () => {
+test("committee application is validated, posted to the applications deployment, and strips extras", async () => {
   const h = harness(() => json({ ok: true }));
   const application = {
     committee: "relations",
@@ -259,7 +310,10 @@ test("committee application is validated, posted to the join deployment, and str
     requestId,
   );
   assert.equal(h.calls.length, 1);
-  assert.match(h.calls[0].url, /AKfycbyXZz26h5gOUHxq9g9uuVyGbOIt4K5TbhXmw5x-rI6tjHdNLSc8/);
+  assert.match(
+    h.calls[0].url,
+    /AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/,
+  );
   const body = JSON.parse(h.calls[0].options.body);
   assert.equal(body.action, "apply");
   assert.equal(body.requestId, requestId);

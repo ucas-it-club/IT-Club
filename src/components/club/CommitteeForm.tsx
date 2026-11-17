@@ -150,7 +150,36 @@ export function CommitteeForm() {
     } catch (err) {
       setError(
         err instanceof ZodError
-          ? t(["تحقق من الحقول وحاول مجدداً.", "Check your fields and try again."])
+          ? (() => {
+              const labels: Record<string, Pair> = {
+                fullName: ["الاسم الكامل", "Full name"],
+                studentId: ["الرقم الجامعي", "Student ID"],
+                study: ["التخصص والسنة الدراسية", "Major and study year"],
+                whatsapp: ["رقم الواتساب", "WhatsApp number"],
+                email: ["البريد الجامعي", "University email"],
+                why: ["سبب الانضمام", "Why you want to join"],
+                contribution: ["المساهمة", "Contribution"],
+                skills: ["المهارات", "Skills"],
+                roles: ["مجال العمل", "Preferred areas"],
+                experience: ["الخبرة", "Experience"],
+                leadership: ["القيادة", "Leadership"],
+                commitment: ["الالتزام", "Commitment"],
+                hours: ["الساعات الأسبوعية", "Weekly hours"],
+                lateTask: ["التأخر عن التسليم", "Late task"],
+                outsidePreference: ["المهمة خارج التفضيل", "Outside preferred area"],
+                eventIdea: ["فكرة الفعالية", "Event idea"],
+                workshopPrep: ["الاستعداد للورشة", "Workshop preparation"],
+                initiative: ["المبادرة", "Initiative"],
+                teamIssue: ["التعامل مع العضو غير الملتزم", "Team issue"],
+                eventChange: ["التغيير المفاجئ", "Unexpected change"],
+              };
+              const names = [...new Set(err.issues.map((issue) => String(issue.path[0] ?? "")))]
+                .map((name) => labels[name]?.[ar ? 0 : 1] ?? name)
+                .filter(Boolean);
+              return ar
+                ? `تحققي من: ${names.join("، ") || "الحقول المطلوبة"}.`
+                : `Check: ${names.join(", ") || "the required fields"}.`;
+            })()
           : submissionError(err, ar),
       );
       if (err instanceof Error && err.message === "JOIN_CLOSED") registration.markClosed();
