@@ -215,8 +215,10 @@ function studentExists_(sheet, studentId) {
     .getDisplayValues().some((row) => row[0] === studentId);
 }
 function append_(sheet, values) {
-  const cells = values.map((value) => SpreadsheetApp.newRichTextValue().setText(String(value)).build());
-  sheet.getRange(sheet.getLastRow() + 1, 1, 1, cells.length).setNumberFormat("@").setRichTextValues([cells])
+  // Plain-text format first, then plain values: a rich-text write still turned "+970…" into the
+  // formula =+970…. In a plain-text cell an applicant's "=…" stays literal text too.
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, values.length).setNumberFormat("@")
+    .setValues([values.map(String)])
     .setHorizontalAlignment("center").setVerticalAlignment("middle").setTextDirection(null).setWrap(true);
 }
 function requireAdmin_(token) {
