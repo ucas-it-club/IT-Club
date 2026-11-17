@@ -268,6 +268,6 @@ test("committee application is validated, posted to the join deployment, and str
   await assert.rejects(
     h.api.submitApplication({ ...application, whatsapp: "0591234567" }, requestId),
   );
-  await assert.rejects(h.api.submitApplication({ ...application, commit: "no" }, requestId));
-  assert.equal(h.calls.length, 1);
+  await h.api.submitApplication({ ...application, commit: "no" }, requestId);
+  assert.equal(h.calls.length, 2);
 });

@@ -45,14 +45,6 @@ export const aboutStep: FormStep = {
   ],
 };
 
-const commit: Question = {
-  kind: "check",
-  name: "commit",
-  label: [
-    "أتعهد بالتعلّم والعمل ضمن فريق والالتزام بالمهام والمواعيد.",
-    "I commit to learning, working in a team, and meeting tasks and deadlines.",
-  ],
-};
 const leadership: Question = {
   kind: "area",
   name: "leadership",
@@ -169,7 +161,7 @@ export const committees: readonly Committee[] = [
           },
         ],
       },
-      { title: ["العمل الجماعي", "Teamwork"], questions: [leadership, commit] },
+      { title: ["العمل الجماعي", "Teamwork"], questions: [leadership] },
     ],
   },
   {
@@ -233,7 +225,7 @@ export const committees: readonly Committee[] = [
           },
         ],
       },
-      { title: ["العمل الجماعي", "Teamwork"], questions: [leadership, commit] },
+      { title: ["العمل الجماعي", "Teamwork"], questions: [leadership] },
     ],
   },
 ];

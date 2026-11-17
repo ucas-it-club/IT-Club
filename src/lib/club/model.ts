@@ -275,7 +275,6 @@ export const applicationSchema = z.object({
   eventChange: longText.optional(),
   portfolio: z.union([z.literal(""), z.string().trim().url().startsWith("https://").max(300)]),
   leadership: z.string().trim().max(1000),
-  commit: z.literal("yes"),
 }).superRefine((value, ctx) => {
   const required = value.committee === "activities"
     ? ["why", "contribution", "skills", "commitment", "hours", "lateTask", "outsidePreference", "eventIdea", "workshopPrep", "initiative", "teamIssue", "eventChange"]

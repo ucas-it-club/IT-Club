@@ -96,7 +96,7 @@ export function CommitteeForm() {
         return false;
       }
       if (q.kind === "check" && !checked[key(q, current.scope)]) {
-        setError(t(["يجب الموافقة على الالتزام.", "Please accept the commitment."]));
+        setError(t(["أكملي الحقول المطلوبة.", "Complete the required fields."]));
         return false;
       }
       if (q.kind === "radio" && !answers[key(q, current.scope)]) {
@@ -119,7 +119,6 @@ export function CommitteeForm() {
     try {
       const values: Values = {
         committee: committee!.id,
-        commit: "yes",
         portfolio: "",
         leadership: "",
         experience: "",
@@ -187,7 +186,7 @@ export function CommitteeForm() {
               <Select name="studyYear" value={study.year} onValueChange={(year) => setStudy((prev) => ({ ...prev, year }))} required>
                 <SelectTrigger aria-label={t(["السنة الدراسية", "Study year"])}><SelectValue placeholder={t(["اختر السنة", "Select year"])} /></SelectTrigger>
                 <SelectContent>
-                  {[["1", "السنة الأولى", "First year"], ["2", "السنة الثانية", "Second year"], ["3", "السنة الثالثة", "Third year"], ["4", "السنة الرابعة", "Fourth year"]].map(([value, arLabel, enLabel]) => <SelectItem key={value} value={value}>{t([arLabel!, enLabel!])}</SelectItem>)}
+                  {[["1", "السنة الأولى", "First year"], ["2", "السنة الثانية", "Second year"], ["3", "السنة الثالثة", "Third year"], ["4", "السنة الرابعة", "Fourth year"]].map(([value, arLabel, enLabel]) => <SelectItem key={value} value={value!}>{t([arLabel!, enLabel!])}</SelectItem>)}
                 </SelectContent>
               </Select>
             </label>

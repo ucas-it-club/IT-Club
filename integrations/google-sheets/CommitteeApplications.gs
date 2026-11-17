@@ -11,7 +11,7 @@ const APPLICATION_HEADERS = [
   "معرّف الطلب", "التاريخ", "اللجنة", "الاسم الكامل", "الرقم الجامعي",
   "الواتساب", "البريد الإلكتروني", "التخصص", "السنة الدراسية", "لماذا الانضمام",
   "المساهمة", "المهارات", "المجالات", "الخبرة", "رابط الأعمال", "القيادة",
-  "التعهد", "سبق المشاركة التطوعية", "الالتزام الأسبوعي", "الساعات الأسبوعية",
+  "سبق المشاركة التطوعية", "الالتزام الأسبوعي", "الساعات الأسبوعية",
   "التأخر عن موعد التسليم", "مهمة خارج مجال التفضيل", "فكرة الفعالية والفائدة",
   "الاستعداد للورشة", "المبادرة عند ملاحظة نقص", "التعامل مع عدم التزام عضو",
   "التعامل مع تغيير مفاجئ",
@@ -46,7 +46,11 @@ function sheet_(committee) {
     sheet.setFrozenRows(1);
     sheet.setRightToLeft(true);
   } else {
-    const actual = sheet.getRange(1, 1, 1, APPLICATION_HEADERS.length).getValues()[0];
+    const actual = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (actual[16] === "التعهد") {
+      sheet.deleteColumn(17);
+      actual.splice(16, 1);
+    }
     if (JSON.stringify(actual) !== JSON.stringify(APPLICATION_HEADERS)) fail_("SHEET_HEADERS_CHANGED");
   }
   return sheet;
@@ -76,13 +80,13 @@ function validate_(data) {
   const whatsapp = text_(data, "whatsapp", 9, 17);
   if (!/^\d{9}$/.test(studentId) || MAJORS.indexOf(major) < 0 || !/^[1-4]$/.test(year) ||
       !/^\+[0-9]{8,16}$/.test(whatsapp) || !/^[^\s@]+@smail\.ucas\.edu\.ps$/.test(email) ||
-      data.commit !== "yes" || !Array.isArray(data.roles) || data.roles.length < 1 || data.roles.length > 12)
+      !Array.isArray(data.roles) || data.roles.length < 1 || data.roles.length > 12)
     fail_("INVALID_INPUT");
   data.roles.forEach((role) => { if (typeof role !== "string" || role.length < 1 || role.length > 120) fail_("INVALID_INPUT"); });
   return [committee, text_(data, "fullName", 2, 200), studentId, whatsapp, email, major, year,
     optional_(data, "why", 1000), optional_(data, "contribution", 1000), optional_(data, "skills", 1000),
     data.roles.join("، "), optional_(data, "experience", 1000), optional_(data, "portfolio", 300),
-    optional_(data, "leadership", 1000), data.commit === "yes" ? "نعم" : "",
+    optional_(data, "leadership", 1000),
     data.hasExperience === "yes" ? "نعم" : data.hasExperience === "no" ? "لا" : "",
     optional_(data, "commitment", 50), optional_(data, "hours", 50), optional_(data, "lateTask", 1000),
     optional_(data, "outsidePreference", 1000), optional_(data, "eventIdea", 1000), optional_(data, "workshopPrep", 1000),
