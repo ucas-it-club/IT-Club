@@ -281,7 +281,8 @@ export const applicationSchema = z.object({
     : ["why", "skills", "experience"];
   for (const key of required) {
     const answer = value[key as keyof typeof value];
-    const minLength = key === "experience" ? 1 : 10;
+    // commitment and hours are enum answers ("full", "2to4"): the enum already validated them.
+    const minLength = key === "experience" || key === "commitment" || key === "hours" ? 1 : 10;
     if (typeof answer !== "string" || answer.trim().length < minLength) {
       ctx.addIssue({ code: "custom", path: [key], message: "Required answer" });
     }

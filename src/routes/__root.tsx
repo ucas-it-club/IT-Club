@@ -11,6 +11,10 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import cairoArabic from "../assets/fonts/cairo-arabic.woff2?url";
+import bracketLeft from "../assets/logo/bracket-left.webp?url";
+import bracketRight from "../assets/logo/bracket-right.webp?url";
+import dotTop from "../assets/logo/dot-top.webp?url";
+import dotBottom from "../assets/logo/dot-bottom.webp?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { readTheme } from "../lib/club/prefs";
 import { langOf } from "../lib/club/paths";
@@ -118,6 +122,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           href: cairoArabic,
           crossOrigin: "anonymous",
         },
+        // The loading screen and the hero are built from these four pieces: fetch them with the
+        // stylesheet instead of after the HTML is parsed.
+        ...[bracketLeft, bracketRight, dotTop, dotBottom].map((href) => ({
+          rel: "preload",
+          as: "image",
+          href,
+        })),
         { rel: "icon", href: "/favicon.png", type: "image/png" },
       ],
     };

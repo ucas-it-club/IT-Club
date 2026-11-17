@@ -22,6 +22,21 @@ const MAJORS = [
   "تصميم و برمجة صفحات الويب", "تكنولوجيا الوسائط المتعددة",
 ];
 
+// The form sends short codes for these two answers; the sheet is read by people, so store the words.
+const LABELS = {
+  commitment: {
+    full: "أستطيع الالتزام بشكل كامل", organised: "أستطيع الالتزام مع تنظيم وقتي",
+    difficulty: "قد أواجه صعوبة في بعض الفترات", unsure: "لست متأكدًا من قدرتي على الالتزام",
+  },
+  hours: {
+    lt2: "أقل من ساعتين", "2to4": "من ساعتين إلى 4 ساعات", "4to6": "من 4 إلى 6 ساعات",
+    gt6: "أكثر من 6 ساعات", variable: "حسب طبيعة المهام والفعاليات",
+  },
+};
+const COLUMN_WIDTHS = [60, 120, 90, 160, 100, 130, 210, 190, 70, 260, 260, 260, 190, 230, 170, 260,
+  110, 190, 150, 260, 260, 260, 260, 260, 260, 260];
+function label_(key, value) { return (LABELS[key] && LABELS[key][value]) || value; }
+
 function response_(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -42,9 +57,9 @@ function sheet_(committee) {
   let sheet = book.getSheetByName(tab);
   if (!sheet) sheet = book.insertSheet(tab);
   if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 1, APPLICATION_HEADERS.length).setValues([APPLICATION_HEADERS]).setFontWeight("bold");
-    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, APPLICATION_HEADERS.length).setValues([APPLICATION_HEADERS]);
     sheet.setRightToLeft(true);
+    format_(sheet);
   } else {
     const actual = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     if (actual[16] === "التعهد") {
@@ -55,9 +70,40 @@ function sheet_(committee) {
   }
   return sheet;
 }
+/** Layout only, never data. Run from setup(), not per request: it is slow. */
+function format_(sheet) {
+  const columns = APPLICATION_HEADERS.length;
+  sheet.getRange(1, 1, 1, columns).setBackground("#1b3a5c").setFontColor("#ffffff").setFontWeight("bold")
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setWrap(true);
+  sheet.setRowHeight(1, 38);
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(4);
+  COLUMN_WIDTHS.forEach((width, index) => sheet.setColumnWidth(index + 1, width));
+  // Plain text everywhere: otherwise Sheets turns "+970…" into a number and drops the plus.
+  sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), columns)
+    .setNumberFormat("@").setVerticalAlignment("top").setWrap(true);
+  if (!sheet.getFilter()) sheet.getRange(1, 1, Math.max(sheet.getLastRow(), 2), columns).createFilter();
+  if (sheet.getBandings().length === 0)
+    sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), columns)
+      .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false);
+}
 function setup() {
-  Object.keys(APPLICATIONS.tabs).forEach(sheet_);
+  Object.keys(APPLICATIONS.tabs).forEach((committee) => format_(sheet_(committee)));
   return { ready: true, spreadsheet: book_().getUrl() };
+}
+/** One-off: fixes rows saved before this version (lost "+" on WhatsApp, English committee ids). */
+function repairRows() {
+  Object.keys(APPLICATIONS.tabs).forEach((committee) => {
+    const sheet = sheet_(committee);
+    const count = sheet.getLastRow() - 1;
+    if (count < 1) return;
+    const committeeCells = sheet.getRange(2, 3, count, 1);
+    committeeCells.setNumberFormat("@").setValues(committeeCells.getDisplayValues()
+      .map((row) => [APPLICATIONS.tabs[row[0]] || row[0]]));
+    const phoneCells = sheet.getRange(2, 6, count, 1);
+    phoneCells.setNumberFormat("@").setValues(phoneCells.getDisplayValues()
+      .map((row) => [/^\d{8,16}$/.test(row[0]) ? "+" + row[0] : row[0]]));
+  });
 }
 function rowCount_(sheet) {
   if (sheet.getLastRow() < 2) return 0;
@@ -98,12 +144,12 @@ function validate_(data) {
       !Array.isArray(data.roles) || data.roles.length < 1 || data.roles.length > 12)
     fail_("INVALID_INPUT");
   data.roles.forEach((role) => { if (typeof role !== "string" || role.length < 1 || role.length > 120) fail_("INVALID_INPUT"); });
-  return [committee, text_(data, "fullName", 2, 200), studentId, whatsapp, email, major, year,
+  return [APPLICATIONS.tabs[committee], text_(data, "fullName", 2, 200), studentId, whatsapp, email, major, year,
     optional_(data, "why", 1000), optional_(data, "contribution", 1000), optional_(data, "skills", 1000),
     data.roles.join("، "), optional_(data, "experience", 1000), optional_(data, "portfolio", 300),
     optional_(data, "leadership", 1000),
     data.hasExperience === "yes" ? "نعم" : data.hasExperience === "no" ? "لا" : "",
-    optional_(data, "commitment", 50), optional_(data, "hours", 50), optional_(data, "lateTask", 1000),
+    label_("commitment", optional_(data, "commitment", 50)), label_("hours", optional_(data, "hours", 50)), optional_(data, "lateTask", 1000),
     optional_(data, "outsidePreference", 1000), optional_(data, "eventIdea", 1000), optional_(data, "workshopPrep", 1000),
     optional_(data, "initiative", 1000), optional_(data, "teamIssue", 1000), optional_(data, "eventChange", 1000)];
 }
@@ -114,7 +160,8 @@ function exists_(sheet, requestId, studentId) {
 }
 function append_(sheet, values) {
   const cells = values.map((value) => SpreadsheetApp.newRichTextValue().setText(String(value)).build());
-  sheet.getRange(sheet.getLastRow() + 1, 1, 1, cells.length).setRichTextValues([cells]).setWrap(true);
+  const range = sheet.getRange(sheet.getLastRow() + 1, 1, 1, cells.length);
+  range.setNumberFormat("@").setRichTextValues([cells]).setWrap(true).setVerticalAlignment("top");
 }
 function doPost(event) {
   try {
@@ -124,7 +171,7 @@ function doPost(event) {
     const row = validate_(body.data);
     const sheet = sheet_(body.data.committee);
     if (exists_(sheet, body.requestId, row[2])) return response_({ ok: true, duplicate: true });
-    append_(sheet, [body.requestId, new Date().toISOString()].concat(row));
+    append_(sheet, [body.requestId, Utilities.formatDate(new Date(), "Asia/Gaza", "yyyy-MM-dd HH:mm")].concat(row));
     return response_({ ok: true });
   } catch (error) { return errorResponse_(error); }
 }

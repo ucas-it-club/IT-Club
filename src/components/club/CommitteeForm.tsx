@@ -5,6 +5,7 @@ import {
   Check,
   Clapperboard,
   Handshake,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { BrandButton } from "./BrandButton";
@@ -24,7 +25,7 @@ import { ZodError } from "zod";
 type Values = Record<string, string | string[]>;
 type Panel = { id: string; title: Pair; questions: readonly Question[]; scope: string };
 
-const icons: Record<string, LucideIcon> = { media: Clapperboard, relations: Handshake };
+const icons: Record<string, LucideIcon> = { activities: Zap, media: Clapperboard, relations: Handshake };
 const chooseTitle: Pair = ["أي لجنة تريد الانضمام إليها؟", "Which committee do you want to join?"];
 
 /**
@@ -74,7 +75,10 @@ export function CommitteeForm() {
   function go(to: number) {
     setError("");
     setStep(to);
-    requestAnimationFrame(() => heading.current?.focus());
+    requestAnimationFrame(() => {
+      heading.current?.focus();
+      form.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
   }
 
   /** Native validation for this step's fields only; every panel stays mounted so Back keeps answers. */
@@ -205,10 +209,10 @@ export function CommitteeForm() {
                 type="button"
                 aria-pressed={on.includes(opt)}
                 onClick={() =>
-                  setPicked((p) => ({
-                    ...p,
-                    [k]: on.includes(opt) ? on.filter((x) => x !== opt) : [...on, opt],
-                  }))
+                  setPicked((p) => {
+                    const now = p[k] ?? [];
+                    return { ...p, [k]: now.includes(opt) ? now.filter((x) => x !== opt) : [...now, opt] };
+                  })
                 }
                 className={cn(
                   "rounded-full border px-4 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -300,7 +304,7 @@ export function CommitteeForm() {
   }
 
   const card =
-    "mx-auto mt-12 max-w-2xl rounded-[2rem] border border-border bg-card shadow-card sm:mt-16";
+    "mx-auto mt-6 max-w-3xl scroll-mt-24 rounded-[2rem] border border-border bg-card shadow-card sm:mt-8";
 
   if (done)
     return (
@@ -343,9 +347,9 @@ export function CommitteeForm() {
       noValidate
       onSubmit={submit}
       aria-busy={busy}
-      className={cn(card, "p-6 pt-10 sm:p-12 sm:pt-14")}
+      className={cn(card, "p-5 pt-8 sm:p-8 sm:pt-10")}
     >
-      <header className="mb-8">
+      <header className="mb-6">
         <p className="text-sm font-bold text-muted-foreground">
           {committee && step > 0
             ? ar
@@ -382,7 +386,7 @@ export function CommitteeForm() {
         <div
           role="radiogroup"
           aria-label={t(chooseTitle)}
-          className="grid gap-4 sm:col-span-2 sm:grid-cols-2"
+          className="flex flex-wrap justify-center gap-4 sm:col-span-2"
         >
           {committees.map((c) => {
             const Icon = icons[c.id] ?? Handshake;
@@ -398,10 +402,10 @@ export function CommitteeForm() {
                   setError("");
                 }}
                 className={cn(
-                  "relative flex flex-col items-center gap-3 rounded-2xl border-2 p-5 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "relative flex min-w-[11.5rem] max-w-[14rem] flex-1 basis-[11.5rem] flex-col items-center gap-3 rounded-2xl border-2 p-5 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   on
                     ? "border-primary bg-primary/10"
-                    : "border-border bg-background hover:border-primary/50",
+                    : "border-border bg-background hover-gradient-outline",
                 )}
               >
                 <span className="grid size-11 place-items-center rounded-xl bg-primary/15 text-primary">

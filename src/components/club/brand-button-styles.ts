@@ -4,8 +4,8 @@ export type BrandButtonVariant = "primary" | "accent" | "outline" | "ghost";
 export type BrandButtonSize = "sm" | "md" | "lg";
 
 const variantClasses: Record<BrandButtonVariant, string> = {
-  primary: "bg-brand-gradient text-primary-foreground shadow-card hover:brightness-95",
-  accent: "bg-accent text-accent-foreground shadow-card hover:brightness-95",
+  primary: "bg-brand-gradient text-primary-foreground shadow-card",
+  accent: "bg-accent text-accent-foreground shadow-card",
   outline:
     "border-2 border-primary/30 bg-card text-primary hover:border-primary/60 hover:bg-primary/5",
   ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
