@@ -548,8 +548,8 @@ export function CommitteeForm() {
 
       <aside className="mt-6 rounded-2xl bg-muted/60 p-4 text-sm leading-7 text-muted-foreground sm:col-span-2">
         {t([
-          "طبيعة العمل التطوعي: العمل ضمن لجنة الأنشطة هو عمل تطوعي لا يُقدَّم مقابل أجر مادي، بل يقوم على التعاون والعطاء وتحمل المسؤولية، والمساهمة في تطوير البيئة الجامعية وتقديم أنشطة نافعة للطلاب.",
-          "Volunteer work: Activities Committee work is unpaid. It is based on cooperation, giving, responsibility, and contributing to a better university environment through useful activities for students.",
+          "طبيعة العمل التطوعي: العمل ضمن النادي التكنولوجي هو عمل تطوعي لا يُقدَّم مقابل أجر مادي، بل يقوم على التعاون والعطاء وتحمل المسؤولية، والمساهمة في تطوير البيئة الجامعية وتقديم ما ينفع الطلاب.",
+          "Volunteer work: work in the IT Club is unpaid. It is based on cooperation, giving, responsibility, and contributing to a better university environment through work that benefits students.",
         ])}
       </aside>
 
