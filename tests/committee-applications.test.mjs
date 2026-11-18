@@ -8,10 +8,11 @@ function harness(role = "super_admin") {
   const props = new Map([["SUPABASE_PUBLISHABLE_KEY", "test-publishable-key"]]);
   let locked = false;
 
-  function makeSheet() {
+  function makeSheet(name) {
     const rows = [];
     return {
       rows,
+      getName: () => name,
       getLastRow: () => rows.length,
       getLastColumn: () => Math.max(0, ...rows.map((row) => row.length)),
       getMaxRows: () => 1000,
@@ -26,7 +27,11 @@ function harness(role = "super_admin") {
       getRange(row, col, n, width) {
         // Layout calls (colours, widths, alignment) change nothing the tests read, so unknown methods chain.
         const range = new Proxy({
+          // Like Sheets' parser: a leading ' is dropped and keeps the rest as typed; a bare "+970…" becomes "=+970…".
           setValues(values) {
+            values = values.map((line) =>
+              line.map((cell) => (/^'/.test(cell) ? cell.slice(1) : /^\+\d/.test(cell) ? `=${cell}` : cell)),
+            );
             values.forEach((value, i) => {
               rows[row - 1 + i] ??= [];
               value.forEach((cell, j) => (rows[row - 1 + i][col - 1 + j] = cell));
@@ -47,10 +52,15 @@ function harness(role = "super_admin") {
               Array.from({ length: width }, (_, j) => rows[row - 1 + i]?.[col - 1 + j] ?? ""),
             ),
           // A formula cell like =+970… reports only its digits, as in Sheets.
+          // A String object stands for a plain-text cell whose text merely starts with "=".
           getDisplayValues: () =>
-            range.getValues().map((line) => line.map((cell) => String(cell).replace(/^=\+?(\d+)$/, "$1"))),
+            range.getValues().map((line) =>
+              line.map((cell) => (typeof cell === "string" ? cell.replace(/^=\+?(\d+)$/, "$1") : String(cell))),
+            ),
           getFormulas: () =>
-            range.getValues().map((line) => line.map((cell) => (String(cell).startsWith("=") ? String(cell) : ""))),
+            range.getValues().map((line) =>
+              line.map((cell) => (typeof cell === "string" && cell.startsWith("=") ? cell : "")),
+            ),
         }, { get: (target, key) => target[key] ?? (() => range) });
         return range;
       },
@@ -92,7 +102,7 @@ function harness(role = "super_admin") {
           getUrl: () => `https://docs.google.com/spreadsheets/d/${id}/edit`,
           getSheetByName: (name) => book.get(name),
           insertSheet(name) {
-            const sheet = makeSheet();
+            const sheet = makeSheet(name);
             book.set(name, sheet);
             return sheet;
           },
@@ -342,6 +352,15 @@ test("repairRows also fixes phone cells that Sheets stored as a formula (=+970�
   book.get("الأنشطة").rows.push(["id-3", "t", "activities", "n", "229000003", "=+970591234567"]);
   app.context.repairRows();
   assert.deepEqual(book.get("الأنشطة").rows[1].slice(2, 6), ["الأنشطة", "n", "229000003", "+970591234567"]);
+});
+
+test("new rows keep the WhatsApp number as +970… in the sheet itself", () => {
+  const app = harness();
+  app.context.setup();
+  app.configure(true, 10);
+  app.post({ action: "apply", requestId: requestId(9), data: makeApplication("media", 9) });
+  const book = app.books.values().next().value;
+  assert.match(book.get("الإعلام").rows[1][5], /^\+970\d+$/);
 });
 
 test("repairRows turns old UTC timestamps into the sheet's Gaza-time format", () => {

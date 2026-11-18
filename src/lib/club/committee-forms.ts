@@ -65,7 +65,7 @@ export const committees: readonly Committee[] = [
       ] },
       { title: ["المهارات والاهتمامات", "Skills and interests"], questions: [
         { kind: "radio", name: "hasExperience", label: ["هل سبق لك المشاركة في تنظيم أنشطة أو فعاليات أو أعمال تطوعية؟", "Have you helped organise activities, events or volunteer work before?"], options: [["yes", "نعم", "Yes"], ["no", "لا", "No"]] },
-        { kind: "area", name: "experience", optional: true, showWhen: ["hasExperience", "yes"], label: ["إذا كانت إجابتك نعم، اذكر طبيعة مشاركتك وما المهام التي توليتها.", "If yes, describe your participation and responsibilities."], rows: 3 },
+        { kind: "area", name: "experience", showWhen: ["hasExperience", "yes"], label: ["إذا كانت إجابتك نعم، اذكر طبيعة مشاركتك وما المهام التي توليتها.", "If yes, describe your participation and responsibilities."], rows: 3 },
         { kind: "chips", name: "roles", label: ["ما المجالات التي تميل إلى العمل فيها داخل لجنة الأنشطة؟", "Which areas would you prefer to work in?"], options: [
           ["ideas", "التخطيط واقتراح الأفكار.", "Planning and proposing ideas"], ["events", "تنظيم الورش والفعاليات.", "Organising workshops and events"], ["coordination", "التنسيق والتواصل مع المدربين والضيوف.", "Coordinating with trainers and guests"], ["hosting", "الاستقبال والضيافة.", "Reception and hospitality"], ["logistics", "تجهيز القاعات والاحتياجات اللوجستية.", "Venue and logistics preparation"], ["registration", "إدارة الحضور والتسجيل.", "Attendance and registration"], ["documentation", "التوثيق والمتابعة.", "Documentation and follow-up"], ["flexible", "لا أمتلك تفضيلًا محددًا، ومستعد للتعلم والعمل في مجالات مختلفة.", "No fixed preference; willing to learn and help in different areas"]
         ] },
@@ -152,9 +152,9 @@ export const committees: readonly Committee[] = [
           {
             kind: "text",
             name: "portfolio",
-            hint: "https://",
+            hint: "https://github.com/… أو https://linkedin.com/in/…",
             optional: true,
-            label: ["رابط أعمالك", "Portfolio link"],
+            label: ["رابط أعمالك (GitHub أو LinkedIn أو أي رابط لأعمالك)", "Portfolio link (GitHub, LinkedIn or any work link)"],
             props: { type: "url", dir: "ltr" },
           },
         ],

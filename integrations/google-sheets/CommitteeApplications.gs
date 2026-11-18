@@ -119,7 +119,7 @@ function repairRows() {
       });
       dateCells.setNumberFormat("@").setValues(dates);
       committeeCells.setNumberFormat("@").setValues(committeeNames);
-      phoneCells.setNumberFormat("@").setValues(phones);
+      phoneCells.setNumberFormat("General").setValues(phones.map((row) => ["'" + row[0]]));
     });
     return { repaired: true };
   });
@@ -215,10 +215,11 @@ function studentExists_(sheet, studentId) {
     .getDisplayValues().some((row) => row[0] === studentId);
 }
 function append_(sheet, values) {
-  // Plain-text format first, then plain values: a rich-text write still turned "+970…" into the
-  // formula =+970…. In a plain-text cell an applicant's "=…" stays literal text too.
-  sheet.getRange(sheet.getLastRow() + 1, 1, 1, values.length).setNumberFormat("@")
-    .setValues([values.map(String)])
+  const range = sheet.getRange(sheet.getLastRow() + 1, 1, 1, values.length).setNumberFormat("@");
+  // A plain-text cell still saved "+970…" as "=+970…"; a leading ' in a normal cell keeps it as typed.
+  range.getCell(1, 6).setNumberFormat("General");
+  values[5] = "'" + values[5];
+  range.setValues([values.map(String)])
     .setHorizontalAlignment("center").setVerticalAlignment("middle").setTextDirection(null).setWrap(true);
 }
 function requireAdmin_(token) {

@@ -380,7 +380,21 @@ export function CommitteeForm() {
             className="resize-y leading-7"
           />
         ) : (
-          <Input name={inputName} required={!q.optional} placeholder={q.hint} {...q.props} />
+          <Input
+            name={inputName}
+            required={!q.optional}
+            placeholder={q.hint}
+            {...q.props}
+            // People paste "github.com/name"; add the scheme so the link is accepted.
+            onBlur={
+              q.props?.["type"] === "url"
+                ? (e) => {
+                    const v = e.currentTarget.value.trim();
+                    if (v && !/^[a-z][a-z0-9+.-]*:/i.test(v)) e.currentTarget.value = `https://${v}`;
+                  }
+                : undefined
+            }
+          />
         )}
       </label>
     );
