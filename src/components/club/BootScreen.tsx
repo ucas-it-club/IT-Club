@@ -24,6 +24,7 @@ declare global {
  */
 const script = `(function(){
 var d=document.documentElement;
+if(location.pathname==='/ask'||location.pathname==='/ask/'){d.classList.add('boot-seen');return}
 try{if(sessionStorage.getItem('ucas-boot')){d.classList.add('boot-seen');return}}catch(e){}
 var p=location.pathname;if(p==='/'||p==='/en'||p==='/en/'){d.classList.add('hero-opening');window.__bootWaitHero=true}
 var ring=document.getElementById('boot-ring'),t0=performance.now(),shown=0,finishing=false;

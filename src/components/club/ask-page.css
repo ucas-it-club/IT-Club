@@ -1,0 +1,401 @@
+/* /ask: one dark screen, same tokens as the club site's dark theme. Always dark, whatever the saved theme. */
+.ask {
+  --bg: #0d1726;
+  --surface: #152337;
+  --line: #30445d;
+  --fg: #e8eff8;
+  --muted: #adbdd1;
+  --ink: #0d1726;
+  --a: #b8c7da; /* neutral until a question lands, then the category colour */
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: max(0.75rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  color: var(--fg);
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* The site's own animated background (SiteBackground) sits on this dark base. It reads the
+   theme tokens, so they are pinned to the dark values here. */
+.ask {
+  --foreground: #e8eff8;
+  --primary: #78b7f3;
+  --accent: #86cd62;
+}
+.ask::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -11;
+  background: var(--bg);
+}
+/* Glows pick up the colour of the question on screen. */
+.ask .club-bg-glow-a,
+.ask .club-bg-glow-c {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--a) 18%, transparent),
+    transparent
+  );
+}
+.ask[data-cat="edu"],
+.ask-card[data-cat="edu"] {
+  --a: #78b7f3;
+}
+.ask[data-cat="faith"],
+.ask-card[data-cat="faith"] {
+  --a: #86cd62;
+}
+.ask[data-cat="tech"],
+.ask-card[data-cat="tech"] {
+  --a: #35c9c1;
+}
+.ask[data-cat="life"],
+.ask-card[data-cat="life"] {
+  --a: #cdd8e6; /* brand gray, lightened for the dark page: عام stays neutral, no off-brand hue */
+}
+
+.ask-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+}
+.ask-head img {
+  height: 2.5rem;
+  width: auto;
+}
+/* Needs the .club-site prefix to outrank the site h1 rule (margin, padding, tall line-height) that lifts the title above the logo. */
+.club-site .ask .ask-head h1 {
+  margin: 0;
+  padding: 0;
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+/* The row of cards. Each card places itself (transform, opacity) from AskPage while it moves. */
+.ask-stage {
+  position: relative;
+  margin-inline: -1rem; /* full bleed: cards slide off the screen edge, not off the padded column */
+  flex: 1;
+  min-height: 16rem;
+  overflow: clip;
+  touch-action: pan-y; /* sideways drags are ours; vertical still scrolls */
+  cursor: grab;
+  outline: none;
+}
+.ask-stage:active {
+  cursor: grabbing;
+}
+.ask-card {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: 1rem; /* full column width at rest */
+  display: grid;
+  place-items: center;
+  padding: 1.5rem 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(80% 50% at 50% 0%, rgb(205 216 230 / 0.09), transparent),
+    color-mix(in oklab, var(--surface) 80%, transparent);
+  box-shadow: 0 24px 48px -24px rgb(0 0 0 / 0.7);
+  text-align: center;
+  will-change: transform, opacity;
+  -webkit-user-drag: none;
+}
+/* The category light over the card: off while the reel spins, then fades in stronger in its colour. */
+.ask-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    85% 55% at 50% 0%,
+    color-mix(in oklab, var(--a) 40%, transparent),
+    transparent
+  );
+  opacity: 1;
+  transition: opacity 900ms ease-out 150ms;
+  pointer-events: none;
+}
+.ask-card:not([data-cat])::before,
+.ask[data-phase="spin"] .ask-card::before {
+  opacity: 0;
+  transition-duration: 150ms;
+  transition-delay: 0s;
+}
+.ask-back {
+  position: relative;
+  color: color-mix(in oklab, var(--fg) 22%, transparent);
+  font-size: 8rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.ask-stage:focus-visible .ask-card:not([aria-hidden="true"]) {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.ask-q,
+.ask-intro {
+  position: relative; /* above the card light */
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+.ask-q p {
+  margin: 0;
+  font-size: clamp(1.5rem, 6.4vw, 2.1rem);
+  font-weight: 800;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+.ask-q > * {
+  animation: ask-rise 480ms cubic-bezier(0.16, 1, 0.3, 1) 80ms backwards;
+}
+@keyframes ask-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.ask-tag {
+  padding: 0.15rem 0.9rem;
+  border-radius: 999px;
+  background: var(--a);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+.ask-intro img {
+  width: 10rem;
+  height: auto;
+}
+.ask-intro p {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+.ask-go {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 4.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  background: #1b2b40;
+  color: var(--fg);
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 120ms,
+    color 300ms 200ms,
+    border-color 300ms;
+}
+/* Neutral until a question lands, then the category colour grows from the centre as a circle
+   (wide enough to cover the whole button, which the overflow clips to its rounded shape). */
+.ask-go::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  width: 34rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--a);
+  translate: -50% -50%;
+  scale: 0;
+  transition: scale 180ms ease-in;
+}
+.ask[data-cat] .ask-go {
+  border-color: transparent;
+  color: var(--ink);
+}
+.ask[data-cat] .ask-go::before {
+  scale: 1;
+}
+.ask[data-phase="land"][data-cat] .ask-go::before {
+  animation: ask-fill 750ms cubic-bezier(0.16, 1, 0.3, 1) 200ms backwards;
+}
+@keyframes ask-fill {
+  from {
+    scale: 0;
+  }
+}
+.ask[data-intro] .ask-go {
+  border-color: transparent;
+  background: linear-gradient(100deg, #1864bc, #00a19a 50%, #73bf49);
+  color: #fff;
+}
+.ask-go:disabled {
+  opacity: 0.85;
+}
+.ask-go:active {
+  transform: scale(0.97);
+}
+.ask :focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ask-q > *,
+  .ask-q > p,
+  .ask-q > .ask-tag,
+  .ask[data-phase="land"] .ask-card[aria-hidden="false"],
+  .ask[data-phase="land"][data-cat] .ask-go::before {
+    animation: none;
+  }
+  .ask-go,
+  .ask-go::before,
+  .ask-card::before {
+    transition: none;
+  }
+}
+
+/* ---------- The game: spin, land, burst ---------- */
+.ask-card {
+  filter: blur(var(--blur, 0px));
+}
+/* Order of arrival: the tag pops first so the category is known, then the question follows. */
+.ask-q > .ask-tag {
+  animation: ask-pop 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.ask-q > p {
+  animation: ask-rise 520ms cubic-bezier(0.16, 1, 0.3, 1) 1280ms backwards;
+}
+/* The card lands with a small thump. */
+.ask[data-phase="land"] .ask-card[aria-hidden="false"] {
+  animation: ask-thump 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes ask-thump {
+  from {
+    scale: 0.94;
+  }
+}
+@keyframes ask-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-8deg);
+  }
+}
+
+/* While the reel runs the background speeds up and breathes... */
+.ask[data-phase="spin"] .club-bg-dot {
+  animation-duration: calc(var(--dur) / 8);
+}
+.ask[data-phase="spin"] .club-bg-glow {
+  animation: ask-breathe 480ms ease-in-out infinite alternate;
+}
+.ask[data-phase="spin"] .club-bg-lines {
+  animation: ask-grid 480ms ease-in-out infinite alternate;
+}
+.ask[data-phase="spin"] .ask-go {
+  animation: ask-wobble 360ms ease-in-out infinite alternate;
+}
+/* ...and flashes once in the question's colour when it lands. */
+.ask[data-phase="land"] .club-bg-glow {
+  animation: ask-flash 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ask[data-phase="land"] .club-bg-glow-a,
+.ask[data-phase="land"] .club-bg-glow-c {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--a) 45%, transparent),
+    transparent
+  );
+}
+@keyframes ask-breathe {
+  to {
+    transform: scale(1.35);
+  }
+}
+@keyframes ask-grid {
+  to {
+    filter: brightness(2.6);
+  }
+}
+@keyframes ask-wobble {
+  from {
+    transform: rotate(-0.6deg) scale(0.99);
+  }
+  to {
+    transform: rotate(0.6deg) scale(1.01);
+  }
+}
+@keyframes ask-flash {
+  40% {
+    transform: scale(1.7);
+  }
+}
+
+/* Confetti and a ring thrown from the middle of the stage. */
+.ask-burst {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.ask-burst::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8rem;
+  height: 8rem;
+  margin: -4rem 0 0 -4rem;
+  border: 3px solid var(--a);
+  border-radius: 50%;
+  animation: ask-ring 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.ask-burst i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  background: var(--c);
+  animation: ask-fly 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes ask-ring {
+  from {
+    transform: scale(0.2);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+@keyframes ask-fly {
+  from {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ask-burst {
+    display: none;
+  }
+  .ask-q > .ask-tag {
+    animation: none;
+  }
+}
