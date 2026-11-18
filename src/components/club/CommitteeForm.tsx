@@ -5,6 +5,7 @@ import {
   Check,
   Clapperboard,
   Handshake,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { BrandButton } from "./BrandButton";
@@ -13,7 +14,9 @@ import { DialCodeSelect } from "./DialCodeSelect";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { aboutStep, committees, type Pair, type Question } from "@/lib/club/committee-forms";
+import { applicationSchema, majors, majorEnglishLabels } from "@/lib/club/model";
 import { useRegistration } from "@/lib/club/registration";
 import { submissionError, submitApplication } from "@/lib/club/sheets";
 import { cn } from "@/lib/utils";
@@ -21,8 +24,42 @@ import { ZodError } from "zod";
 
 type Values = Record<string, string | string[]>;
 type Panel = { id: string; title: Pair; questions: readonly Question[]; scope: string };
+const fieldLabels: Record<string, Pair> = {
+  fullName: ["الاسم الكامل", "Full name"],
+  studentId: ["الرقم الجامعي", "Student ID"],
+  study: ["التخصص والسنة الدراسية", "Major and study year"],
+  whatsapp: ["رقم الواتساب", "WhatsApp number"],
+  email: ["البريد الجامعي", "University email"],
+  why: ["سبب الانضمام", "Why you want to join"],
+  contribution: ["المساهمة", "Contribution"],
+  skills: ["المهارات", "Skills"],
+  roles: ["مجال العمل", "Preferred areas"],
+  experience: ["الخبرة", "Experience"],
+  leadership: ["القيادة", "Leadership"],
+  commitment: ["الالتزام", "Commitment"],
+  hours: ["الساعات الأسبوعية", "Weekly hours"],
+  lateTask: ["التأخر عن التسليم", "Late task"],
+  outsidePreference: ["المهمة خارج التفضيل", "Outside preferred area"],
+  eventIdea: ["فكرة الفعالية", "Event idea"],
+  workshopPrep: ["الاستعداد للورشة", "Workshop preparation"],
+  initiative: ["المبادرة", "Initiative"],
+  teamIssue: ["التعامل مع العضو غير الملتزم", "Team issue"],
+  eventChange: ["التغيير المفاجئ", "Unexpected change"],
+};
 
-const icons: Record<string, LucideIcon> = { media: Clapperboard, relations: Handshake };
+/** Which payload fields a question feeds: the study picker sets two. */
+const fieldsOf = (q: Question) => (q.kind === "study" ? ["major", "studyYear"] : [q.name]);
+/** What to tell the applicant when a field fails the same rules the sheet enforces. */
+const hints: Record<string, Pair> = {
+  fullName: ["اكتب الاسم من حرفين إلى 200 حرف.", "Enter your name (2 to 200 characters)."],
+  studentId: ["الرقم الجامعي 9 أرقام بالضبط.", "The student ID is exactly 9 digits."],
+  whatsapp: ["رمز الدولة ثم من 8 إلى 16 رقمًا.", "Country code, then 8 to 16 digits."],
+  email: ["استخدم بريدك الجامعي smail.ucas.edu.ps.", "Use your smail.ucas.edu.ps university email."],
+  portfolio: ["يجب أن يبدأ الرابط بـ https://", "The link must start with https://"],
+};
+const answerHint: Pair = ["اكتب 10 أحرف على الأقل.", "Write at least 10 characters."];
+
+const icons: Record<string, LucideIcon> = { activities: Zap, media: Clapperboard, relations: Handshake };
 const chooseTitle: Pair = ["أي لجنة تريد الانضمام إليها؟", "Which committee do you want to join?"];
 
 /**
@@ -37,6 +74,8 @@ export function CommitteeForm() {
   const [cid, setCid] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<Record<string, string[]>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [study, setStudy] = useState({ major: "", year: "" });
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [dial, setDial] = useState("+970");
   const [error, setError] = useState("");
@@ -70,7 +109,42 @@ export function CommitteeForm() {
   function go(to: number) {
     setError("");
     setStep(to);
-    requestAnimationFrame(() => heading.current?.focus());
+    requestAnimationFrame(() => {
+      heading.current?.focus();
+      form.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }
+
+  /** The payload exactly as the sheet receives it, from whatever has been answered so far. */
+  function collect(el: HTMLFormElement): Values {
+    const values: Values = {
+      committee: committee!.id,
+      portfolio: "",
+      leadership: "",
+      experience: "",
+      major: study.major,
+      studyYear: study.year,
+    };
+    // SAFETY: no file inputs, so every entry is a string.
+    for (const [k, v] of new FormData(el) as unknown as Iterable<[string, string]>) {
+      const [scope, name] = k.includes("__") ? k.split("__") : ["", k];
+      if (!scope || scope === cid) values[name!] = v;
+    }
+    values["whatsapp"] = dial + String(values["whatsapp"] ?? "").replace(/^0+/, "");
+    for (const [k, v] of Object.entries(picked))
+      if (k.startsWith(`${cid}:`)) values[k.slice(cid!.length + 1)] = v;
+    // The sheet is read in Arabic, so send the Arabic role names.
+    const labels = new Map(
+      committee!.steps.flatMap((x) =>
+        x.questions.flatMap((q) =>
+          q.kind === "chips" ? q.options.map((o) => [o[0], o[1]] as const) : [],
+        ),
+      ),
+    );
+    values["roles"] = ((values["roles"] as string[] | undefined) ?? []).map(
+      (r) => labels.get(r) ?? r,
+    );
+    return values;
   }
 
   /** Native validation for this step's fields only; every panel stays mounted so Back keeps answers. */
@@ -85,17 +159,62 @@ export function CommitteeForm() {
     );
     for (const el of inputs ?? []) if (!el.reportValidity()) return false;
     for (const q of current.questions) {
+      if (q.showWhen && answers[`${current.scope}:${q.showWhen[0]}`] !== q.showWhen[1]) continue;
       if (q.optional) continue;
       if (q.kind === "chips" && !picked[key(q, current.scope)]?.length) {
         setError(t(["اختر خياراً واحداً على الأقل.", "Pick at least one option."]));
         return false;
       }
       if (q.kind === "check" && !checked[key(q, current.scope)]) {
-        setError(t(["يجب الموافقة على الالتزام.", "Please accept the commitment."]));
+        setError(t(["أكملي الحقول المطلوبة.", "Complete the required fields."]));
+        return false;
+      }
+      if (q.kind === "radio" && !answers[key(q, current.scope)]) {
+        setError(t(["اختر إجابة للمتابعة.", "Choose an answer to continue."]));
+        return false;
+      }
+      if (q.kind === "study" && (!study.major || !study.year)) {
+        setError(t(["اختر التخصص والسنة الدراسية للمتابعة.", "Select your major and study year to continue."]));
         return false;
       }
     }
-    return true;
+    return schemaValid();
+  }
+
+  /**
+   * Hold the applicant on this step until its answers pass the sheet's own rules (the same
+   * schema `submitApplication` parses), so a wrong answer is caught where it is typed.
+   */
+  function schemaValid() {
+    const values = collect(form.current!);
+    // Later steps are still empty; a missing required field would stop the schema before it checks answers.
+    const roles = values["roles"] as string[];
+    const result = applicationSchema.safeParse({ ...values, roles: roles.length ? roles : ["-"] });
+    if (result.success) return true;
+    const wanted = new Set(
+      current.questions
+        .filter((q) => !q.showWhen || answers[`${current.scope}:${q.showWhen[0]}`] === q.showWhen[1])
+        .flatMap(fieldsOf),
+    );
+    const bad = [...new Set(result.error.issues.map((issue) => String(issue.path[0] ?? "")))].filter(
+      (name) => wanted.has(name),
+    );
+    if (!bad.length) return true;
+    const field = (name: string) =>
+      form.current!.querySelector<HTMLInputElement>(
+        `[data-step="${current.id}"] [name="${current.scope ? `${current.scope}__` : ""}${name}"]`,
+      );
+    const input = bad.map(field).find(Boolean);
+    if (input) {
+      // The browser's own bubble points at the field and names the rule.
+      input.setCustomValidity(t(hints[bad[0]!] ?? answerHint));
+      input.reportValidity();
+      input.addEventListener("input", () => input.setCustomValidity(""), { once: true });
+    } else {
+      const names = bad.map((name) => fieldLabels[name]?.[ar ? 0 : 1] ?? name);
+      setError(ar ? `تحقق من: ${names.join("، ")}.` : `Check: ${names.join(", ")}.`);
+    }
+    return false;
   }
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -104,38 +223,21 @@ export function CommitteeForm() {
     if (!last) return go(step + 1);
     setBusy(true);
     try {
-      const values: Values = {
-        committee: committee!.id,
-        commit: "yes",
-        portfolio: "",
-        leadership: "",
-      };
-      // SAFETY: no file inputs, so every entry is a string.
-      for (const [k, v] of new FormData(e.currentTarget) as unknown as Iterable<[string, string]>) {
-        const [scope, name] = k.includes("__") ? k.split("__") : ["", k];
-        if (!scope || scope === cid) values[name!] = v;
-      }
-      values["whatsapp"] = dial + String(values["whatsapp"] ?? "").replace(/^0+/, "");
-      for (const [k, v] of Object.entries(picked))
-        if (k.startsWith(`${cid}:`)) values[k.slice(cid!.length + 1)] = v;
-      // The sheet is read in Arabic, so send the Arabic role names.
-      const labels = new Map(
-        committee!.steps.flatMap((x) =>
-          x.questions.flatMap((q) =>
-            q.kind === "chips" ? q.options.map((o) => [o[0], o[1]] as const) : [],
-          ),
-        ),
-      );
-      values["roles"] = ((values["roles"] as string[] | undefined) ?? []).map(
-        (r) => labels.get(r) ?? r,
-      );
+      const values = collect(e.currentTarget);
       requestId.current ??= crypto.randomUUID();
       await submitApplication(values, requestId.current);
       setDone(true);
     } catch (err) {
       setError(
         err instanceof ZodError
-          ? t(["تحقق من الحقول وحاول مجدداً.", "Check your fields and try again."])
+          ? (() => {
+              const names = [...new Set(err.issues.map((issue) => String(issue.path[0] ?? "")))]
+                .map((name) => fieldLabels[name]?.[ar ? 0 : 1] ?? name)
+                .filter(Boolean);
+              return ar
+                ? `تحققي من: ${names.join("، ") || "الحقول المطلوبة"}.`
+                : `Check: ${names.join(", ") || "the required fields"}.`;
+            })()
           : submissionError(err, ar),
       );
       if (err instanceof Error && err.message === "JOIN_CLOSED") registration.markClosed();
@@ -151,6 +253,33 @@ export function CommitteeForm() {
   function render(q: Question, scope: string) {
     const k = key(q, scope);
     const inputName = scope ? `${scope}__${q.name}` : q.name;
+    if (q.showWhen && answers[`${scope}:${q.showWhen[0]}`] !== q.showWhen[1]) return null;
+    if (q.kind === "study")
+      return (
+        <fieldset key={k} className="sm:col-span-2">
+          <legend className="mb-2 text-sm font-bold">{t(q.label)}</legend>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="text-sm font-medium">
+              <span className="mb-1.5 block">{t(["التخصص", "Major"])}</span>
+              <Select name="major" value={study.major} onValueChange={(major) => setStudy((prev) => ({ ...prev, major }))} required>
+                <SelectTrigger aria-label={t(["التخصص", "Major"])}><SelectValue placeholder={t(["اختر التخصص", "Select major"])} /></SelectTrigger>
+                <SelectContent>
+                  {majors.map((major) => <SelectItem key={major} value={major}>{ar ? major : majorEnglishLabels[major]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="text-sm font-medium">
+              <span className="mb-1.5 block">{t(["السنة الدراسية", "Study year"])}</span>
+              <Select name="studyYear" value={study.year} onValueChange={(year) => setStudy((prev) => ({ ...prev, year }))} required>
+                <SelectTrigger aria-label={t(["السنة الدراسية", "Study year"])}><SelectValue placeholder={t(["اختر السنة", "Select year"])} /></SelectTrigger>
+                <SelectContent>
+                  {[["1", "السنة الأولى", "First year"], ["2", "السنة الثانية", "Second year"], ["3", "السنة الثالثة", "Third year"], ["4", "السنة الرابعة", "Fourth year"]].map(([value, arLabel, enLabel]) => <SelectItem key={value} value={value!}>{t([arLabel!, enLabel!])}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </label>
+          </div>
+        </fieldset>
+      );
     if (q.kind === "chips") {
       const on = picked[k] ?? [];
       return (
@@ -163,10 +292,10 @@ export function CommitteeForm() {
                 type="button"
                 aria-pressed={on.includes(opt)}
                 onClick={() =>
-                  setPicked((p) => ({
-                    ...p,
-                    [k]: on.includes(opt) ? on.filter((x) => x !== opt) : [...on, opt],
-                  }))
+                  setPicked((p) => {
+                    const now = p[k] ?? [];
+                    return { ...p, [k]: now.includes(opt) ? now.filter((x) => x !== opt) : [...now, opt] };
+                  })
                 }
                 className={cn(
                   "rounded-full border px-4 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -195,6 +324,21 @@ export function CommitteeForm() {
           />
           {t(q.label)}
         </label>
+      );
+    if (q.kind === "radio")
+      return (
+        <fieldset key={k} className="sm:col-span-2">
+          <legend className="mb-3 text-sm font-bold">{t(q.label)}</legend>
+          <input type="hidden" name={inputName} value={answers[k] ?? ""} required />
+          <div role="radiogroup" aria-label={t(q.label)} className="flex flex-wrap gap-2">
+            {q.options.map(([value, arLabel, enLabel]) => (
+              <button key={value} type="button" role="radio" aria-checked={answers[k] === value}
+                onClick={() => setAnswers((prev) => ({ ...prev, [k]: value }))}
+                className={cn("rounded-full border px-4 py-2 text-sm font-bold", answers[k] === value ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50")}
+              >{t([arLabel, enLabel])}</button>
+            ))}
+          </div>
+        </fieldset>
       );
     if (q.kind === "phone")
       return (
@@ -236,14 +380,28 @@ export function CommitteeForm() {
             className="resize-y leading-7"
           />
         ) : (
-          <Input name={inputName} required={!q.optional} placeholder={q.hint} {...q.props} />
+          <Input
+            name={inputName}
+            required={!q.optional}
+            placeholder={q.hint}
+            {...q.props}
+            // People paste "github.com/name"; add the scheme so the link is accepted.
+            onBlur={
+              q.props?.["type"] === "url"
+                ? (e) => {
+                    const v = e.currentTarget.value.trim();
+                    if (v && !/^[a-z][a-z0-9+.-]*:/i.test(v)) e.currentTarget.value = `https://${v}`;
+                  }
+                : undefined
+            }
+          />
         )}
       </label>
     );
   }
 
   const card =
-    "mx-auto mt-12 max-w-2xl rounded-[2rem] border border-border bg-card shadow-card sm:mt-16";
+    "mx-auto mt-6 max-w-3xl scroll-mt-24 rounded-[2rem] border border-border bg-card shadow-card sm:mt-8";
 
   if (done)
     return (
@@ -286,9 +444,9 @@ export function CommitteeForm() {
       noValidate
       onSubmit={submit}
       aria-busy={busy}
-      className={cn(card, "p-6 pt-10 sm:p-12 sm:pt-14")}
+      className={cn(card, "p-5 pt-8 sm:p-8 sm:pt-10")}
     >
-      <header className="mb-8">
+      <header className="mb-6">
         <p className="text-sm font-bold text-muted-foreground">
           {committee && step > 0
             ? ar
@@ -299,7 +457,7 @@ export function CommitteeForm() {
         <h2 ref={heading} tabIndex={-1} className="mt-2 text-3xl font-extrabold outline-none">
           {t(current.title)}
         </h2>
-        <div
+        {step > 0 && <div
           role="progressbar"
           aria-valuemin={1}
           aria-valuemax={flow.length}
@@ -316,8 +474,8 @@ export function CommitteeForm() {
               )}
             />
           ))}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">{t(progress)}</p>
+        </div>}
+        {step > 0 && <p className="mt-2 text-xs text-muted-foreground">{t(progress)}</p>}
         {step > 1 && <p className="mt-1 text-xs text-muted-foreground">اكتب إجاباتك بالعربية.</p>}
       </header>
 
@@ -325,7 +483,7 @@ export function CommitteeForm() {
         <div
           role="radiogroup"
           aria-label={t(chooseTitle)}
-          className="grid gap-4 sm:col-span-2 sm:grid-cols-2"
+          className="flex flex-wrap justify-center gap-4 sm:col-span-2"
         >
           {committees.map((c) => {
             const Icon = icons[c.id] ?? Handshake;
@@ -341,10 +499,10 @@ export function CommitteeForm() {
                   setError("");
                 }}
                 className={cn(
-                  "relative flex flex-col items-start gap-3 rounded-2xl border-2 p-5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "relative flex min-w-[11.5rem] max-w-[14rem] flex-1 basis-[11.5rem] flex-col items-center gap-3 rounded-2xl border-2 p-5 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   on
                     ? "border-primary bg-primary/10"
-                    : "border-border bg-background hover:border-primary/50",
+                    : "border-border bg-background hover-gradient-outline",
                 )}
               >
                 <span className="grid size-11 place-items-center rounded-xl bg-primary/15 text-primary">
@@ -365,7 +523,7 @@ export function CommitteeForm() {
             );
           })}
         </div>
-        <p className="text-sm text-muted-foreground sm:col-span-2">
+        <p className="text-center text-sm text-muted-foreground sm:col-span-2">
           {t([
             "تستطيع الرجوع وتغيير اللجنة في أي وقت.",
             "You can come back and switch committee any time.",
@@ -387,6 +545,13 @@ export function CommitteeForm() {
           {error}
         </p>
       )}
+
+      <aside className="mt-6 rounded-2xl bg-muted/60 p-4 text-sm leading-7 text-muted-foreground sm:col-span-2">
+        {t([
+          "طبيعة العمل التطوعي: العمل ضمن لجنة الأنشطة هو عمل تطوعي لا يُقدَّم مقابل أجر مادي، بل يقوم على التعاون والعطاء وتحمل المسؤولية، والمساهمة في تطوير البيئة الجامعية وتقديم أنشطة نافعة للطلاب.",
+          "Volunteer work: Activities Committee work is unpaid. It is based on cooperation, giving, responsibility, and contributing to a better university environment through useful activities for students.",
+        ])}
+      </aside>
 
       <div className="mt-8 flex items-center justify-between gap-3">
         {step > 0 ? (

@@ -632,15 +632,11 @@ html.js .club-reveal.is-shown {
    Buttons: the brand gradient fades in under the label and a light band sweeps across.
    Text links: the words take the gradient and the band sweeps through them. */
 .club-site {
-  --sheen-fill: linear-gradient(
-    100deg,
-    var(--brand-blue) 0%,
-    oklch(0.53 0.13 195) 50%,
-    oklch(0.53 0.15 138) 100%
-  );
-  --sheen-text: var(--sheen-fill);
+  --sheen-fill: var(--brand-gradient);
+  /* Gradient text sits on the page, so it takes the darker text-safe ramp. */
+  --sheen-text: var(--brand-ramp-text);
   /* Mid-ramp hue for icons and rules beside gradient text. */
-  --sheen-accent: oklch(0.53 0.13 195);
+  --sheen-accent: var(--brand-teal);
   --sheen-band: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.35) 50%, transparent 65%);
   --sheen-band-text: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.9) 50%, transparent 62%);
 }

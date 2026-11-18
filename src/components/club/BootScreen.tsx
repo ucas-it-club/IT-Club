@@ -13,13 +13,18 @@ declare global {
 }
 
 /**
- * The loading screen: the club logo, assembled from its own pieces, over a percentage.
+ * The loading screen: the club logo, assembled from its own pieces, with a ring
+ * that draws as the page really loads.
  *
  * It is plain markup plus one inline script, so it paints from the first byte
- * of the document and runs before React hydrates. The script eases the counter
- * toward 90%, waits for `window.__bootDone()` (ClubSite calls it once content
- * is ready), then runs to 100 and plays its assembly backwards. Once per session: a visitor who
- * already saw it never sees it again, and without JavaScript it never covers
+ * of the document and runs before React hydrates. Progress is the weighted sum
+ * of four real signals, and it never moves without one: the document is parsed,
+ * the images the page loads eagerly have arrived, the window load event has
+ * fired and the fonts are ready, and the app says its content is ready
+ * (`window.__bootDone()`: ClubSite after the data arrives, or the home hero once
+ * its opening is in place). There is no minimum time: a cached visit leaves as
+ * soon as it is ready. After 8 seconds it leaves regardless, so a stalled request
+ * can never trap the visitor. Once per session; without JavaScript it never covers
  * the page. Everything it hides is real content already in the document.
  */
 const script = `(function(){
@@ -27,17 +32,26 @@ var d=document.documentElement;
 if(location.pathname==='/ask'||location.pathname==='/ask/'){d.classList.add('boot-seen');return}
 try{if(sessionStorage.getItem('ucas-boot')){d.classList.add('boot-seen');return}}catch(e){}
 var p=location.pathname;if(p==='/'||p==='/en'||p==='/en/'){d.classList.add('hero-opening');window.__bootWaitHero=true}
-var ring=document.getElementById('boot-ring'),t0=performance.now(),shown=0,finishing=false;
-function leave(){d.classList.add('booted');try{sessionStorage.setItem('ucas-boot','1')}catch(e){}}
+var ring=document.getElementById('boot-ring'),shown=0,app=false,loaded=false,fonts=false,forced=false,left=false;
+function leave(){if(left)return;left=true;d.classList.add('booted');try{sessionStorage.setItem('ucas-boot','1')}catch(e){}}
+function images(){
+var list=document.images,total=0,ready=0;
+for(var i=0;i<list.length;i++){var img=list[i];if(img.loading==='lazy')continue;total++;if(img.complete)ready++}
+return total?ready/total:1}
+function real(){
+if(forced)return 100;
+var parsed=document.readyState!=='loading';
+return (parsed?15:0)+(parsed?30*images():0)+(loaded&&fonts?20:0)+(app?35:0)}
+function load(){loaded=true;if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){fonts=true});else fonts=true}
+if(document.readyState==='complete')load();else window.addEventListener('load',load);
 function tick(){
-var t=performance.now()-t0;
-var target=finishing?100:90*(1-Math.exp(-t/1400));
-shown+=(target-shown)*(finishing?0.22:0.1);
+var target=real();
+shown+=(target-shown)*0.15;
 if(ring)ring.style.strokeDashoffset=100-shown;
-if(finishing&&shown>99.4){if(ring)ring.style.strokeDashoffset=0;setTimeout(leave,220);return}
+if(target>=100&&shown>99.4){if(ring)ring.style.strokeDashoffset=0;setTimeout(leave,220);return}
 requestAnimationFrame(tick)}
-window.__bootDone=function(){setTimeout(function(){finishing=true},Math.max(0,700-(performance.now()-t0)))};
-setTimeout(function(){window.__bootDone()},8000);
+window.__bootDone=function(){app=true};
+setTimeout(function(){forced=true},8000);
 requestAnimationFrame(tick);
 })();`;
 

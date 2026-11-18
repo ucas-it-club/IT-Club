@@ -4,6 +4,7 @@ import { test } from "node:test";
 
 const detail = readFileSync("src/components/club/EventDetail.tsx", "utf8");
 const pages = readFileSync("src/components/club/ClubPages.tsx", "utf8");
+const events = readFileSync("src/components/club/EventsPage.tsx", "utf8");
 const content = readFileSync("src/components/club/ClubContent.tsx", "utf8");
 const admin = readFileSync("src/components/club/AdminPanel.tsx", "utf8");
 
@@ -73,7 +74,7 @@ test("registration uses the shared time-aware availability guard and opens on de
 
 test("expired upcoming events are presented and filtered as past events", () => {
   assert.match(content, /kind === "events" \? eventDisplayStatus\(item\)/);
-  assert.match(pages, /eventDisplayStatus\(item, now\) === "past"/);
+  assert.match(events, /eventDisplayStatus\(item, now\) === "past"/);
   assert.match(detail, /const displayStatus = eventDisplayStatus\(event\)/);
   assert.match(detail, /displayStatus === "past"/);
 });

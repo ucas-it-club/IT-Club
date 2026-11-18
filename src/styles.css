@@ -98,6 +98,17 @@
   --brand-blue: oklch(0.509 0.156 255.7);
   --brand-green: oklch(0.73 0.17 136.1);
   --brand-gray: oklch(0.675 0.004 247.9);
+  /* The one brand ramp. Fills, outlines and hovers read --brand-gradient; nothing else should
+     hardcode these stops. --brand-ramp-text is the darker twin for gradient *text* on a light
+     page, where full-strength green is too faint to read. */
+  --brand-teal: oklch(0.62 0.15 190);
+  --brand-gradient: linear-gradient(100deg, var(--brand-blue) 0%, var(--brand-teal) 50%, var(--brand-green) 100%);
+  --brand-ramp-text: linear-gradient(
+    100deg,
+    var(--brand-blue) 0%,
+    oklch(0.53 0.13 195) 50%,
+    oklch(0.53 0.15 138) 100%
+  );
   --navy: oklch(0.283 0.068 254.4);
   /* The navy behind the full-bleed bands. In dark mode the navy would sit on
      a dark page with almost no contrast between them, so the bands lift one
@@ -209,17 +220,11 @@
 /* ---------- Brand utilities ---------- */
 
 @utility bg-brand-gradient {
-  /* The ramp carries white text, so every stop has to clear 4.5:1 against
-     white: the brand blue is 5.9:1, the deep teal 4.7:1, the deep green 5:1.
-     A plain blue->green lerp sags to 0.082 chroma (muddy teal), and 100deg
-     keeps the ramp on the long axis so pills show both brand ends, not the
-     middle. */
-  background-image: linear-gradient(
-    100deg,
-    var(--brand-blue) 0%,
-    oklch(0.53 0.13 195) 50%,
-    oklch(0.53 0.15 138) 100%
-  );
+  /* Full-strength brand ramp (blue, bright teal, brand green). White text on the green end
+     is under 4.5:1; keep labels on it bold and large, or use the soft gradient. A plain
+     blue->green lerp sags to 0.082 chroma (muddy teal), so the mid stop holds its chroma, and
+     100deg keeps the ramp on the long axis so pills show both brand ends, not the middle. */
+  background-image: var(--brand-gradient);
   /* Without this the ramp is sized to the padding box but painted over the
      border box, so a transparent border shows the next repeat tile as a slit. */
   background-origin: border-box;
@@ -232,6 +237,31 @@
     color-mix(in oklab, var(--brand-green) 9%, transparent)
   );
   background-origin: border-box;
+}
+
+/* A 2px brand-gradient outline that appears on hover. It is a masked ring laid over the
+   element's own border, so the fill, radius and layout stay untouched. */
+@utility hover-gradient-outline {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background-image: var(--brand-gradient);
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+  &:hover::before {
+    opacity: 1;
+  }
 }
 
 @utility shadow-card {

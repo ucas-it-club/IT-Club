@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import {
   configureRegistration,
   isOpen,
+  loadApplications,
   loadRegistration,
   sheetLinks,
   submissionError,
   type Registration,
+  type CommitteeApplicationPage,
 } from "@/lib/club/sheets";
 import { saveSettings } from "@/lib/club/supabase";
 
@@ -21,6 +23,27 @@ export function RegistrationAdmin({ canEdit }: { canEdit: boolean }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [unavailable, setUnavailable] = useState(false);
+  const [applications, setApplications] = useState<CommitteeApplicationPage | null>(null);
+  const [applicationsOffset, setApplicationsOffset] = useState(0);
+  const [applicationsBusy, setApplicationsBusy] = useState(false);
+  const [applicationsError, setApplicationsError] = useState("");
+
+  async function refreshApplications(offset = applicationsOffset) {
+    setApplicationsBusy(true);
+    setApplicationsError("");
+    try {
+      setApplications(await loadApplications(offset));
+      setApplicationsOffset(offset);
+    } catch {
+      setApplicationsError(
+        ar
+          ? "تعذر تحميل الطلبات. تحققي من صلاحية المدير والاتصال."
+          : "Could not load applications. Check admin access and connection.",
+      );
+    } finally {
+      setApplicationsBusy(false);
+    }
+  }
   useEffect(() => {
     let active = true;
 
@@ -175,14 +198,167 @@ export function RegistrationAdmin({ canEdit }: { canEdit: boolean }) {
         </>
       )}
       {notice && <p role="status">{notice}</p>}
-      <a
-        className="inline-block font-bold text-primary underline"
-        href={sheetLinks.join}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {ar ? "فتح طلبات الانضمام في Google Sheets" : "Open applications in Google Sheets"}
-      </a>
+      {canEdit && (
+        <section
+          className="space-y-4 border-t border-border pt-5"
+          aria-labelledby="committee-applications-heading"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 id="committee-applications-heading" className="text-xl font-black">
+                {ar ? "طلبات اللجان" : "Committee applications"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {ar
+                  ? "تظهر بيانات المتقدمين هنا للمشرف العام فقط."
+                  : "Applicant details are available to super admins only."}
+              </p>
+            </div>
+            <BrandButton
+              type="button"
+              variant="outline"
+              disabled={applicationsBusy}
+              onClick={() => void refreshApplications()}
+            >
+              {applicationsBusy
+                ? ar
+                  ? "جارٍ التحميل…"
+                  : "Loading…"
+                : applications
+                  ? ar
+                    ? "تحديث الطلبات"
+                    : "Refresh applications"
+                  : ar
+                    ? "عرض الطلبات"
+                    : "Load applications"}
+            </BrandButton>
+          </div>
+          {applicationsError && <p role="alert">{applicationsError}</p>}
+          {applications &&
+            (applications.total ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {ar
+                    ? `إجمالي الطلبات: ${applications.total}`
+                    : `Total applications: ${applications.total}`}
+                </p>
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full min-w-[760px] text-start text-sm">
+                    <thead className="bg-muted/60">
+                      <tr>
+                        {[
+                          ar ? "المتقدم" : "Applicant",
+                          ar ? "اللجنة" : "Committee",
+                          ar ? "الرقم الجامعي" : "Student ID",
+                          ar ? "التواصل" : "Contact",
+                          ar ? "التخصص والسنة" : "Major and year",
+                          ar ? "الإجابات" : "Answers",
+                        ].map((label) => (
+                          <th key={label} className="p-3 font-bold">
+                            {label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {applications.applications.map((application) => (
+                        <tr key={application.id} className="border-t border-border align-top">
+                          <td className="p-3">
+                            <strong>{application.fullName}</strong>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(application.submittedAt).toLocaleString(
+                                ar ? "ar-PS" : "en-GB",
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3">{application.committeeName}</td>
+                          <td className="p-3" dir="ltr">
+                            {application.studentId}
+                          </td>
+                          <td className="p-3">
+                            <a className="underline" href={`mailto:${application.email}`}>
+                              {application.email}
+                            </a>
+                            <div dir="ltr">
+                              <a
+                                className="underline"
+                                href={`https://wa.me/${application.whatsapp.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {application.whatsapp}
+                              </a>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            {application.major}
+                            <div>
+                              {ar
+                                ? `السنة ${application.studyYear}`
+                                : `Year ${application.studyYear}`}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <details>
+                              <summary className="cursor-pointer font-bold">
+                                {ar ? "عرض الإجابات" : "View answers"}
+                              </summary>
+                              <dl className="mt-3 min-w-64 space-y-3">
+                                {Object.entries(application.answers)
+                                  .filter(([, answer]) => answer)
+                                  .map(([question, answer]) => (
+                                    <div key={question}>
+                                      <dt className="font-bold">{question}</dt>
+                                      <dd className="whitespace-pre-wrap">{answer}</dd>
+                                    </div>
+                                  ))}
+                              </dl>
+                            </details>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <BrandButton
+                    type="button"
+                    variant="outline"
+                    disabled={applicationsBusy || applicationsOffset === 0}
+                    onClick={() => void refreshApplications(Math.max(0, applicationsOffset - 50))}
+                  >
+                    {ar ? "السابق" : "Previous"}
+                  </BrandButton>
+                  <span className="text-sm text-muted-foreground">
+                    {ar
+                      ? `عرض ${applicationsOffset + 1}–${Math.min(applicationsOffset + applications.applications.length, applications.total)} من ${applications.total}`
+                      : `Showing ${applicationsOffset + 1}–${Math.min(applicationsOffset + applications.applications.length, applications.total)} of ${applications.total}`}
+                  </span>
+                  <BrandButton
+                    type="button"
+                    variant="outline"
+                    disabled={applicationsBusy || applicationsOffset + 50 >= applications.total}
+                    onClick={() => void refreshApplications(applicationsOffset + 50)}
+                  >
+                    {ar ? "التالي" : "Next"}
+                  </BrandButton>
+                </div>
+              </>
+            ) : (
+              <p role="status">{ar ? "لا توجد طلبات حتى الآن." : "No applications yet."}</p>
+            ))}
+        </section>
+      )}
+      {canEdit && (
+        <a
+          className="inline-block font-bold text-primary underline"
+          href={sheetLinks.applications}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {ar ? "فتح شيتات الطلبات" : "Open application sheets"}
+        </a>
+      )}
     </section>
   );
 }

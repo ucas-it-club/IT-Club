@@ -14,7 +14,7 @@ const MAJORS = [
   "تصميم و برمجة صفحات الويب",
   "تكنولوجيا الوسائط المتعددة",
 ];
-const COMMITTEES = { media: "الإعلام", relations: "العلاقات العامة" };
+const COMMITTEES = { media: "الإعلام", relations: "العلاقات العامة", activities: "الأنشطة" };
 const HEADERS = {
   apply: [
     "معرّف الطلب",
@@ -31,6 +31,20 @@ const HEADERS = {
     "رابط الأعمال",
     "القيادة",
     "التعهد",
+    "التخصص والسنة الدراسية",
+    "مساهمة المتقدم",
+    "سبق المشاركة التطوعية",
+    "الالتزام الأسبوعي",
+    "الساعات الأسبوعية",
+    "التأخر عن موعد التسليم",
+    "مهمة خارج مجال التفضيل",
+    "فكرة الفعالية والفائدة",
+    "الاستعداد للورشة",
+    "المبادرة عند ملاحظة نقص",
+    "التعامل مع عدم التزام عضو",
+    "التعامل مع تغيير مفاجئ",
+    "التخصص المحدد",
+    "السنة الدراسية المحددة",
   ],
   contact: ["معرّف الطلب", "التاريخ", "الاسم", "البريد الإلكتروني", "الرسالة"],
   join: [
@@ -90,8 +104,13 @@ function sheet_(kind) {
     sheet.setFrozenRows(1);
     sheet.setRightToLeft(true);
   } else {
-    const actual = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
-    if (JSON.stringify(actual) !== JSON.stringify(headers)) fail_("SHEET_HEADERS_CHANGED");
+    const lastColumn = Math.max(sheet.getLastColumn(), 1);
+    const actual = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+    if (kind === "apply" && lastColumn < headers.length &&
+        JSON.stringify(actual) === JSON.stringify(headers.slice(0, lastColumn))) {
+      sheet.getRange(1, lastColumn + 1, 1, headers.length - lastColumn)
+        .setValues([headers.slice(lastColumn)]).setFontWeight("bold");
+    } else if (JSON.stringify(actual) !== JSON.stringify(headers)) fail_("SHEET_HEADERS_CHANGED");
   }
   return sheet;
 }
@@ -195,8 +214,11 @@ function validateApply_(data) {
   const whatsapp = text_(data, "whatsapp", 9, 17);
   const email = text_(data, "email", 3, 254);
   const portfolio = optional_(data, "portfolio", 300);
+  const major = text_(data, "major", 2, 200);
+  const studyYear = text_(data, "studyYear", 1, 1);
   if (
-    !/^[0-9]{9}$/.test(studentId) ||
+    !/^[0-9]{9}$/.test(studentId) || MAJORS.indexOf(major) < 0 ||
+    ["1", "2", "3", "4"].indexOf(studyYear) < 0 ||
     !/^\+[0-9]{8,16}$/.test(whatsapp) ||
     !/^[^\s@]+@smail\.ucas\.edu\.ps$/.test(email) ||
     (portfolio && !/^https:\/\/\S+$/.test(portfolio)) ||
@@ -205,10 +227,25 @@ function validateApply_(data) {
     data.roles.length < 1 ||
     data.roles.length > 12 ||
     data.roles.some(function (role) {
-      return typeof role !== "string" || role.length < 1 || role.length > 60;
+      return typeof role !== "string" || role.length < 1 || role.length > 120;
     })
   )
     fail_("INVALID_INPUT");
+  if (committee === "activities") {
+    if (["yes", "no"].indexOf(data.hasExperience) < 0 ||
+        ["full", "organised", "difficulty", "unsure"].indexOf(data.commitment) < 0 ||
+        ["lt2", "2to4", "4to6", "gt6", "variable"].indexOf(data.hours) < 0 ||
+        !Array.isArray(data.roles) || data.roles.length < 1 || data.roles.length > 12 ||
+        (data.hasExperience === "yes" && optional_(data, "experience", 1000).length < 10)) fail_("INVALID_INPUT");
+    return [COMMITTEES[committee], text_(data, "fullName", 2, 200), studentId, whatsapp, email,
+      text_(data, "why", 10, 1000), text_(data, "skills", 10, 1000), data.roles.join("، "),
+      optional_(data, "experience", 1000), portfolio, optional_(data, "leadership", 1000), "نعم",
+      major + " - " + studyYear, text_(data, "contribution", 10, 1000), data.hasExperience === "yes" ? "نعم" : "لا",
+      data.commitment, data.hours, text_(data, "lateTask", 10, 1000),
+      text_(data, "outsidePreference", 10, 1000), text_(data, "eventIdea", 10, 1000),
+      text_(data, "workshopPrep", 10, 1000), text_(data, "initiative", 10, 1000),
+      text_(data, "teamIssue", 10, 1000), text_(data, "eventChange", 10, 1000), major, studyYear];
+  }
   return [
     COMMITTEES[committee],
     text_(data, "fullName", 2, 200),
@@ -222,6 +259,20 @@ function validateApply_(data) {
     portfolio,
     optional_(data, "leadership", 1000),
     "نعم",
+    major + " - " + studyYear,
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    major,
+    studyYear,
   ];
 }
 function exists_(sheet, column, value) {

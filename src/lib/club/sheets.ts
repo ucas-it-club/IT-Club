@@ -5,12 +5,16 @@ export const sheetLinks = {
   contact:
     "https://docs.google.com/spreadsheets/d/1-k2MvrFu2lvOq0ypMJCo-Zs_Q2lw3MD7_sTNAXUi6rc/edit",
   join: "https://docs.google.com/spreadsheets/d/1v6RYlzZujoRSAHvOwsY_FQ7X5s3UOHW8E9b3SGxzcWg/edit",
+  applications:
+    "https://docs.google.com/spreadsheets/d/1z-4RrH38b2WfFvdgLXzpVbOqf68Jb2-r4JljWbVnj00/edit",
 };
 
 const endpoints = {
   contact:
     "https://script.google.com/a/macros/ucas.edu.ps/s/AKfycbxbRhHH3dTxdsvpAD0TSGFae6mtBmLwf3zUApDqe6VGiNvZrE-M4Ni164_0LDu-e1MTow/exec",
   join: "https://script.google.com/macros/s/AKfycbxV5GRTEe8Y2QEcEPHDFURBXZsZpg6JTZxkya40NJFTBL-sklDQSKrkwmJYmTSQBn1q/exec",
+  applications:
+    "https://script.google.com/macros/s/AKfycbwCYy0Q3hh5Ez7k2tUkefoQu29t8Y4bdpVeVzvJoUTXBGnIdvgYXw_Zo0rGREdrYhlE/exec",
 };
 
 const registrationSchema = z.object({
@@ -79,7 +83,7 @@ async function request(kind: keyof typeof endpoints, body?: RequestBody) {
 }
 
 export async function loadRegistration(): Promise<Registration> {
-  const value = await request("join");
+  const value = await request("applications");
   const parsed = registrationSchema.safeParse(value.registration);
 
   if (!parsed.success) throw new SheetsError("UNAVAILABLE");
@@ -94,7 +98,7 @@ export async function configureRegistration(enabled: boolean, limit: number) {
 
   if (error || !data.session) throw new SheetsError("UNAUTHORIZED");
 
-  const value = await request("join", {
+  const value = await request("applications", {
     action: "configure",
     accessToken: data.session.access_token,
     enabled,
@@ -102,6 +106,42 @@ export async function configureRegistration(enabled: boolean, limit: number) {
   });
 
   return registrationSchema.parse(value.registration);
+}
+
+export type CommitteeApplicationRecord = {
+  id: string;
+  submittedAt: string;
+  committee: "media" | "relations" | "activities";
+  committeeName: string;
+  fullName: string;
+  studentId: string;
+  whatsapp: string;
+  email: string;
+  major: string;
+  studyYear: string;
+  answers: Record<string, string>;
+};
+export type CommitteeApplicationPage = {
+  applications: CommitteeApplicationRecord[];
+  total: number;
+};
+
+export async function loadApplications(offset = 0, limit = 50): Promise<CommitteeApplicationPage> {
+  const { supabase } = await import("./supabase");
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) throw new SheetsError("UNAUTHORIZED");
+  const value = await request("applications", {
+    action: "listApplications",
+    accessToken: data.session.access_token,
+    offset,
+    limit,
+  });
+  if (!Array.isArray(value.applications) || !Number.isInteger(value.total))
+    throw new SheetsError("UNAVAILABLE");
+  return {
+    applications: value.applications as CommitteeApplicationRecord[],
+    total: value.total as number,
+  };
 }
 
 export async function submitToSheet(
@@ -116,7 +156,7 @@ export async function submitToSheet(
 /** Committee join application. Missing optional answers go to the sheet as empty cells. */
 export async function submitApplication(values: unknown, requestId: string) {
   const data = applicationSchema.parse(values);
-  await request("join", { action: "apply", requestId, data });
+  await request("applications", { action: "apply", requestId, data });
 }
 
 const uuidSchema = z.string().uuid();
