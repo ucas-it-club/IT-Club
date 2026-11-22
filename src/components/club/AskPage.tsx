@@ -235,7 +235,7 @@ export function AskPage() {
   return (
     <div
       className="ask"
-      data-cat={phase === "spin" ? undefined : current?.category}
+      data-cat={phase === "spin" ? undefined : current?.tone}
       data-intro={current ? undefined : ""}
       data-phase={phase}
     >
@@ -279,7 +279,7 @@ export function AskPage() {
                 else cards.current.delete(i);
               }}
               data-i={i}
-              data-cat={question?.category}
+              data-cat={question?.tone}
               className="ask-card"
               aria-hidden={i !== index}
             >
