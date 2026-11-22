@@ -88,7 +88,7 @@ function format_(sheet) {
   // Centred, wrapped, direction left to Sheets: old rows carried a per-cell right-to-left direction
   // and a left/top alignment, which made text start in one cell and run into the next.
   // Plain text, or Sheets turns "+970…" into a number and drops the plus.
-  sheet.getRange(1, 1, sheet.getMaxRows(), columns)
+  sheet.getRange(1, 1, sheet.getMaxRows(), columns).setFontFamily("Cairo")
     .setHorizontalAlignment("center").setVerticalAlignment("middle").setTextDirection(null).setWrap(true);
   sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), columns).setNumberFormat("@");
 }
@@ -219,7 +219,7 @@ function append_(sheet, values) {
   // A plain-text cell still saved "+970…" as "=+970…"; a leading ' in a normal cell keeps it as typed.
   range.getCell(1, 6).setNumberFormat("General");
   values[5] = "'" + values[5];
-  range.setValues([values.map(String)])
+  range.setValues([values.map(String)]).setFontFamily("Cairo")
     .setHorizontalAlignment("center").setVerticalAlignment("middle").setTextDirection(null).setWrap(true);
 }
 function requireAdmin_(token) {
