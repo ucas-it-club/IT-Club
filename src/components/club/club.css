@@ -501,11 +501,8 @@ html.js .club-reveal.is-shown {
   /* Fits the value line under the label. */
   height: 1.05rem;
 }
-/* A phone shows all four cells, two by two. */
+/* A phone keeps the four cells on one row, tighter. */
 @media (max-width: 767.98px) {
-  .club-site:has(.club-status) {
-    --status-h: 5rem;
-  }
   /* A phone shows the strip on the home page only: on forms and other pages the screen is
      too short to give it up. */
   .club-site:has(.club-status:not([data-home])) {
@@ -515,15 +512,19 @@ html.js .club-reveal.is-shown {
     visibility: hidden;
   }
   .club-status {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-inline: 1.25rem;
     border-radius: 0 0 1.25rem 1.25rem;
   }
-  .club-status > div:nth-child(odd) {
-    border-inline-start: 0;
+  .club-status > div {
+    padding-inline: 0.35rem;
   }
-  .club-status > div:nth-child(n + 3) {
-    border-top: 1px solid var(--border);
+  .club-status dt {
+    font-size: 0.625rem;
+    letter-spacing: 0;
+  }
+  .club-status dd,
+  .club-status-college a {
+    font-size: 0.75rem;
   }
 }
 
