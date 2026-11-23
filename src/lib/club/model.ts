@@ -65,11 +65,56 @@ export type Content = {
   presenterName_en?: string;
   presenterBio?: string;
   presenterBio_en?: string;
+  /** Events: presenters and organizers in display order, from club_event_people. */
+  people?: EventPerson[];
   eventRegistration?: EventRegistration;
   createdAt?: string;
   updatedAt?: string;
   updatedBy?: string;
 };
+
+/**
+ * One presenter or organizer. Name, bio and links are copied from the member when
+ * one is picked, so later profile edits do not change past events.
+ */
+export type EventPerson = {
+  memberId?: string | undefined;
+  role: "presenter" | "organizer";
+  name?: string | undefined;
+  name_en?: string | undefined;
+  bio?: string | undefined;
+  bio_en?: string | undefined;
+  linkedinUrl?: string | undefined;
+  githubUrl?: string | undefined;
+};
+
+/** An event's people in one role. Before club_event_people loads, the old single presenter. */
+export function eventPeople(event: Content, role: EventPerson["role"]): EventPerson[] {
+  const legacy: EventPerson[] =
+    event.presenterName || event.presenterName_en
+      ? [
+          {
+            role: "presenter",
+            name: event.presenterName,
+            name_en: event.presenterName_en,
+            bio: event.presenterBio,
+            bio_en: event.presenterBio_en,
+          },
+        ]
+      : [];
+
+  return (event.people ?? legacy).filter((person) => person.role === role);
+}
+
+/** The visitor's language, else the other one. */
+export function personField(person: EventPerson, key: "name" | "bio", lang: Lang) {
+  const arabic = person[key]?.trim() || "";
+  const english = person[`${key}_en`]?.trim() || "";
+
+  return lang === "en" ? english || arabic : arabic || english;
+}
+
+export const maxEventPeople = 6;
 
 export type EventRegistration = {
   enabled: boolean;
@@ -92,17 +137,13 @@ export const eventRegistrationSchema = z.object({
   attendanceEnabled: z.boolean(),
 });
 
-/** Details shown in the event information and presenter sections. */
+/** Details shown in the event information section. */
 export const eventDetailsSchema = z
   .object({
     eventTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
     durationMinutes: z.coerce.number().int().min(1).max(1440),
     eventType: z.string().trim().min(2).max(100),
     eventType_en: z.string().trim().min(2).max(100),
-    presenterName: z.string().trim().min(2).max(200),
-    presenterName_en: z.string().trim().min(2).max(200),
-    presenterBio: z.string().trim().min(2).max(500),
-    presenterBio_en: z.string().trim().min(2).max(500),
   })
   .strict();
 

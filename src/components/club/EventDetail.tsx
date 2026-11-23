@@ -1,6 +1,20 @@
 import { useState, type ReactNode } from "react";
-import { CalendarDays, Clock3, Hourglass, Tag, UserRound } from "lucide-react";
-import type { Content, Lang } from "@/lib/club/model";
+import { CalendarDays, Clock3, Github, Hourglass, Linkedin, Tag, UserRound } from "lucide-react";
+import {
+  eventPeople,
+  personField,
+  safeUrl,
+  type Content,
+  type EventPerson,
+  type Lang,
+} from "@/lib/club/model";
+import { itemPage } from "@/lib/club/paths";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { contentImageUrls } from "@/lib/club/google-drive";
 import {
   eventDisplayStatus,
@@ -13,6 +27,8 @@ import { BrandButton } from "./BrandButton";
 import { ContentImage } from "./ContentImage";
 import { EventRegistrationForm } from "./EventRegistrationForm";
 import { RichText } from "./RichText";
+import { ClubLink } from "./ClubContent";
+import { useClub } from "./club-context";
 
 function localizedEventField(
   event: Content,
@@ -61,6 +77,205 @@ function EventFact({
   );
 }
 
+/** The member a person was picked from, if they still exist. */
+function useMember(person: EventPerson) {
+  const { data } = useClub();
+  const member = person.memberId
+    ? data.members.find((item) => item.id === person.memberId)
+    : undefined;
+  const profile =
+    member && member.profileEnabled !== false ? itemPage("members", member, data) : undefined;
+
+  return { photo: member?.images?.map(safeUrl).find(Boolean), profile };
+}
+
+function PersonAvatar({ photo, large }: { photo?: string | undefined; large?: boolean }) {
+  const size = large ? "size-12" : "size-9";
+
+  return photo ? (
+    <img
+      src={photo}
+      alt=""
+      width={96}
+      height={96}
+      loading="lazy"
+      className={`${size} shrink-0 rounded-2xl object-cover object-top`}
+    />
+  ) : (
+    <span
+      className={`${size} flex shrink-0 items-center justify-center rounded-2xl bg-card text-primary shadow-sm`}
+    >
+      <UserRound className={large ? "size-6" : "size-5"} aria-hidden="true" />
+    </span>
+  );
+}
+
+function PersonLinks({ person }: { person: EventPerson }) {
+  const links = (
+    [
+      ["linkedinUrl", "LinkedIn", Linkedin],
+      ["githubUrl", "GitHub", Github],
+    ] as const
+  ).filter(([key]) => safeUrl(person[key]));
+  if (!links.length) return null;
+
+  return (
+    <div className="mt-3 flex gap-3">
+      {links.map(([key, label, Icon]) => (
+        <a
+          key={key}
+          href={safeUrl(person[key])}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${label}: ${person.name_en || person.name}`}
+          className="inline-flex size-9 items-center justify-center rounded-xl bg-card text-primary shadow-sm hover:bg-primary hover:text-primary-foreground"
+        >
+          <Icon className="size-5" aria-hidden="true" />
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function PresenterItem({
+  person,
+  index,
+  lang,
+}: {
+  person: EventPerson;
+  index: number;
+  lang: Lang;
+}) {
+  const { photo, profile } = useMember(person);
+  const name = personField(person, "name", lang);
+
+  return (
+    <AccordionItem value={String(index)} className="border-border/60 last:border-b-0">
+      <AccordionTrigger className="gap-3 py-3 text-start text-base font-black text-primary hover:no-underline">
+        <span className="flex min-w-0 items-center gap-3">
+          <PersonAvatar photo={photo} />
+          <span className="min-w-0 break-words">{name}</span>
+        </span>
+      </AccordionTrigger>
+      <AccordionContent className="ps-12">
+        <p className="leading-relaxed text-muted-foreground">{personField(person, "bio", lang)}</p>
+        {profile && (
+          <ClubLink path={profile} className="mt-2 inline-block font-bold text-primary underline">
+            {lang === "ar" ? "الملف الشخصي" : "Profile"}
+          </ClubLink>
+        )}
+        <PersonLinks person={person} />
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+function Organizer({ person, lang }: { person: EventPerson; lang: Lang }) {
+  const { photo, profile } = useMember(person);
+  const chip = (
+    <>
+      {photo ? (
+        <img
+          src={photo}
+          alt=""
+          width={48}
+          height={48}
+          loading="lazy"
+          className="size-6 rounded-full object-cover object-top"
+        />
+      ) : (
+        <UserRound className="size-4" aria-hidden="true" />
+      )}
+      {personField(person, "name", lang)}
+    </>
+  );
+  const className =
+    "inline-flex items-center gap-2 rounded-full bg-card px-3 py-1 text-sm font-bold text-foreground shadow-sm";
+
+  return (
+    <li>
+      {profile ? (
+        <ClubLink path={profile} className={`${className} hover:text-primary`}>
+          {chip}
+        </ClubLink>
+      ) : (
+        <span className={className}>{chip}</span>
+      )}
+    </li>
+  );
+}
+
+/** One presenter gets the full card; several get a list that opens one at a time. */
+function EventPeople({ event, lang }: { event: Content; lang: Lang }) {
+  const ar = lang === "ar";
+  const presenters = eventPeople(event, "presenter");
+  const organizers = eventPeople(event, "organizer");
+  const single = presenters.length === 1 ? presenters[0] : undefined;
+  const { photo, profile } = useMember(single ?? { role: "presenter" });
+  const headingId = `event-presenter-${event.id}`;
+  const singleName = single ? personField(single, "name", lang) : "";
+
+  return (
+    <section aria-labelledby={headingId} className="rounded-3xl bg-brand-gradient-soft p-5 sm:p-6">
+      {presenters.length > 1 ? (
+        <>
+          <h2 id={headingId} className="text-sm font-bold text-muted-foreground">
+            {ar ? "مقدمو الفعالية" : "Event presenters"}
+          </h2>
+          <Accordion type="single" collapsible className="mt-1">
+            {presenters.map((person, index) => (
+              <PresenterItem key={index} person={person} index={index} lang={lang} />
+            ))}
+          </Accordion>
+        </>
+      ) : (
+        <div className="flex items-start gap-4">
+          <PersonAvatar photo={photo} large />
+          <div className="min-w-0">
+            <h2 id={headingId} className="text-sm font-bold text-muted-foreground">
+              {ar ? "مقدم الفعالية" : "Event presenter"}
+            </h2>
+            <p className="mt-1 break-words text-xl font-black text-primary">
+              {!singleName ? (
+                ar ? (
+                  "سيُعلن عنه قريبًا"
+                ) : (
+                  "To be announced"
+                )
+              ) : profile ? (
+                <ClubLink path={profile} className="hover:underline">
+                  {singleName}
+                </ClubLink>
+              ) : (
+                singleName
+              )}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {(single && personField(single, "bio", lang)) ||
+                (ar
+                  ? "ستُضاف نبذة عن مقدم الفعالية عند توفرها."
+                  : "A short presenter bio will be added when available.")}
+            </p>
+            {single && <PersonLinks person={single} />}
+          </div>
+        </div>
+      )}
+      {organizers.length > 0 && (
+        <div className="mt-4 border-t border-border/60 pt-4">
+          <h3 className="text-sm font-bold text-muted-foreground">
+            {ar ? "تنظيم" : "Organized by"}
+          </h3>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {organizers.map((person, index) => (
+              <Organizer key={index} person={person} lang={lang} />
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function EventDetail({
   event,
   lang,
@@ -77,8 +292,6 @@ export function EventDetail({
   const registrationAvailable = eventRegistrationIsAvailable(event);
   const ended = eventHasEnded(event);
   const displayStatus = eventDisplayStatus(event);
-  const presenterName = localizedEventField(event, "presenterName", "presenterName_en", lang);
-  const presenterBio = localizedEventField(event, "presenterBio", "presenterBio_en", lang);
   const eventType = localizedEventField(event, "eventType", "eventType_en", lang);
   const unavailable = ar ? "يُحدّد لاحقًا" : "To be announced";
 
@@ -139,33 +352,7 @@ export function EventDetail({
               )}
             </figure>
 
-            <section
-              aria-labelledby={`event-presenter-${event.id}`}
-              className="rounded-3xl bg-brand-gradient-soft p-5 sm:p-6"
-            >
-              <div className="flex items-start gap-4">
-                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-card text-primary shadow-sm">
-                  <UserRound className="size-6" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <h2
-                    id={`event-presenter-${event.id}`}
-                    className="text-sm font-bold text-muted-foreground"
-                  >
-                    {ar ? "مقدم الفعالية" : "Event presenter"}
-                  </h2>
-                  <p className="mt-1 text-xl font-black text-primary">
-                    {presenterName || (ar ? "سيُعلن عنه قريبًا" : "To be announced")}
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {presenterBio ||
-                      (ar
-                        ? "ستُضاف نبذة عن مقدم الفعالية عند توفرها."
-                        : "A short presenter bio will be added when available.")}
-                  </p>
-                </div>
-              </div>
-            </section>
+            <EventPeople event={event} lang={lang} />
 
             <section aria-labelledby={`event-information-${event.id}`}>
               <h2 id={`event-information-${event.id}`} className="club-rule text-2xl font-black">

@@ -1,4 +1,4 @@
-import type { Content, ContentCollection, Settings } from "./model";
+import type { Content, ContentCollection, EventPerson, Settings } from "./model";
 import type { FeedbackKind } from "./feedback";
 
 /**
@@ -77,9 +77,14 @@ async function request<T>(path: string, init: RequestInit, f: Fetcher): Promise<
   throw new Error(message);
 }
 
-async function rows(table: string, order: string, f: Fetcher, signal: AbortSignal, hasSlug = true) {
+async function rows(
+  table: string,
+  order: string,
+  f: Fetcher,
+  signal: AbortSignal,
+  fields = "id,slug,data,created_at,updated_at,updated_by",
+) {
   const result: Row[] = [];
-  const fields = `id,${hasSlug ? "slug," : ""}data,created_at,updated_at,updated_by`;
 
   for (let offset = 0; ; offset += 500) {
     const page = await request<Row[]>(
@@ -130,7 +135,7 @@ export async function contentExists(ref: string, kinds: ContentCollection[]) {
 export async function loadPublic(f: Fetcher = fetch, callerSignal?: AbortSignal) {
   const deadline = AbortSignal.timeout(8000);
   const signal = callerSignal ? AbortSignal.any([callerSignal, deadline]) : deadline;
-  const [members, events, news, partners, settings] = await Promise.all([
+  const [members, events, news, partners, settings, people] = await Promise.all([
     rows(contentTables.members, "updated_at", f, signal),
     rows(contentTables.events, "updated_at", f, signal),
     rows(contentTables.news, "updated_at", f, signal),
@@ -140,7 +145,36 @@ export async function loadPublic(f: Fetcher = fetch, callerSignal?: AbortSignal)
       { method: "GET", signal },
       f,
     ),
+    // A failure here must not blank the site (e.g. before the table's migration is
+    // live): events then fall back to their old single presenter.
+    rows(
+      "club_event_people",
+      "display_order",
+      f,
+      signal,
+      "id,event_id,member_id,role,name,name_en,bio,bio_en,linkedin_url,github_url,display_order",
+    ).catch(() => null),
   ]);
+
+  const peopleByEvent = new Map<string, EventPerson[]>();
+
+  for (const row of [...(people ?? [])].sort(
+    (a, b) => Number(a["display_order"]) - Number(b["display_order"]),
+  )) {
+    const text = (key: string) => (typeof row[key] === "string" ? String(row[key]) : undefined);
+    const list = peopleByEvent.get(String(row["event_id"])) ?? [];
+    list.push({
+      role: row["role"] === "organizer" ? "organizer" : "presenter",
+      memberId: text("member_id"),
+      name: text("name"),
+      name_en: text("name_en"),
+      bio: text("bio"),
+      bio_en: text("bio_en"),
+      linkedinUrl: text("linkedin_url"),
+      githubUrl: text("github_url"),
+    });
+    peopleByEvent.set(String(row["event_id"]), list);
+  }
 
   const data: Record<ContentCollection, Content[]> = {
     members: [],
@@ -167,6 +201,9 @@ export async function loadPublic(f: Fetcher = fetch, callerSignal?: AbortSignal)
         createdAt: String(row["created_at"] ?? ""),
         updatedAt: String(row["updated_at"] ?? ""),
         updatedBy: String(row["updated_by"] || ""),
+        ...(kind === "events" && people
+          ? { people: peopleByEvent.get(String(row["id"])) ?? [] }
+          : {}),
       });
   }
 
