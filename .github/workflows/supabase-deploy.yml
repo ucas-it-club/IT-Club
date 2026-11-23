@@ -1,0 +1,60 @@
+# Deploys database migrations and Edge Functions to Supabase production
+# whenever master changes anything under supabase/. See docs/supabase-deploy.md.
+name: Deploy Supabase
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - ".github/workflows/supabase-deploy.yml"
+  workflow_dispatch:
+
+# Never run two deploys against production at once; never cancel one mid-migration.
+concurrency:
+  group: supabase-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Add required reviewers to this environment in repo settings to gate deploys.
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: jxweaxenswbjpxxjmihb
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Every test that replays migrations in PGlite must pass before production changes.
+      - name: Migration tests
+        run: grep -l "@electric-sql/pglite" tests/*.test.mjs | xargs node --test
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref "$PROJECT_REF"
+
+      - name: Show pending migrations
+        run: supabase db push --remote --dry-run
+
+      - name: Apply migrations
+        run: supabase db push --remote --yes
+
+      - name: Deploy Edge Functions
+        run: supabase functions deploy --project-ref "$PROJECT_REF"
