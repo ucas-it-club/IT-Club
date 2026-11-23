@@ -20,9 +20,10 @@ export function flipFrom(was: Box, now: Box) {
   return `translate(${was.left - now.left}px, ${was.top - now.top}px) scale(${was.width / now.width}, ${was.height / now.height})`;
 }
 
-/** One card width plus a gap past the given side. */
-export function offScreen(side: Side) {
-  return side === "left" ? "translateX(calc(-100% - 3rem))" : "translateX(calc(100% + 3rem))";
+/** Moves a card drawn at `box` until it is fully past the viewport's `side` edge. */
+export function offScreen(side: Side, box: Pick<Box, "left" | "width">, viewport: number) {
+  const dx = side === "left" ? -(box.left + box.width) : viewport - box.left;
+  return `translateX(${dx}px)`;
 }
 
 const shown = (el: HTMLElement) => el.getClientRects().length > 0;
@@ -46,12 +47,13 @@ export function slideCards(stage: HTMLElement, update: () => void, from: Side) {
       copy: el.cloneNode(true) as HTMLElement,
     });
   }
+  // Cards still leaving from an interrupted slide keep going; they remove themselves.
   for (const el of cards()) el.getAnimations().forEach((a) => a.cancel());
-  stage.querySelectorAll(":scope > [data-hs-leaving]").forEach((el) => el.remove());
 
   update();
 
   const stageBox = stage.getBoundingClientRect();
+  const viewport = document.documentElement.clientWidth;
   const done: Promise<unknown>[] = [];
   const to = from === "left" ? "right" : "left";
 
@@ -64,7 +66,7 @@ export function slideCards(stage: HTMLElement, update: () => void, from: Side) {
           { transformOrigin: "0 0", transform: flipFrom(was.box, now) },
           { transformOrigin: "0 0", transform: "none" },
         ]
-      : [{ transform: offScreen(from) }, { transform: "none" }];
+      : [{ transform: offScreen(from, now, viewport) }, { transform: "none" }];
     done.push(el.animate(frames, timing).finished);
   }
 
@@ -84,11 +86,14 @@ export function slideCards(stage: HTMLElement, update: () => void, from: Side) {
       pointerEvents: "none",
     });
     stage.append(copy);
-    const slide = copy.animate([{ transform: "none" }, { transform: offScreen(to) }], timing);
+    const slide = copy.animate(
+      [{ transform: "none" }, { transform: offScreen(to, box, viewport) }],
+      timing,
+    );
     done.push(slide.finished.finally(() => copy.remove()));
   }
 
-  // The edge fade is on only while cards move, so nothing is clipped at rest.
+  // While cards travel past the screen edges the page clips sideways (styles.css), so no scrollbar flashes.
   stage.dataset["sliding"] = "";
   void Promise.allSettled(done).then(() => {
     if (

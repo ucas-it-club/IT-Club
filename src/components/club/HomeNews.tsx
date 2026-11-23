@@ -151,7 +151,7 @@ export function HomeStories({
       )}
       <Reveal className="relative">
         <div
-          className={`hs-stage relative grid items-start gap-4 ${single ? "md:[--hs-fade:40px] md:[--hs-line:-40px]" : "min-[85rem]:[--hs-fade:40px] min-[85rem]:[--hs-line:-40px]"} ${n > 1 && !single ? `lg:grid-rows-[auto_1fr] ${flip ? "lg:grid-cols-[calc((100%_-_2.78rem)/3)_1fr]" : "lg:grid-cols-[1fr_calc((100%_-_2.78rem)/3)]"}` : ""}`}
+          className={`hs-stage relative grid items-start gap-4 ${n > 1 && !single ? `lg:grid-rows-[auto_1fr] ${flip ? "lg:grid-cols-[calc((100%_-_2.78rem)/3)_1fr]" : "lg:grid-cols-[1fr_calc((100%_-_2.78rem)/3)]"}` : ""}`}
         >
           {/* Keyed by story, so React moves a card instead of rebuilding it. */}
           {order.map((item, i) => (

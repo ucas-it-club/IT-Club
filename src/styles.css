@@ -102,12 +102,7 @@
      hardcode these stops. --brand-ramp-text is the darker twin for gradient *text* on a light
      page, where full-strength green is too faint to read. */
   --brand-teal: oklch(0.62 0.15 190);
-  --brand-gradient: linear-gradient(
-    100deg,
-    var(--brand-blue) 0%,
-    var(--brand-teal) 50%,
-    var(--brand-green) 100%
-  );
+  --brand-gradient: linear-gradient(100deg, var(--brand-blue) 0%, var(--brand-teal) 50%, var(--brand-green) 100%);
   --brand-ramp-text: linear-gradient(
     100deg,
     var(--brand-blue) 0%,
@@ -358,30 +353,11 @@
   }
 }
 
-/* Home stories taking turns (HomeStories, card-slide.ts): the cards move in the page.
-   While they slide, they fade out just outside the cards' edges, so at rest nothing is
-   clipped. --hs-line is where a card is fully gone (negative: outside the cards) and the
-   fade runs from there back to the cards' edge. Over a phone-width card that is the
-   page gutter; where the arrows sit outside, it is the gap before them. */
-/* In a layer, so the md:/min-[85rem]: utilities on the element can override it. */
-@layer components {
-  .hs-stage {
-    --hs-line: -16px;
-    --hs-fade: 16px;
-  }
-}
-.hs-stage[data-sliding] {
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    #000 var(--hs-fade),
-    #000 calc(100% - var(--hs-fade)),
-    transparent
-  );
-  mask-size: calc(100% - 2 * var(--hs-line)) calc(100% + 4rem);
-  mask-position: var(--hs-line) -2rem;
-  mask-repeat: no-repeat;
-  mask-clip: no-clip;
+/* Home stories taking turns (HomeStories, card-slide.ts): the cards move in the page,
+   coming in from beyond one screen edge and leaving past the other. The screen edge is
+   the only cut; clipping sideways stops the travelling cards from adding a scrollbar. */
+.club-site:has(.hs-stage[data-sliding]) {
+  overflow-x: clip;
 }
 .hs-btn {
   display: inline-grid;

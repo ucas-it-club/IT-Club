@@ -14,9 +14,12 @@ test("a card that has not moved gets no offset", () => {
   assert.equal(flipFrom(box, box), "translate(0px, 0px) scale(1, 1)");
 });
 
-test("off screen is one card width plus a gap past the given side", () => {
-  assert.equal(offScreen("left"), "translateX(calc(-100% - 3rem))");
-  assert.equal(offScreen("right"), "translateX(calc(100% + 3rem))");
+test("off screen means fully past the viewport edge, not just past the card's own box", () => {
+  const box = { left: 300, width: 700 };
+  // Its right edge lands on the viewport's left edge.
+  assert.equal(offScreen("left", box, 1280), "translateX(-1000px)");
+  // Its left edge lands on the viewport's right edge.
+  assert.equal(offScreen("right", box, 1280), "translateX(980px)");
 });
 
 // The slide used View Transitions, whose snapshots sat above the sticky header and stayed
