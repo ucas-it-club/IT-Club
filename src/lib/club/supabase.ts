@@ -1,7 +1,13 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { url, key, configured, SetupRequiredError } from "./public-api";
 import { prepareImage } from "./images";
-import { contentSchema, type Content, type ContentCollection, type Settings } from "./model";
+import {
+  contentSchema,
+  type Content,
+  type ContentCollection,
+  type EventPerson,
+  type Settings,
+} from "./model";
 import { loginEmail } from "./admin-access";
 import type { Feedback } from "./feedback";
 
@@ -164,6 +170,26 @@ export async function saveContent(
   if (!result.data) throw new Error("The saved content was not returned");
   changed();
   return String(result.data.id);
+}
+
+/** Replaces an event's presenters and organizers; list order is display order. */
+export async function saveEventPeople(eventId: string, people: EventPerson[]) {
+  const { error } = await supabase().rpc("club_save_event_people", {
+    target_event: eventId,
+    people: people.map((person) => ({
+      role: person.role,
+      member_id: person.memberId ?? null,
+      name: person.name ?? null,
+      name_en: person.name_en ?? null,
+      bio: person.bio ?? null,
+      bio_en: person.bio_en ?? null,
+      linkedin_url: person.linkedinUrl ?? null,
+      github_url: person.githubUrl ?? null,
+    })),
+  });
+
+  check(error);
+  changed();
 }
 
 export async function removeContent(kind: ContentCollection, id: string) {

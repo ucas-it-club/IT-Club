@@ -14,6 +14,7 @@ import { AdminUsersEditor } from "./admin/AdminUsersEditor";
 import { NewsWorkspace } from "./admin/NewsWorkspace";
 import { AchievementWorkspace } from "./admin/AchievementWorkspace";
 import { FeedbackWorkspace } from "./admin/FeedbackWorkspace";
+import { checkPeople, EventPeopleEditor, initialPeopleRows } from "./admin/EventPeopleEditor";
 import { canManageMember, canManageNews } from "@/lib/club/admin-access";
 import {
   loadAdminDateOrder,
@@ -32,6 +33,7 @@ import {
   loadRole,
   watchQuery,
   saveContent,
+  saveEventPeople,
   removeContent,
   uploadImage,
   saveSettings,
@@ -47,6 +49,7 @@ import {
   contentSchema,
   defaultEventRegistration,
   eventDetailsSchema,
+  eventPeople,
   safeUrl,
   type Content,
   type ContentCollection,
@@ -830,10 +833,15 @@ export function ContentEditor({
   onSaved: () => void;
   onDirtyChange: (dirty: boolean) => void;
 }) {
-  const { lang } = useClub();
+  const { lang, data } = useClub();
   const ar = lang === "ar";
   const queryClient = useQueryClient();
   const [dirty, setDirty] = useState(false);
+  const [peopleRows, setPeopleRows] = useState(() =>
+    initialPeopleRows(
+      item ? [...eventPeople(item, "presenter"), ...eventPeople(item, "organizer")] : [],
+    ),
+  );
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
   useEffect(() => {
     if (!dirty) return;
@@ -905,6 +913,7 @@ export function ContentEditor({
     e.preventDefault();
 
     if (busy || file) return;
+    const checkedPeople = checkPeople(peopleRows, ar);
     // SAFETY: this form has no file inputs, so every FormData entry value is a string.
     const values = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
     const parsed = contentSchema.safeParse(values);
@@ -971,18 +980,18 @@ export function ContentEditor({
         durationMinutes: Number(values["durationHours"]) * 60,
         eventType: values["eventType"],
         eventType_en: values["eventType_en"],
-        presenterName: values["presenterName"],
-        presenterName_en: values["presenterName_en"],
-        presenterBio: values["presenterBio"],
-        presenterBio_en: values["presenterBio_en"],
       });
 
       if (!eventDetails.success) {
         setError(
           ar
-            ? "أكمل معلومات الفعالية والمقدم. يجب أن تكون المدة بين ربع ساعة و24 ساعة."
-            : "Complete the event and presenter details. Duration must be between 0.25 and 24 hours.",
+            ? "أكمل معلومات الفعالية. يجب أن تكون المدة بين ربع ساعة و24 ساعة."
+            : "Complete the event details. Duration must be between 0.25 and 24 hours.",
         );
+        return;
+      }
+      if (typeof checkedPeople === "string") {
+        setError(checkedPeople);
         return;
       }
 
@@ -1028,6 +1037,9 @@ export function ContentEditor({
     try {
       const savedId = await saveContent(targetKind, value, savedItemId, kind, typedSlug || null);
       setSavedItemId(savedId);
+      // After the event save: a data write without presenter keys clears the first presenter.
+      if (targetKind === "events" && typeof checkedPeople !== "string")
+        await saveEventPeople(savedId, checkedPeople);
 
       if (
         manageEventSheets &&
@@ -1041,7 +1053,13 @@ export function ContentEditor({
       if (item?.id && targetKind !== "news") {
         queryClient.setQueryData<Awaited<ReturnType<typeof loadPublic>>>(clubPublicKey, (old) => {
           if (!old) return old;
-          const updated = { ...item, ...value };
+          const updated = {
+            ...item,
+            ...value,
+            ...(targetKind === "events" && typeof checkedPeople !== "string"
+              ? { people: checkedPeople }
+              : {}),
+          };
           if (value.displayOrder === undefined) delete updated.displayOrder;
           const nextData = { ...old.data };
           nextData[kind] = old.data[kind].filter((c) => c.id !== item.id);
@@ -1166,6 +1184,9 @@ export function ContentEditor({
             ],
           ];
 
+  const previewPeople = peopleRows
+    .filter((row) => !row.searching)
+    .map(({ key: _key, searching: _searching, ...person }) => person);
   const previewItem: Content = {
     id: item?.id || "admin-preview",
     title: draft["title"] ?? item?.title ?? "",
@@ -1184,10 +1205,7 @@ export function ContentEditor({
         : {}),
     eventType: draft["eventType"] ?? item?.eventType ?? "",
     eventType_en: draft["eventType_en"] ?? item?.eventType_en ?? "",
-    presenterName: draft["presenterName"] ?? item?.presenterName ?? "",
-    presenterName_en: draft["presenterName_en"] ?? item?.presenterName_en ?? "",
-    presenterBio: draft["presenterBio"] ?? item?.presenterBio ?? "",
-    presenterBio_en: draft["presenterBio_en"] ?? item?.presenterBio_en ?? "",
+    people: previewPeople,
     partnershipType: draft["partnershipType"] ?? item?.partnershipType ?? "",
     partnershipType_en: draft["partnershipType_en"] ?? item?.partnershipType_en ?? "",
     websiteUrl: draft["websiteUrl"] ?? item?.websiteUrl ?? "",
@@ -1449,9 +1467,7 @@ export function ContentEditor({
       {targetKind === "events" && (
         <>
           <fieldset className="space-y-5 rounded-2xl border border-border p-5">
-            <legend className="px-2 font-bold">
-              {ar ? "معلومات الفعالية والمقدم" : "Event and presenter details"}
-            </legend>
+            <legend className="px-2 font-bold">{ar ? "معلومات الفعالية" : "Event details"}</legend>
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="block text-sm font-bold">
                 <span className="mb-2 block">{ar ? "وقت الفعالية" : "Event time"}</span>
@@ -1475,13 +1491,6 @@ export function ContentEditor({
                 [
                   ["eventType", "نوع الفعالية بالعربية", "Event type in Arabic", 100],
                   ["eventType_en", "نوع الفعالية بالإنجليزية", "Event type in English", 100],
-                  ["presenterName", "اسم مقدم الفعالية بالعربية", "Presenter name in Arabic", 200],
-                  [
-                    "presenterName_en",
-                    "اسم مقدم الفعالية بالإنجليزية",
-                    "Presenter name in English",
-                    200,
-                  ],
                 ] as const
               ).map(([key, a, en, maxLength]) => (
                 <label key={key} className="block text-sm font-bold">
@@ -1496,26 +1505,21 @@ export function ContentEditor({
                   />
                 </label>
               ))}
-              {(
-                [
-                  ["presenterBio", "سطر عن المقدم بالعربية", "Presenter bio in Arabic"],
-                  ["presenterBio_en", "سطر عن المقدم بالإنجليزية", "Presenter bio in English"],
-                ] as const
-              ).map(([key, a, en]) => (
-                <label key={key} className="block text-sm font-bold">
-                  <span className="mb-2 block">{ar ? a : en}</span>
-                  <Textarea
-                    name={key}
-                    required
-                    minLength={2}
-                    maxLength={500}
-                    rows={3}
-                    defaultValue={item?.[key] || ""}
-                    dir={key.endsWith("_en") ? "ltr" : "rtl"}
-                  />
-                </label>
-              ))}
             </div>
+          </fieldset>
+          <fieldset className="min-w-0 space-y-5 rounded-2xl border border-border p-5">
+            <legend className="px-2 font-bold">
+              {ar ? "المقدمون والمنظمون" : "Presenters and organizers"}
+            </legend>
+            <EventPeopleEditor
+              rows={peopleRows}
+              onChange={(rows) => {
+                setPeopleRows(rows);
+                setDirty(true);
+              }}
+              members={data.members}
+              ar={ar}
+            />
           </fieldset>
           <label className="block">
             <span className="mb-2 block">{ar ? "الحالة" : "Status"}</span>

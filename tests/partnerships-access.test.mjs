@@ -37,7 +37,8 @@ before(async () => {
       file.includes("communications_role") ||
       file.includes("events_committee_role") ||
       file.includes("legacy_event_reader") ||
-      file.includes("event_columns")
+      file.includes("event_columns") ||
+      file.includes("event_people")
     )
       continue;
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
