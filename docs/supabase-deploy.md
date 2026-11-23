@@ -65,6 +65,7 @@ in the database.
 ## Rules from here on
 
 - Change production only through migration files merged to `master`. A change made in
-  the dashboard or through MCP puts the history out of step again.
+  the dashboard, the SQL editor or through MCP puts the history out of step again.
+  This rule is also in `AGENTS.md`, so coding agents follow it.
 - A failed `db push` leaves earlier migrations in that run applied. Fix forward with a
   new migration; do not edit a file that has already run.
