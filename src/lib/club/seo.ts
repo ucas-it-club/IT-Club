@@ -144,6 +144,16 @@ export const pages = {
         "What the UCAS IT Club site stores, how form data is used, and how to request deletion.",
     },
   },
+  feedback: {
+    ar: {
+      title: "ملاحظات على الموقع | النادي التكنولوجي",
+      description: "أبلغ عن مشكلة في موقع النادي التكنولوجي أو اقترح تحسينًا.",
+    },
+    en: {
+      title: "Site feedback | UCAS IT Club",
+      description: "Report a problem on the UCAS IT Club website or suggest an improvement.",
+    },
+  },
   admin: {
     ar: {
       title: "الإدارة | النادي التكنولوجي",

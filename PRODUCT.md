@@ -29,6 +29,7 @@ A student-run club site that is genuinely maintained by students — content, me
 - Membership applications go to Google Sheets through Google Apps Script, which also carries the open/closed flag and the registration cap. The endpoint currently answers in ~3 s.
 - Registration is closed at the time of writing.
 - A visit counter records a random `sessionStorage` id; it does not identify people.
+- Site Feedback (`/feedback`) is anonymous by default; name and contact are optional. Not a contact form: it is only about the website itself.
 - Hosting is Cloudflare, code on GitHub, project connected to Lovable (published history must not be rewritten).
 
 ## Capabilities and Constraints

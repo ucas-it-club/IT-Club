@@ -39,14 +39,16 @@
   --band-soft: color-mix(in oklab, white 78%, var(--band-bg));
   --fill: var(--navy);
   --fill-ink: white;
-  --fill-soft: color-mix(in oklab, white 88%, transparent);
+  /* On a platform colour the note uses the full ink: every fill keeps 4.5:1 or more. */
+  --fill-soft: var(--fill-ink);
 }
 .contact-band-instagram {
-  --fill: linear-gradient(45deg, #e6683c, #dc2743 45%, #bc1888);
+  --fill: linear-gradient(45deg, #dc2743, #bc1888 55%, #8a3ab9);
 }
 .contact-band-facebook {
   --band-bg: color-mix(in oklab, var(--navy) 94%, white);
-  --fill: #1877f2;
+  /* Facebook's own pressed blue; #1877f2 gives white text only 4.2:1. */
+  --fill: #166fe5;
 }
 .contact-band-linkedin {
   --band-bg: color-mix(in oklab, var(--navy) 88%, white);
@@ -54,7 +56,9 @@
 }
 .contact-band-email {
   --band-bg: color-mix(in oklab, var(--navy) 82%, white);
-  --fill: linear-gradient(100deg, var(--brand-green), var(--brand-blue));
+  /* No brand colour of its own: brand green, with navy ink because white on it is 2.3:1. */
+  --fill: var(--brand-green);
+  --fill-ink: var(--navy);
 }
 .dark .contact-band {
   --band-bg: var(--navy-band);
@@ -94,7 +98,7 @@
 }
 .contact-band-link:focus-visible {
   outline-offset: -6px;
-  outline-color: var(--band-ink);
+  outline-color: currentColor;
 }
 @media (hover: hover) {
   .contact-band-link:hover,
@@ -194,4 +198,17 @@
   .contact-band-action svg {
     transition: none;
   }
+}
+
+.contact-feedback {
+  margin-top: 2rem;
+  text-align: center;
+  color: var(--muted-foreground);
+  line-height: 2;
+}
+.contact .contact-feedback a {
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
