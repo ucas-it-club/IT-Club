@@ -248,3 +248,55 @@ test("club_event_people follows the event access rules and limits", async () => 
   );
   await as(null);
 });
+
+test("column saves keep image links, image rules and slugs working", async () => {
+  const id = legacy[1].id;
+  await db.exec("reset role");
+  const ownPath = `${events}/00000000-0000-4000-8000-0000000000cc.webp`;
+  await db.query(
+    "insert into club_media(name,path,size,mime,created_by) values('event photo',$1,10,'image/webp',$2)",
+    [ownPath, events],
+  );
+  const ownUrl = (await one("select club_private.media_url($1) url", [ownPath])).url;
+  await as(events);
+  await db.query("update club_events set images=array[$1] where id=$2", [ownUrl, id]);
+  const linked = await one("select count(*)::int n from club_event_media where event_id=$1", [id]);
+  assert.equal(linked.n, 1);
+  await db.query("update club_events set images='{}' where id=$1", [id]);
+  const unlinked = await one("select count(*)::int n from club_event_media where event_id=$1", [
+    id,
+  ]);
+  assert.equal(unlinked.n, 0);
+
+  await as(null);
+  await db.exec("reset role");
+  const path = `${media}/00000000-0000-4000-8000-0000000000bb.webp`;
+  await db.query(
+    "insert into club_media(name,path,size,mime,created_by) values('news photo',$1,10,'image/webp',$2)",
+    [path, media],
+  );
+  const otherUrl = (await one("select club_private.media_url($1) url", [path])).url;
+  await as(events);
+  await assert.rejects(
+    db.query("update club_events set images=array[$1] where id=$2", [otherUrl, id]),
+    /not available to this committee/,
+  );
+
+  await as(owner);
+  const news = await one("insert into club_news(data) values($1) returning id,slug", [
+    JSON.stringify({
+      title: "خبر",
+      title_en: "Shared trigger news",
+      description: "تفاصيل الخبر",
+      description_en: "News details",
+      images: [mediaUrl],
+      date: "2026-11-20",
+    }),
+  ]);
+  assert.equal(news.slug, "shared-trigger-news");
+  const newsLinks = await one("select count(*)::int n from club_news_media where news_id=$1", [
+    news.id,
+  ]);
+  assert.equal(newsLinks.n, 1);
+  await as(null);
+});
