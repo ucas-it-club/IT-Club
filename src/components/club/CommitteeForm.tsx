@@ -14,7 +14,13 @@ import { DialCodeSelect } from "./DialCodeSelect";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { aboutStep, committees, type Pair, type Question } from "@/lib/club/committee-forms";
 import { applicationSchema, majors, majorEnglishLabels } from "@/lib/club/model";
 import { useRegistration } from "@/lib/club/registration";
@@ -54,12 +60,19 @@ const hints: Record<string, Pair> = {
   fullName: ["اكتب الاسم من حرفين إلى 200 حرف.", "Enter your name (2 to 200 characters)."],
   studentId: ["الرقم الجامعي 9 أرقام بالضبط.", "The student ID is exactly 9 digits."],
   whatsapp: ["رمز الدولة ثم من 8 إلى 16 رقمًا.", "Country code, then 8 to 16 digits."],
-  email: ["استخدم بريدك الجامعي smail.ucas.edu.ps.", "Use your smail.ucas.edu.ps university email."],
+  email: [
+    "استخدم بريدك الجامعي smail.ucas.edu.ps.",
+    "Use your smail.ucas.edu.ps university email.",
+  ],
   portfolio: ["يجب أن يبدأ الرابط بـ https://", "The link must start with https://"],
 };
 const answerHint: Pair = ["اكتب 10 أحرف على الأقل.", "Write at least 10 characters."];
 
-const icons: Record<string, LucideIcon> = { activities: Zap, media: Clapperboard, relations: Handshake };
+const icons: Record<string, LucideIcon> = {
+  activities: Zap,
+  media: Clapperboard,
+  relations: Handshake,
+};
 const chooseTitle: Pair = ["أي لجنة تريد الانضمام إليها؟", "Which committee do you want to join?"];
 
 /**
@@ -174,7 +187,12 @@ export function CommitteeForm() {
         return false;
       }
       if (q.kind === "study" && (!study.major || !study.year)) {
-        setError(t(["اختر التخصص والسنة الدراسية للمتابعة.", "Select your major and study year to continue."]));
+        setError(
+          t([
+            "اختر التخصص والسنة الدراسية للمتابعة.",
+            "Select your major and study year to continue.",
+          ]),
+        );
         return false;
       }
     }
@@ -193,12 +211,14 @@ export function CommitteeForm() {
     if (result.success) return true;
     const wanted = new Set(
       current.questions
-        .filter((q) => !q.showWhen || answers[`${current.scope}:${q.showWhen[0]}`] === q.showWhen[1])
+        .filter(
+          (q) => !q.showWhen || answers[`${current.scope}:${q.showWhen[0]}`] === q.showWhen[1],
+        )
         .flatMap(fieldsOf),
     );
-    const bad = [...new Set(result.error.issues.map((issue) => String(issue.path[0] ?? "")))].filter(
-      (name) => wanted.has(name),
-    );
+    const bad = [
+      ...new Set(result.error.issues.map((issue) => String(issue.path[0] ?? ""))),
+    ].filter((name) => wanted.has(name));
     if (!bad.length) return true;
     const field = (name: string) =>
       form.current!.querySelector<HTMLInputElement>(
@@ -261,19 +281,46 @@ export function CommitteeForm() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="text-sm font-medium">
               <span className="mb-1.5 block">{t(["التخصص", "Major"])}</span>
-              <Select name="major" value={study.major} onValueChange={(major) => setStudy((prev) => ({ ...prev, major }))} required>
-                <SelectTrigger aria-label={t(["التخصص", "Major"])}><SelectValue placeholder={t(["اختر التخصص", "Select major"])} /></SelectTrigger>
+              <Select
+                name="major"
+                value={study.major}
+                onValueChange={(major) => setStudy((prev) => ({ ...prev, major }))}
+                required
+              >
+                <SelectTrigger aria-label={t(["التخصص", "Major"])}>
+                  <SelectValue placeholder={t(["اختر التخصص", "Select major"])} />
+                </SelectTrigger>
                 <SelectContent>
-                  {majors.map((major) => <SelectItem key={major} value={major}>{ar ? major : majorEnglishLabels[major]}</SelectItem>)}
+                  {majors.map((major) => (
+                    <SelectItem key={major} value={major}>
+                      {ar ? major : majorEnglishLabels[major]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </label>
             <label className="text-sm font-medium">
               <span className="mb-1.5 block">{t(["السنة الدراسية", "Study year"])}</span>
-              <Select name="studyYear" value={study.year} onValueChange={(year) => setStudy((prev) => ({ ...prev, year }))} required>
-                <SelectTrigger aria-label={t(["السنة الدراسية", "Study year"])}><SelectValue placeholder={t(["اختر السنة", "Select year"])} /></SelectTrigger>
+              <Select
+                name="studyYear"
+                value={study.year}
+                onValueChange={(year) => setStudy((prev) => ({ ...prev, year }))}
+                required
+              >
+                <SelectTrigger aria-label={t(["السنة الدراسية", "Study year"])}>
+                  <SelectValue placeholder={t(["اختر السنة", "Select year"])} />
+                </SelectTrigger>
                 <SelectContent>
-                  {[["1", "السنة الأولى", "First year"], ["2", "السنة الثانية", "Second year"], ["3", "السنة الثالثة", "Third year"], ["4", "السنة الرابعة", "Fourth year"]].map(([value, arLabel, enLabel]) => <SelectItem key={value} value={value!}>{t([arLabel!, enLabel!])}</SelectItem>)}
+                  {[
+                    ["1", "السنة الأولى", "First year"],
+                    ["2", "السنة الثانية", "Second year"],
+                    ["3", "السنة الثالثة", "Third year"],
+                    ["4", "السنة الرابعة", "Fourth year"],
+                  ].map(([value, arLabel, enLabel]) => (
+                    <SelectItem key={value} value={value!}>
+                      {t([arLabel!, enLabel!])}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </label>
@@ -294,7 +341,10 @@ export function CommitteeForm() {
                 onClick={() =>
                   setPicked((p) => {
                     const now = p[k] ?? [];
-                    return { ...p, [k]: now.includes(opt) ? now.filter((x) => x !== opt) : [...now, opt] };
+                    return {
+                      ...p,
+                      [k]: now.includes(opt) ? now.filter((x) => x !== opt) : [...now, opt],
+                    };
                   })
                 }
                 className={cn(
@@ -332,10 +382,21 @@ export function CommitteeForm() {
           <input type="hidden" name={inputName} value={answers[k] ?? ""} required />
           <div role="radiogroup" aria-label={t(q.label)} className="flex flex-wrap gap-2">
             {q.options.map(([value, arLabel, enLabel]) => (
-              <button key={value} type="button" role="radio" aria-checked={answers[k] === value}
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={answers[k] === value}
                 onClick={() => setAnswers((prev) => ({ ...prev, [k]: value }))}
-                className={cn("rounded-full border px-4 py-2 text-sm font-bold", answers[k] === value ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:border-primary/50")}
-              >{t([arLabel, enLabel])}</button>
+                className={cn(
+                  "rounded-full border px-4 py-2 text-sm font-bold",
+                  answers[k] === value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background hover:border-primary/50",
+                )}
+              >
+                {t([arLabel, enLabel])}
+              </button>
             ))}
           </div>
         </fieldset>
@@ -390,7 +451,8 @@ export function CommitteeForm() {
               q.props?.["type"] === "url"
                 ? (e) => {
                     const v = e.currentTarget.value.trim();
-                    if (v && !/^[a-z][a-z0-9+.-]*:/i.test(v)) e.currentTarget.value = `https://${v}`;
+                    if (v && !/^[a-z][a-z0-9+.-]*:/i.test(v))
+                      e.currentTarget.value = `https://${v}`;
                   }
                 : undefined
             }
@@ -457,24 +519,26 @@ export function CommitteeForm() {
         <h2 ref={heading} tabIndex={-1} className="mt-2 text-3xl font-extrabold outline-none">
           {t(current.title)}
         </h2>
-        {step > 0 && <div
-          role="progressbar"
-          aria-valuemin={1}
-          aria-valuemax={flow.length}
-          aria-valuenow={step + 1}
-          aria-label={t(progress)}
-          className="mt-5 flex gap-2"
-        >
-          {flow.map((_, i) => (
-            <span
-              key={i}
-              className={cn(
-                "h-1.5 flex-1 rounded-full transition-colors duration-300",
-                i <= step ? "bg-primary" : "bg-muted",
-              )}
-            />
-          ))}
-        </div>}
+        {step > 0 && (
+          <div
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={flow.length}
+            aria-valuenow={step + 1}
+            aria-label={t(progress)}
+            className="mt-5 flex gap-2"
+          >
+            {flow.map((_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-1.5 flex-1 rounded-full transition-colors duration-300",
+                  i <= step ? "bg-primary" : "bg-muted",
+                )}
+              />
+            ))}
+          </div>
+        )}
         {step > 0 && <p className="mt-2 text-xs text-muted-foreground">{t(progress)}</p>}
         {step > 1 && <p className="mt-1 text-xs text-muted-foreground">اكتب إجاباتك بالعربية.</p>}
       </header>

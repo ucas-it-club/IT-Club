@@ -257,10 +257,9 @@ export function BracketHero() {
     let cancelled = false;
 
     void (async () => {
-      const loaded = await Promise.all([
-        import("gsap"),
-        import("gsap/ScrollTrigger"),
-      ]).catch(() => null);
+      const loaded = await Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).catch(
+        () => null,
+      );
 
       if (cancelled) return;
       if (!loaded) {

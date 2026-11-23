@@ -65,7 +65,9 @@ export function SiteStatus() {
             href={collegeUrl[lang]}
             target="_blank"
             rel="noopener"
-            title={ar ? "الكلية الجامعية للعلوم التطبيقية" : "University College of Applied Sciences"}
+            title={
+              ar ? "الكلية الجامعية للعلوم التطبيقية" : "University College of Applied Sciences"
+            }
           >
             <img src={ucasIcon} alt="" width={36} height={96} decoding="async" />
             UCAS
