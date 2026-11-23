@@ -1,17 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/club/supabase";
-import { feedbackKinds, feedbackStatuses, type Feedback } from "@/lib/club/feedback";
-
-/** Newest first; RLS returns rows only to super admins and editors. */
-async function loadFeedback() {
-  const { data, error } = await supabase()
-    .from("club_feedback")
-    .select("id,kind,message,name,contact,page,lang,theme,device,status,created_at")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  // SAFETY: the select above names exactly the Feedback columns.
-  return (data || []) as Feedback[];
-}
+import { loadFeedback } from "@/lib/club/supabase";
+import { feedbackKinds, feedbackStatuses } from "@/lib/club/feedback";
 
 /** Read-only list of Site Feedback for super admins and editors. */
 export function FeedbackWorkspace({ ar }: { ar: boolean }) {

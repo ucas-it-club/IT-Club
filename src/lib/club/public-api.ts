@@ -1,7 +1,8 @@
 import type { Content, ContentCollection, Settings } from "./model";
+import type { FeedbackKind } from "./feedback";
 
 /**
- * The public read path, without the Supabase SDK.
+ * The public read path, and the one anonymous write (Site Feedback), without the Supabase SDK.
  *
  * Everything a visitor sees is a small set of parallel PostgREST GETs and one RPC, all anonymous,
  * all guarded by RLS. Reaching them through `createClient` pulled the whole SDK
@@ -192,7 +193,7 @@ export async function recordClubVisit(visitId: string) {
 }
 
 export type FeedbackInput = {
-  kind: "bug" | "suggestion";
+  kind: FeedbackKind;
   message: string;
   name: string;
   contact: string;

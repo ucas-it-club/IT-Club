@@ -87,6 +87,11 @@ export function PrivacyPage() {
       </p>
       <p className="mt-4 leading-relaxed text-muted-foreground">
         {ar
+          ? "الملاحظات على الموقع تُحفظ على Supabase مع الصفحة التي جئت منها واللغة والمظهر ونوع المتصفح، ومعها اسمك ووسيلة التواصل فقط إن كتبتهما. يقرؤها المحررون فقط. لمنع الرسائل المزعجة يحفظ الخادم بصمة مشفّرة لعنوان IP لمدة ساعة تقريبًا، ولا يحفظ العنوان نفسه."
+          : "Site feedback is stored on Supabase with the page you came from, your language, theme and browser, and your name and contact only if you typed them. Only editors read it. To stop spam, the server keeps a salted hash of your IP address for about an hour, never the address itself."}
+      </p>
+      <p className="mt-4 leading-relaxed text-muted-foreground">
+        {ar
           ? "محتوى الموقع وصوره مستضاف على Supabase. صور الأعضاء والفعاليات عامة لأنها معروضة على الموقع."
           : "Site content and images are hosted on Supabase. Member and event images are public because they are displayed on the site."}
       </p>

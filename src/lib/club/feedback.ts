@@ -34,28 +34,43 @@ let source = "";
 export const rememberFeedbackSource = () => {
   source = location.pathname;
 };
-export const feedbackSource = () => source;
+
+/** Takes the remembered page once; a direct visit falls back to a same-site referrer. */
+export function takeFeedbackSource() {
+  const from = source;
+  source = "";
+  if (from) return from;
+  try {
+    const referrer = new URL(document.referrer);
+    if (referrer.origin === location.origin) return referrer.pathname;
+  } catch {
+    /* No referrer. */
+  }
+  return "";
+}
+
+const feedbackErrors: [string, string, string][] = [
+  [
+    "feedback_rate_limited",
+    "أرسلت عدة ملاحظات خلال الساعة الأخيرة. حاول مرة أخرى لاحقًا.",
+    "You have sent several notes in the last hour. Please try again later.",
+  ],
+  [
+    "feedback_too_long",
+    `الرسالة أطول من ${feedbackMaxLength} حرف.`,
+    `The message is longer than ${feedbackMaxLength} characters.`,
+  ],
+  ["feedback_empty", "اكتب رسالتك أولًا.", "Write your message first."],
+  ["feedback_rejected", "تعذر قبول الرسالة.", "The message could not be accepted."],
+];
 
 /** Bilingual message for an error thrown by club_send_feedback. */
 export function feedbackError(error: unknown, ar: boolean) {
   const text = error instanceof Error ? error.message : "";
-  const [a, e] = text.includes("feedback_rate_limited")
-    ? [
-        "أرسلت عدة ملاحظات خلال الساعة الأخيرة. حاول مرة أخرى لاحقًا.",
-        "You have sent several notes in the last hour. Please try again later.",
-      ]
-    : text.includes("feedback_too_long")
-      ? [
-          `الرسالة أطول من ${feedbackMaxLength} حرف.`,
-          `The message is longer than ${feedbackMaxLength} characters.`,
-        ]
-      : text.includes("feedback_empty")
-        ? ["اكتب رسالتك أولًا.", "Write your message first."]
-        : text.includes("feedback_rejected")
-          ? ["تعذر قبول الرسالة.", "The message could not be accepted."]
-          : [
-              "تعذر الإرسال. تحقق من اتصالك وحاول مجددًا.",
-              "Could not send. Check your connection and try again.",
-            ];
+  const [, a, e] = feedbackErrors.find(([code]) => text.includes(code)) ?? [
+    "",
+    "تعذر الإرسال. تحقق من اتصالك وحاول مجددًا.",
+    "Could not send. Check your connection and try again.",
+  ];
   return ar ? a : e;
 }

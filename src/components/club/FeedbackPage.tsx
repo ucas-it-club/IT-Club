@@ -9,7 +9,7 @@ import {
   feedbackError,
   feedbackKinds,
   feedbackMaxLength,
-  feedbackSource,
+  takeFeedbackSource,
   type FeedbackKind,
 } from "@/lib/club/feedback";
 
@@ -23,6 +23,7 @@ export function FeedbackPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [from] = useState(() => (typeof window === "undefined" ? "" : takeFeedbackSource()));
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,7 +36,7 @@ export function FeedbackPage() {
         message,
         name: String(form.get("name") || ""),
         contact: String(form.get("contact") || ""),
-        page: feedbackSource() || location.pathname,
+        page: from || location.pathname,
         lang,
         theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
         device: navigator.userAgent.slice(0, 300),

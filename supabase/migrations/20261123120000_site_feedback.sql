@@ -23,7 +23,7 @@ grant select on public.club_feedback to authenticated;
 create policy club_feedback_read on public.club_feedback for select to authenticated
  using(club_private.is_editor());
 
--- The rate guard keeps only a salted hash of the IP, for at most about two hours.
+-- The rate guard keeps only a salted hash of the IP: about an hour, at most two with pg_cron.
 create table club_private.feedback_salt (salt text not null);
 insert into club_private.feedback_salt(salt) values (gen_random_uuid()::text || gen_random_uuid()::text);
 create table club_private.feedback_rate (
