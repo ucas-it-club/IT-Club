@@ -353,10 +353,11 @@
   }
 }
 
-/* Home stories taking turns (HomeStories, card-slide.ts): the cards move in the page,
-   coming in from beyond one screen edge and leaving past the other. The screen edge is
-   the only cut; clipping sideways stops the travelling cards from adding a scrollbar. */
-.club-site:has(.hs-stage[data-sliding]) {
+/* Home stories taking turns (HomeStories, card-slide.ts): the cards move in the page.
+   While they move, the stage clips at its own left and right edges with a hard cut, so
+   cards are seen in the same box as at rest: one leaves across one edge, one enters
+   across the other, and nothing passes over the arrows outside it. */
+.hs-stage[data-sliding] {
   overflow-x: clip;
 }
 .hs-btn {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { flipFrom, offScreen } from "../src/lib/club/card-slide.ts";
+import { flipFrom, pastEdge } from "../src/lib/club/card-slide.ts";
 
 test("a card that stays animates from its old box to its new one", () => {
   const was = { left: 100, top: 50, width: 400, height: 225 };
@@ -14,12 +14,14 @@ test("a card that has not moved gets no offset", () => {
   assert.equal(flipFrom(box, box), "translate(0px, 0px) scale(1, 1)");
 });
 
-test("off screen means fully past the viewport edge, not just past the card's own box", () => {
-  const box = { left: 300, width: 700 };
-  // Its right edge lands on the viewport's left edge.
-  assert.equal(offScreen("left", box, 1280), "translateX(-1000px)");
-  // Its left edge lands on the viewport's right edge.
-  assert.equal(offScreen("right", box, 1280), "translateX(980px)");
+test("a card enters and leaves across the stage's own edges, not the screen's", () => {
+  const stage = { left: 100, width: 1080 };
+  const big = { left: 100, width: 700 };
+  const small = { left: 830, width: 350 };
+  // Its right edge lands on the stage's left edge.
+  assert.equal(pastEdge("left", big, stage), "translateX(-700px)");
+  // Its left edge lands on the stage's right edge.
+  assert.equal(pastEdge("right", small, stage), "translateX(350px)");
 });
 
 // The slide used View Transitions, whose snapshots sat above the sticky header and stayed

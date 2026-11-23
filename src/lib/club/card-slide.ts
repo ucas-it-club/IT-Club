@@ -20,9 +20,14 @@ export function flipFrom(was: Box, now: Box) {
   return `translate(${was.left - now.left}px, ${was.top - now.top}px) scale(${was.width / now.width}, ${was.height / now.height})`;
 }
 
-/** Moves a card drawn at `box` until it is fully past the viewport's `side` edge. */
-export function offScreen(side: Side, box: Pick<Box, "left" | "width">, viewport: number) {
-  const dx = side === "left" ? -(box.left + box.width) : viewport - box.left;
+/** Moves a card drawn at `box` until it is just past the stage's `side` edge, where the stage clips it. */
+export function pastEdge(
+  side: Side,
+  box: Pick<Box, "left" | "width">,
+  stage: Pick<Box, "left" | "width">,
+) {
+  const dx =
+    side === "left" ? stage.left - (box.left + box.width) : stage.left + stage.width - box.left;
   return `translateX(${dx}px)`;
 }
 
@@ -30,8 +35,8 @@ const shown = (el: HTMLElement) => el.getClientRects().length > 0;
 
 /**
  * Runs `update` (which must render synchronously) and slides the stage's cards into
- * their new places. New cards come in from `from`; cards that leave slide off the
- * other side as copies that are removed when they are gone. Each card needs a
+ * their new places. New cards come in across the stage's `from` edge; cards that
+ * leave slide out across the other edge as copies that are removed when they are gone. Each card needs a
  * `data-key`. A slide that starts during another picks up from where cards are drawn.
  */
 export function slideCards(stage: HTMLElement, update: () => void, from: Side) {
@@ -53,7 +58,6 @@ export function slideCards(stage: HTMLElement, update: () => void, from: Side) {
   update();
 
   const stageBox = stage.getBoundingClientRect();
-  const viewport = document.documentElement.clientWidth;
   const done: Promise<unknown>[] = [];
   const to = from === "left" ? "right" : "left";
 
@@ -66,7 +70,7 @@ export function slideCards(stage: HTMLElement, update: () => void, from: Side) {
           { transformOrigin: "0 0", transform: flipFrom(was.box, now) },
           { transformOrigin: "0 0", transform: "none" },
         ]
-      : [{ transform: offScreen(from, now, viewport) }, { transform: "none" }];
+      : [{ transform: pastEdge(from, now, stageBox) }, { transform: "none" }];
     done.push(el.animate(frames, timing).finished);
   }
 
@@ -87,13 +91,13 @@ export function slideCards(stage: HTMLElement, update: () => void, from: Side) {
     });
     stage.append(copy);
     const slide = copy.animate(
-      [{ transform: "none" }, { transform: offScreen(to, box, viewport) }],
+      [{ transform: "none" }, { transform: pastEdge(to, box, stageBox) }],
       timing,
     );
     done.push(slide.finished.finally(() => copy.remove()));
   }
 
-  // While cards travel past the screen edges the page clips sideways (styles.css), so no scrollbar flashes.
+  // While cards move, the stage clips at its own edges (styles.css): the same box they are seen in at rest.
   stage.dataset["sliding"] = "";
   void Promise.allSettled(done).then(() => {
     if (
