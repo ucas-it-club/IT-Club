@@ -437,7 +437,19 @@ html.js .club-reveal.is-shown {
   text-align: center;
   /* Solid, like the navbar above it: nothing scrolling beneath shows through the text. */
   background: var(--background);
-  transition: opacity 600ms ease;
+  overflow: hidden;
+  transition:
+    height 300ms ease,
+    opacity 300ms ease,
+    visibility 300ms;
+}
+/* Scrolled down: the strip folds away and the space it held goes back to the page. */
+[data-status-away] .club-site:has(.club-status) {
+  --status-h: 0px;
+}
+[data-status-away] .club-status {
+  opacity: 0;
+  visibility: hidden;
 }
 .club-status > div {
   display: flex;
@@ -493,6 +505,14 @@ html.js .club-reveal.is-shown {
 @media (max-width: 767.98px) {
   .club-site:has(.club-status) {
     --status-h: 5rem;
+  }
+  /* A phone shows the strip on the home page only: on forms and other pages the screen is
+     too short to give it up. */
+  .club-site:has(.club-status:not([data-home])) {
+    --status-h: 0px;
+  }
+  .club-status:not([data-home]) {
+    visibility: hidden;
   }
   .club-status {
     grid-template-columns: repeat(2, minmax(0, 1fr));

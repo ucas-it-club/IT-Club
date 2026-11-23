@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "@tanstack/react-router";
 import { dateParts, eventDisplayStatus } from "@/lib/club/event-timing";
 import { collegeUrl, local } from "@/lib/club/model";
+import { pageOf } from "@/lib/club/paths";
 import ucasIcon from "@/assets/ucas-college-icon.webp";
 import { useClub } from "./club-context";
 
@@ -12,6 +14,7 @@ import { useClub } from "./club-context";
 export function SiteStatus() {
   const { lang, data, visitorCount } = useClub();
   const ar = lang === "ar";
+  const home = pageOf(useLocation().pathname) === "";
   // Null until mounted: the server cannot know the visitor's clock, and a time
   // rendered there would be wrong and mismatch on hydration.
   const [now, setNow] = useState<Date | null>(null);
@@ -21,6 +24,18 @@ export function SiteStatus() {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
 
     return () => window.clearInterval(timer);
+  }, []);
+
+  // Folds away once the page scrolls, giving the screen back to the content.
+  useEffect(() => {
+    const html = document.documentElement;
+    const onScroll = () => html.toggleAttribute("data-status-away", window.scrollY > 40);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      html.removeAttribute("data-status-away");
+    };
   }, []);
 
   const time = now
@@ -56,7 +71,7 @@ export function SiteStatus() {
   ];
 
   return (
-    <dl className="club-status" dir={ar ? "rtl" : "ltr"}>
+    <dl className="club-status" data-home={home || undefined} dir={ar ? "rtl" : "ltr"}>
       {/* The college: its own icon and name, linking to its site. */}
       <div className="club-status-college">
         <dt>{ar ? "الكلية" : "College"}</dt>
