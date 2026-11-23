@@ -13,6 +13,7 @@ import { SettingsEditor } from "./admin/SettingsEditor";
 import { AdminUsersEditor } from "./admin/AdminUsersEditor";
 import { NewsWorkspace } from "./admin/NewsWorkspace";
 import { AchievementWorkspace } from "./admin/AchievementWorkspace";
+import { FeedbackWorkspace } from "./admin/FeedbackWorkspace";
 import { canManageMember, canManageNews } from "@/lib/club/admin-access";
 import {
   loadAdminDateOrder,
@@ -357,6 +358,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
               .map((x) => [x, labels[x][ar ? 0 : 1]]),
             ["joinRequests", ar ? "طلبات الانضمام" : "Applications"],
             ["contactMessages", ar ? "الرسائل" : "Messages"],
+            ["feedback", ar ? "ملاحظات الموقع" : "Site feedback"],
             ...(role === "super_admin"
               ? [
                   ["settings", ar ? "إعدادات الموقع" : "Site settings"],
@@ -770,6 +772,7 @@ function AdminWorkspace({ role, user }: { role: string; user: User }) {
               )}
             </>
           ))}
+        {tab === "feedback" && <FeedbackWorkspace ar={ar} />}
         {tab === "joinRequests" && <RegistrationAdmin canEdit={role === "super_admin"} />}
         {tab === "contactMessages" && (
           <section className="rounded-3xl border border-border bg-card p-6 space-y-4">
