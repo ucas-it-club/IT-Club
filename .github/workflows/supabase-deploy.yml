@@ -34,10 +34,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 24
 
-      - run: npm ci
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
 
       # Every test that replays migrations in PGlite must pass before production changes.
       - name: Migration tests
