@@ -1,6 +1,9 @@
 import type { ComponentType } from "react";
 import { ArrowUpLeft, ArrowUpRight, Facebook, Instagram, Linkedin, Mail } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useClub } from "./club-context";
+import { hrefOf } from "@/lib/club/paths";
+import { rememberFeedbackSource } from "@/lib/club/feedback";
 
 type Channel = {
   key: string;
@@ -88,6 +91,14 @@ export function ContactPage() {
           </li>
         ))}
       </ul>
+      <p className="contact-feedback">
+        {ar
+          ? "مشكلة في الموقع أو فكرة لتحسينه؟ "
+          : "Something wrong on the site, or an idea to improve it? "}
+        <Link to={hrefOf(lang, "feedback")} onClick={rememberFeedbackSource}>
+          {ar ? "أرسل ملاحظة على الموقع" : "Send site feedback"}
+        </Link>
+      </p>
     </section>
   );
 }

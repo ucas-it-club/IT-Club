@@ -195,3 +195,16 @@
     transition: none;
   }
 }
+
+.contact-feedback {
+  margin-top: 2rem;
+  text-align: center;
+  color: var(--muted-foreground);
+  line-height: 2;
+}
+.contact .contact-feedback a {
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}

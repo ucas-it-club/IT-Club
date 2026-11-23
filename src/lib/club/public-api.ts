@@ -52,6 +52,9 @@ async function request<T>(path: string, init: RequestInit, f: Fetcher): Promise<
   });
 
   if (response.ok) {
+    // A void RPC answers 204 with no body.
+    // SAFETY: only void calls such as sendFeedback ask for T = null.
+    if (response.status === 204) return null as T;
     // SAFETY: T names the shape this path's `select` returns; see above.
     return (await response.json()) as T;
   }
@@ -186,4 +189,29 @@ export async function recordClubVisit(visitId: string) {
   if (!Number.isSafeInteger(count) || count < 0) throw new Error("Invalid visit count");
 
   return count;
+}
+
+export type FeedbackInput = {
+  kind: "bug" | "suggestion";
+  message: string;
+  name: string;
+  contact: string;
+  page: string;
+  lang: string;
+  theme: string;
+  device: string;
+  website: string;
+};
+
+/** Sends one piece of Site Feedback; the RPC validates and rate-limits it. */
+export async function sendFeedback(input: FeedbackInput) {
+  await request<null>(
+    "rpc/club_send_feedback",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+    fetch,
+  );
 }

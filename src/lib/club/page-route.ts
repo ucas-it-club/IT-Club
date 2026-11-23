@@ -21,7 +21,7 @@ import { loadClubData, refreshClubData } from "./ssr-data";
  */
 
 /** Pages that take no id after them. */
-const fixed = ["about", "join", "contact", "privacy", "admin", "ask"];
+const fixed = ["about", "join", "contact", "privacy", "feedback", "admin", "ask"];
 
 export const isCollection = (page: string): page is ContentCollection =>
   // SAFETY: the cast only satisfies includes' parameter type; the check itself
@@ -146,7 +146,7 @@ export function pageHead(
 
   // SAFETY: hasOwn confirms first is one of copy's keys before the cast.
   const key: PageKey = missing || !Object.hasOwn(copy, first) ? "missing" : (first as PageKey);
-  const noindex = key === "missing" || key === "admin" || key === "ask";
+  const noindex = key === "missing" || key === "admin" || key === "ask" || key === "feedback";
 
   return {
     meta: seo({
