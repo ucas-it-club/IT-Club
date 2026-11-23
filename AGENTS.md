@@ -12,9 +12,9 @@
 ## Supabase production
 
 Change the production database only through migration files in
-`supabase/migrations`, merged to `master`. The `Deploy Supabase` workflow applies
-them (see `docs/supabase-deploy.md`). Never change production schema, policies,
-functions or Edge Functions from the Supabase dashboard, the SQL editor or an MCP
-connection: that puts the migration history out of step with the repo and breaks
-the next deploy. Never edit a migration file that has already run; fix forward
-with a new one.
+`supabase/migrations`, merged to `master`. The supervisor then applies them from
+a laptop with `supabase db push` (see `docs/supabase-migrations.md`); agents do
+not apply them. Never change production schema, policies, functions or Edge
+Functions from the Supabase dashboard, the SQL editor or an MCP connection: that
+puts the migration history out of step with the repo and breaks the next push.
+Never edit a migration file that has already run; fix forward with a new one.
