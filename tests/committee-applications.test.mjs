@@ -26,42 +26,55 @@ function harness(role = "super_admin") {
       setRightToLeft() {},
       getRange(row, col, n, width) {
         // Layout calls (colours, widths, alignment) change nothing the tests read, so unknown methods chain.
-        const range = new Proxy({
-          // Like Sheets' parser: a leading ' is dropped and keeps the rest as typed; a bare "+970…" becomes "=+970…".
-          setValues(values) {
-            values = values.map((line) =>
-              line.map((cell) => (/^'/.test(cell) ? cell.slice(1) : /^\+\d/.test(cell) ? `=${cell}` : cell)),
-            );
-            values.forEach((value, i) => {
-              rows[row - 1 + i] ??= [];
-              value.forEach((cell, j) => (rows[row - 1 + i][col - 1 + j] = cell));
-            });
-            return range;
+        const range = new Proxy(
+          {
+            // Like Sheets' parser: a leading ' is dropped and keeps the rest as typed; a bare "+970…" becomes "=+970…".
+            setValues(values) {
+              values = values.map((line) =>
+                line.map((cell) =>
+                  /^'/.test(cell) ? cell.slice(1) : /^\+\d/.test(cell) ? `=${cell}` : cell,
+                ),
+              );
+              values.forEach((value, i) => {
+                rows[row - 1 + i] ??= [];
+                value.forEach((cell, j) => (rows[row - 1 + i][col - 1 + j] = cell));
+              });
+              return range;
+            },
+            setRichTextValues(values) {
+              return range.setValues(values.map((line) => line.map((cell) => cell.text)));
+            },
+            setFontWeight() {
+              return range;
+            },
+            setWrap() {
+              return range;
+            },
+            getValues: () =>
+              Array.from({ length: n }, (_, i) =>
+                Array.from({ length: width }, (_, j) => rows[row - 1 + i]?.[col - 1 + j] ?? ""),
+              ),
+            // A formula cell like =+970… reports only its digits, as in Sheets.
+            // A String object stands for a plain-text cell whose text merely starts with "=".
+            getDisplayValues: () =>
+              range
+                .getValues()
+                .map((line) =>
+                  line.map((cell) =>
+                    typeof cell === "string" ? cell.replace(/^=\+?(\d+)$/, "$1") : String(cell),
+                  ),
+                ),
+            getFormulas: () =>
+              range
+                .getValues()
+                .map((line) =>
+                  line.map((cell) =>
+                    typeof cell === "string" && cell.startsWith("=") ? cell : "",
+                  ),
+                ),
           },
-          setRichTextValues(values) {
-            return range.setValues(values.map((line) => line.map((cell) => cell.text)));
-          },
-          setFontWeight() {
-            return range;
-          },
-          setWrap() {
-            return range;
-          },
-          getValues: () =>
-            Array.from({ length: n }, (_, i) =>
-              Array.from({ length: width }, (_, j) => rows[row - 1 + i]?.[col - 1 + j] ?? ""),
-            ),
-          // A formula cell like =+970… reports only its digits, as in Sheets.
-          // A String object stands for a plain-text cell whose text merely starts with "=".
-          getDisplayValues: () =>
-            range.getValues().map((line) =>
-              line.map((cell) => (typeof cell === "string" ? cell.replace(/^=\+?(\d+)$/, "$1") : String(cell))),
-            ),
-          getFormulas: () =>
-            range.getValues().map((line) =>
-              line.map((cell) => (typeof cell === "string" && cell.startsWith("=") ? cell : "")),
-            ),
-        }, { get: (target, key) => target[key] ?? (() => range) });
+          { get: (target, key) => target[key] ?? (() => range) },
+        );
         return range;
       },
     };
@@ -322,11 +335,14 @@ test("rows are stored for people: Arabic names and answers, plain-text phone, Ga
   app.context.setup();
   app.configure(true, 10);
   assert.equal(
-    app.post({ action: "apply", requestId: requestId(1), data: makeApplication("activities", 1) }).ok,
+    app.post({ action: "apply", requestId: requestId(1), data: makeApplication("activities", 1) })
+      .ok,
     true,
   );
-  const [record] = app.post({ action: "listApplications", accessToken: "valid-test-token-long-enough" })
-    .applications;
+  const [record] = app.post({
+    action: "listApplications",
+    accessToken: "valid-test-token-long-enough",
+  }).applications;
   assert.equal(record.committeeName, "الأنشطة");
   assert.equal(record.whatsapp, "+970591234567");
   assert.equal(record.submittedAt, "2026-11-17 18:00");
@@ -338,11 +354,23 @@ test("repairRows restores the plus and the Arabic committee name on old rows onl
   const app = harness();
   app.context.setup();
   const book = app.books.values().next().value;
-  book.get("العلاقات العامة").rows.push(["id-1", "t", "relations", "n", "220220642", "972594890620"]);
+  book
+    .get("العلاقات العامة")
+    .rows.push(["id-1", "t", "relations", "n", "220220642", "972594890620"]);
   book.get("الإعلام").rows.push(["id-2", "t", "الإعلام", "n", "220220643", "+970567344834"]);
   app.context.repairRows();
-  assert.deepEqual(book.get("العلاقات العامة").rows[1].slice(2, 6), ["العلاقات العامة", "n", "220220642", "+972594890620"]);
-  assert.deepEqual(book.get("الإعلام").rows[1].slice(2, 6), ["الإعلام", "n", "220220643", "+970567344834"]);
+  assert.deepEqual(book.get("العلاقات العامة").rows[1].slice(2, 6), [
+    "العلاقات العامة",
+    "n",
+    "220220642",
+    "+972594890620",
+  ]);
+  assert.deepEqual(book.get("الإعلام").rows[1].slice(2, 6), [
+    "الإعلام",
+    "n",
+    "220220643",
+    "+970567344834",
+  ]);
 });
 
 test("repairRows also fixes phone cells that Sheets stored as a formula (=+970…)", () => {
@@ -351,7 +379,12 @@ test("repairRows also fixes phone cells that Sheets stored as a formula (=+970�
   const book = app.books.values().next().value;
   book.get("الأنشطة").rows.push(["id-3", "t", "activities", "n", "229000003", "=+970591234567"]);
   app.context.repairRows();
-  assert.deepEqual(book.get("الأنشطة").rows[1].slice(2, 6), ["الأنشطة", "n", "229000003", "+970591234567"]);
+  assert.deepEqual(book.get("الأنشطة").rows[1].slice(2, 6), [
+    "الأنشطة",
+    "n",
+    "229000003",
+    "+970591234567",
+  ]);
 });
 
 test("new rows keep the WhatsApp number as +970… in the sheet itself", () => {
@@ -367,9 +400,15 @@ test("repairRows turns old UTC timestamps into the sheet's Gaza-time format", ()
   const app = harness();
   app.context.setup();
   const book = app.books.values().next().value;
-  book.get("الإعلام").rows.push(["id-4", "2026-11-17T16:11:45.036Z", "الإعلام", "n", "1", "+970567344834"]);
+  book
+    .get("الإعلام")
+    .rows.push(["id-4", "2026-11-17T16:11:45.036Z", "الإعلام", "n", "1", "+970567344834"]);
   book.get("الإعلام").rows.push(["id-5", "2026-11-17 18:10", "الإعلام", "n", "2", "+970567344835"]);
   app.context.repairRows();
   assert.equal(book.get("الإعلام").rows[1][1], "2026-11-17 18:00");
-  assert.equal(book.get("الإعلام").rows[2][1], "2026-11-17 18:10", "already-new dates are left alone");
+  assert.equal(
+    book.get("الإعلام").rows[2][1],
+    "2026-11-17 18:10",
+    "already-new dates are left alone",
+  );
 });
