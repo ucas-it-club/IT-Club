@@ -69,6 +69,7 @@ Web Application (TanStack Start)
 | `club_partners`                                                                  | Club partners                             |
 | `club_settings`                                                                  | Official club text and links              |
 | `club_visits`                                                                    | Privacy-preserving session visit count    |
+| `club_feedback`                                                                  | Site Feedback from visitors (admins read) |
 | `club_admins`                                                                    | Editor and super administrator roles      |
 | `club_media`                                                                     | Media library records                     |
 | `club_member_media`, `club_event_media`, `club_news_media`, `club_partner_media` | Media relationships for each content type |

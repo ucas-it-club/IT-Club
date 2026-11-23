@@ -38,6 +38,10 @@ const PrivacyPage = lazy(() =>
   import("./PrivacyPage").then((module) => ({ default: module.PrivacyPage })),
 );
 
+const FeedbackPage = lazy(() =>
+  import("./FeedbackPage").then((module) => ({ default: module.FeedbackPage })),
+);
+
 const AskPage = lazy(() => import("./AskPage").then((module) => ({ default: module.AskPage })));
 
 const navigationItems = [
@@ -322,6 +326,12 @@ export function ContentPage() {
     return (
       <Suspense fallback={null}>
         <AskPage />
+      </Suspense>
+    );
+  if (page === "feedback")
+    return (
+      <Suspense fallback={<LoadingView />}>
+        <FeedbackPage />
       </Suspense>
     );
   if (page === "privacy")

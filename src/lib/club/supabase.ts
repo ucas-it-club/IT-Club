@@ -3,6 +3,7 @@ import { url, key, configured, SetupRequiredError } from "./public-api";
 import { prepareImage } from "./images";
 import { contentSchema, type Content, type ContentCollection, type Settings } from "./model";
 import { loginEmail } from "./admin-access";
+import type { Feedback } from "./feedback";
 
 export { url, key, configured, SetupRequiredError } from "./public-api";
 
@@ -459,4 +460,15 @@ export async function deleteMedia(id: string) {
   } finally {
     changed();
   }
+}
+
+/** Site Feedback, newest first; RLS returns rows only to super admins and editors. */
+export async function loadFeedback() {
+  const { data, error } = await supabase()
+    .from("club_feedback")
+    .select("id,kind,message,name,contact,page,lang,theme,device,status,created_at")
+    .order("created_at", { ascending: false });
+  check(error);
+  // SAFETY: the select above names exactly the Feedback columns.
+  return (data || []) as Feedback[];
 }
