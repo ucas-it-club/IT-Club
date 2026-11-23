@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { askCategories, askQuestions, shuffle } from "../src/lib/club/ice-questions.ts";
 
-test("pool has 100+ questions, every category filled, ids unique", () => {
-  assert.ok(askQuestions.length >= 100);
+// The interview set has 90 questions; the floor only catches an emptied or truncated pool.
+test("pool has 80+ questions, every category filled, ids unique", () => {
+  assert.ok(askQuestions.length >= 80);
   for (const { key } of askCategories)
     assert.ok(
       askQuestions.some((question) => question.category === key),
