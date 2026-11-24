@@ -45,6 +45,32 @@ export const filterFeedback = (
       (kind === "all" || item.kind === kind) && (status === "all" || item.status === status),
   );
 
+/**
+ * Markdown for pasting into Claude. Never includes name or contact: the text
+ * leaves the site, and the item ID leads back to the visitor if a reply is needed.
+ */
+export function feedbackMarkdown(items: Feedback[]) {
+  const block = (item: Feedback) =>
+    [
+      `## Feedback ${item.id}`,
+      "",
+      `- Kind: ${feedbackKinds[item.kind][1]}`,
+      `- Status: ${feedbackStatuses[item.status][1]}`,
+      item.page ? `- Page: ${item.page}` : null,
+      item.lang ? `- Language: ${item.lang}` : null,
+      item.theme ? `- Theme: ${item.theme}` : null,
+      item.device ? `- Device: ${item.device}` : null,
+      `- Date: ${item.created_at}`,
+      item.issue_url ? `- Issue: ${item.issue_url}` : null,
+      "",
+      // A quote block keeps the visitor's own Markdown from changing the layout.
+      ...item.message.split(/\r?\n/).map((line) => (line ? `> ${line}` : ">")),
+    ]
+      .filter((line) => line !== null)
+      .join("\n");
+  return items.map(block).join("\n\n---\n\n") + "\n";
+}
+
 /** The page a visitor was on when they followed a feedback link; SPA navigation leaves document.referrer stale. */
 let source = "";
 export const rememberFeedbackSource = () => {

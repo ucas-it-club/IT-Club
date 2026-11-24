@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink } from "lucide-react";
+import { ClipboardCopy, ExternalLink } from "lucide-react";
 import { BrandButton } from "../BrandButton";
 import { DeleteButton } from "./DeleteButton";
 import { Input } from "@/components/ui/input";
@@ -11,9 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteFeedback, loadFeedback, updateFeedback } from "@/lib/club/supabase";
+import {
+  deleteFeedback,
+  loadFeedback,
+  markFeedbackSeen,
+  updateFeedback,
+} from "@/lib/club/supabase";
 import {
   feedbackKinds,
+  feedbackMarkdown,
   feedbackStatuses,
   filterFeedback,
   isGithubIssueUrl,
@@ -32,6 +38,7 @@ export function FeedbackWorkspace({ ar }: { ar: boolean }) {
   const [kind, setKind] = useState<FeedbackKind | "all">("all");
   const [status, setStatus] = useState<FeedbackStatus | "all">("all");
   const [failure, setFailure] = useState("");
+  const [copied, setCopied] = useState("");
   const { data, error, isPending } = useQuery({
     queryKey: feedbackKey,
     queryFn: loadFeedback,
@@ -41,6 +48,7 @@ export function FeedbackWorkspace({ ar }: { ar: boolean }) {
 
   async function run(action: () => Promise<void>) {
     setFailure("");
+    setCopied("");
     try {
       await action();
     } catch {
@@ -53,6 +61,30 @@ export function FeedbackWorkspace({ ar }: { ar: boolean }) {
     } finally {
       await queryClient.invalidateQueries({ queryKey: feedbackKey });
     }
+  }
+
+  async function copy(items: Feedback[]) {
+    setFailure("");
+    setCopied("");
+    try {
+      await navigator.clipboard.writeText(feedbackMarkdown(items));
+    } catch {
+      setFailure(
+        t([
+          "تعذر النسخ. اسمح للمتصفح بالوصول إلى الحافظة.",
+          "Could not copy. Allow clipboard access in the browser.",
+        ]),
+      );
+      return;
+    }
+    const fresh = items.filter((item) => item.status === "new").map((item) => item.id);
+    // run() clears messages first, so the confirmation is set after it.
+    if (fresh.length) await run(() => markFeedbackSeen(fresh));
+    setCopied(
+      ar
+        ? `نُسخت ${items.length} ملاحظة.`
+        : `Copied ${items.length} item${items.length === 1 ? "" : "s"}.`,
+    );
   }
 
   return (
@@ -83,7 +115,24 @@ export function FeedbackWorkspace({ ar }: { ar: boolean }) {
           t={t}
           ar={ar}
         />
+        {shown && shown.length > 0 && (
+          <BrandButton
+            type="button"
+            size="sm"
+            variant="outline"
+            className="self-end"
+            onClick={() => void copy(shown)}
+          >
+            <ClipboardCopy size={16} aria-hidden />
+            {t(["نسخ القائمة لـ Claude", "Copy list for Claude"])} ({shown.length})
+          </BrandButton>
+        )}
       </div>
+      {copied && (
+        <p role="status" className="text-sm font-bold text-primary">
+          {copied}
+        </p>
+      )}
       {failure && (
         <p role="alert" className="text-primary">
           {failure}
@@ -148,7 +197,7 @@ export function FeedbackWorkspace({ ar }: { ar: boolean }) {
                   </div>
                 ))}
             </dl>
-            <FeedbackActions item={item} ar={ar} t={t} run={run} />
+            <FeedbackActions item={item} ar={ar} t={t} run={run} copy={copy} />
           </li>
         ))}
       </ul>
@@ -196,11 +245,13 @@ function FeedbackActions({
   ar,
   t,
   run,
+  copy,
 }: {
   item: Feedback;
   ar: boolean;
   t: (pair: readonly [string, string]) => string;
   run: (action: () => Promise<void>) => Promise<void>;
+  copy: (items: Feedback[]) => Promise<void>;
 }) {
   const [link, setLink] = useState(item.issue_url ?? "");
   const clean = link.trim();
@@ -273,6 +324,10 @@ function FeedbackActions({
             {t(["حفظ الرابط", "Save link"])}
           </BrandButton>
         </form>
+        <BrandButton type="button" size="sm" variant="ghost" onClick={() => void copy([item])}>
+          <ClipboardCopy size={16} aria-hidden />
+          {t(["نسخ لـ Claude", "Copy for Claude"])}
+        </BrandButton>
         <DeleteButton
           label={t(["حذف الملاحظة", "Delete feedback"])}
           onDelete={() => run(() => deleteFeedback(item.id))}
