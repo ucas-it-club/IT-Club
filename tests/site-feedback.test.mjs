@@ -44,8 +44,10 @@ before(async () => {
   await db.exec(
     "alter table public.club_admins drop constraint club_admins_role_check; alter table public.club_admins add constraint club_admins_role_check check(role in ('editor','super_admin','media_editor'))",
   );
-  const file = readdirSync("supabase/migrations").find((f) => f.endsWith("_site_feedback.sql"));
-  await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
+  for (const name of ["_site_feedback.sql", "_feedback_triage.sql"]) {
+    const file = readdirSync("supabase/migrations").find((f) => f.endsWith(name));
+    await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
+  }
   for (const [id, role] of [
     [owner, "super_admin"],
     [editor, "editor"],
@@ -124,9 +126,54 @@ test("only super admins and editors can read feedback", async () => {
     await as(id);
     assert.equal((await db.query("select * from public.club_feedback")).rows.length, n, id);
   }
-  await as(editor);
+});
+
+test("super admins and editors set status, link an issue and delete; others cannot", async () => {
+  await as(null);
+  await send();
+  await send({ kind: "suggestion" });
+  for (const id of [media, outsider]) {
+    await as(id);
+    const update = await db.query("update public.club_feedback set status='done'");
+    assert.equal(update.affectedRows, 0, id);
+    const removed = await db.query("delete from public.club_feedback");
+    assert.equal(removed.affectedRows, 0, id);
+  }
+  await as(null);
   await assert.rejects(db.query("update public.club_feedback set status='done'"));
   await assert.rejects(db.query("delete from public.club_feedback"));
+
+  await as(editor);
+  await assert.rejects(
+    db.query("update public.club_feedback set message='rewritten'"),
+    "message stays read-only",
+  );
+  await assert.rejects(
+    db.query("update public.club_feedback set status='archived'"),
+    "only New, Seen or Done",
+  );
+  await assert.rejects(
+    db.query("update public.club_feedback set issue_url='https://evil.example/issues/1'"),
+    "only a GitHub issue link",
+  );
+  const [bug] = (await db.query("select id from public.club_feedback where kind='bug'")).rows;
+  const link = "https://github.com/ucas-it-club/IT-Club/issues/69";
+  await db.query("update public.club_feedback set issue_url=$1, status='done' where id=$2", [
+    link,
+    bug.id,
+  ]);
+  await as(owner);
+  await db.query("update public.club_feedback set status='seen' where kind='suggestion'");
+  const rows = (
+    await db.query("select kind,status,issue_url from public.club_feedback order by kind")
+  ).rows;
+  assert.deepEqual(rows, [
+    { kind: "bug", status: "done", issue_url: link },
+    { kind: "suggestion", status: "seen", issue_url: null },
+  ]);
+  await as(editor);
+  await db.query("delete from public.club_feedback where id=$1", [bug.id]);
+  assert.equal((await db.query("select * from public.club_feedback")).rows.length, 1);
 });
 
 test("the stored IP hash is not the IP and admins cannot read it", async () => {

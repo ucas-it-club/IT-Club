@@ -9,7 +9,7 @@ import {
   type Settings,
 } from "./model";
 import { loginEmail } from "./admin-access";
-import type { Feedback } from "./feedback";
+import type { Feedback, FeedbackStatus } from "./feedback";
 
 export { url, key, configured, SetupRequiredError } from "./public-api";
 
@@ -492,9 +492,29 @@ export async function deleteMedia(id: string) {
 export async function loadFeedback() {
   const { data, error } = await supabase()
     .from("club_feedback")
-    .select("id,kind,message,name,contact,page,lang,theme,device,status,created_at")
+    .select("id,kind,message,name,contact,page,lang,theme,device,status,issue_url,created_at")
     .order("created_at", { ascending: false });
   check(error);
   // SAFETY: the select above names exactly the Feedback columns.
   return (data || []) as Feedback[];
+}
+
+/** RLS lets only super admins and editors change status and issue_url. */
+export async function updateFeedback(
+  id: string,
+  change: { status: FeedbackStatus; issue_url?: string | null },
+) {
+  const { data, error } = await supabase()
+    .from("club_feedback")
+    .update(change)
+    .eq("id", id)
+    .select("id");
+  check(error);
+  if (!data?.length) throw new Error("Feedback was not updated. Check access and retry.");
+}
+
+export async function deleteFeedback(id: string) {
+  const { data, error } = await supabase().from("club_feedback").delete().eq("id", id).select("id");
+  check(error);
+  if (!data?.length) throw new Error("Feedback was not deleted. Check access and retry.");
 }

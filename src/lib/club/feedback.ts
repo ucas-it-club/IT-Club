@@ -13,6 +13,7 @@ export type Feedback = {
   theme: string | null;
   device: string | null;
   status: FeedbackStatus;
+  issue_url: string | null;
   created_at: string;
 };
 
@@ -28,6 +29,21 @@ export const feedbackStatuses: Record<FeedbackStatus, [string, string]> = {
 };
 
 export const feedbackMaxLength = 2000;
+
+/** Same rule as the club_feedback.issue_url check. */
+export const isGithubIssueUrl = (url: string) =>
+  /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/issues\/[0-9]+$/.test(url);
+
+/** Kind and status filters together; "all" leaves that side open. */
+export const filterFeedback = (
+  items: Feedback[],
+  kind: FeedbackKind | "all",
+  status: FeedbackStatus | "all",
+) =>
+  items.filter(
+    (item) =>
+      (kind === "all" || item.kind === kind) && (status === "all" || item.status === status),
+  );
 
 /** The page a visitor was on when they followed a feedback link; SPA navigation leaves document.referrer stale. */
 let source = "";
