@@ -37,6 +37,7 @@ before(async () => {
       file.includes("legacy_event_reader") ||
       file.includes("event_columns") ||
       file.includes("news_columns") ||
+      file.includes("partner_columns") ||
       file.includes("event_people")
     )
       continue;
