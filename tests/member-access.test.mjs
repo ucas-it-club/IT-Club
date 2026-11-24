@@ -18,6 +18,8 @@ const payload = {
   partnershipType: "تدريب",
   partnershipType_en: "Training",
 };
+// Members hold only member keys (club_members_data_keys).
+const memberPayload = { ...payload, partnershipType: undefined, partnershipType_en: undefined };
 async function as(id) {
   await db.exec("reset role");
   await db.query("select set_config('request.jwt.claim.sub',$1,false)", [id || ""]);
@@ -39,6 +41,7 @@ before(async () => {
       file.includes("legacy_event_reader") ||
       file.includes("event_columns") ||
       file.includes("news_columns") ||
+      file.includes("member_columns") ||
       file.includes("event_people")
     )
       continue;
@@ -62,7 +65,9 @@ before(async () => {
   );
   await db.exec(readFileSync("supabase/migrations/20261103183333_legacy_event_reader.sql", "utf8"));
   // Later migrations need the roles above, so they run after them.
-  for (const file of migrations.filter((file) => /event_columns|news_columns/.test(file)))
+  for (const file of migrations.filter((file) =>
+    /event_columns|news_columns|member_columns/.test(file),
+  ))
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
   for (const [id, role] of [
     [owner, "super_admin"],
@@ -94,7 +99,7 @@ test("member CRUD is scoped, titles are independent, and revocation is immediate
     records[committee] = (
       await db.query("insert into club_members(data) values($1) returning id", [
         JSON.stringify({
-          ...payload,
+          ...memberPayload,
           committee,
           isFounder: committee === "administrative",
           role: "Title " + committee,
@@ -104,7 +109,7 @@ test("member CRUD is scoped, titles are independent, and revocation is immediate
     ).rows[0].id;
   }
   const member = (committee, role) =>
-    JSON.stringify({ ...payload, committee, isFounder: false, role, role_en: role });
+    JSON.stringify({ ...memberPayload, committee, isFounder: false, role, role_en: role });
   await as(outsider);
   for (const committee of ["media", "relations"]) {
     assert.equal(
@@ -207,7 +212,7 @@ test("member CRUD is scoped, titles are independent, and revocation is immediate
     db.query("insert into club_members(data) values($1)", [member("media", "Invalid")]),
   );
   await as(null);
-  assert.equal((await db.query("select * from club_members")).rows.length, 4);
+  assert.equal((await db.query("select id from club_members")).rows.length, 4);
   await assert.rejects(() =>
     db.query("insert into club_members(data) values($1)", [member("media", "Invalid")]),
   );
@@ -228,7 +233,7 @@ test("committee member photos permit owned and linked assets and reject other co
   ).rows[0].id;
   await as(owner);
   const data = {
-    ...payload,
+    ...memberPayload,
     committee: "activities",
     isFounder: false,
     images: [image],
