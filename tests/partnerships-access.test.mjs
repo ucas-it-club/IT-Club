@@ -40,6 +40,7 @@ before(async () => {
       file.includes("event_columns") ||
       file.includes("news_columns") ||
       file.includes("partner_columns") ||
+      file.includes("member_columns") ||
       file.includes("event_people")
     )
       continue;
@@ -64,7 +65,7 @@ before(async () => {
   await db.exec(readFileSync("supabase/migrations/20261103183333_legacy_event_reader.sql", "utf8"));
   // Later migrations need the roles above, so they run after them.
   for (const file of migrations.filter((file) =>
-    /event_columns|news_columns|partner_columns/.test(file),
+    /event_columns|news_columns|member_columns|partner_columns/.test(file),
   ))
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
   for (const [id, role] of [
