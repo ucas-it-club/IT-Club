@@ -36,6 +36,7 @@ before(async () => {
       file.includes("events_committee_role") ||
       file.includes("legacy_event_reader") ||
       file.includes("event_columns") ||
+      file.includes("news_columns") ||
       file.includes("event_people")
     )
       continue;
