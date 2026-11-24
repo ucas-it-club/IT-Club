@@ -9,7 +9,7 @@ const outputPath = `${outputDir}/اخبار-الموقع.xlsx`;
 const previewPath = `${outputDir}/preview.png`;
 const sourceUrl = "https://ucas.itclub-143.workers.dev/news";
 const apiUrl =
-  "https://jxweaxenswbjpxxjmihb.supabase.co/rest/v1/club_news?select=id,slug,data,created_at,updated_at&order=updated_at.desc,id.asc";
+  "https://jxweaxenswbjpxxjmihb.supabase.co/rest/v1/club_news?select=id,slug,title,date,description,created_at,updated_at&order=updated_at.desc,id.asc";
 const publicKey = "sb_publishable_kHJik-SCyMiMQ7nn2SRHbQ_0FR6CpOZ";
 
 function plainText(value = "") {
@@ -43,10 +43,12 @@ if (!process.stdin.isTTY) {
   raw = await response.json();
 }
 const news = raw
+  // Typed columns (issue #50); a saved dump from before may still nest them in `data`.
+  .map((row) => (row && "title" in row ? row : (row?.data ?? {})))
   .map((row) => ({
-    title: safeText(row?.data?.title ?? ""),
-    date: String(row?.data?.date ?? ""),
-    details: safeText(row?.data?.description ?? ""),
+    title: safeText(row.title ?? ""),
+    date: String(row.date ?? ""),
+    details: safeText(row.description ?? ""),
   }))
   .filter((item) => item.title || item.details)
   .sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title, "ar"));

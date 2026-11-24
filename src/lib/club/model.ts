@@ -35,6 +35,8 @@ export type Content = {
   summary?: string;
   summary_en?: string;
   images?: string[];
+  /** News: leads the home page. Loaded only; the admin toggle is issue #29. */
+  featured?: boolean;
   /** Public Google Drive image URLs used by news and events. */
   driveImageUrls?: string[];
   technologies?: string[];

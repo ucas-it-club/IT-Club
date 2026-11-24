@@ -1037,7 +1037,7 @@ export function ContentEditor({
     try {
       const savedId = await saveContent(targetKind, value, savedItemId, kind, typedSlug || null);
       setSavedItemId(savedId);
-      // After the event save: a data write without presenter keys clears the first presenter.
+      // Presenters and organizers save after the event row, which must exist first.
       if (targetKind === "events" && typeof checkedPeople !== "string")
         await saveEventPeople(savedId, checkedPeople);
 

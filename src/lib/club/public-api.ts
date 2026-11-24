@@ -108,6 +108,99 @@ const contentTables: Record<ContentCollection, string> = {
   partners: "club_partners",
 };
 
+type Article = "events" | "news";
+
+const articleColumns =
+  "title,title_en,description,description_en,summary,summary_en,images,drive_image_urls,date";
+
+/** The typed columns events and news are read from (issue #50). */
+export const articleFields: Record<Article, string> = {
+  events: `${articleColumns},status,event_time,duration_minutes,event_type,event_type_en,registration_enabled,registration_name_enabled,registration_phone_enabled,registration_attendance_enabled`,
+  news: `${articleColumns},featured`,
+};
+
+const defined = <T extends object>(value: { [K in keyof T]: T[K] | undefined }) =>
+  // SAFETY: only drops keys whose value is undefined, so every kept key keeps its type.
+  Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;
+
+/** An event or news row as the app's Content fields. Null columns stay unset, as absent keys did in `data`. */
+export function articleFromRow(kind: Article, row: Row): Omit<Content, "id"> {
+  const text = (key: string) => (typeof row[key] === "string" ? String(row[key]) : undefined);
+  const list = (key: string) => {
+    const value = row[key];
+    return Array.isArray(value) ? value.map(String) : undefined;
+  };
+  const content = {
+    title: text("title") ?? "",
+    title_en: text("title_en") ?? "",
+    description: text("description") ?? "",
+    description_en: text("description_en") ?? "",
+    summary: text("summary"),
+    summary_en: text("summary_en"),
+    images: list("images") ?? [],
+    driveImageUrls: list("drive_image_urls"),
+    date: text("date"),
+  };
+
+  if (kind === "news")
+    return defined<Omit<Content, "id">>({ ...content, featured: row["featured"] === true });
+
+  return defined<Omit<Content, "id">>({
+    ...content,
+    status: text("status"),
+    eventTime: text("event_time"),
+    durationMinutes:
+      typeof row["duration_minutes"] === "number" ? row["duration_minutes"] : undefined,
+    eventType: text("event_type"),
+    eventType_en: text("event_type_en"),
+    eventRegistration:
+      typeof row["registration_enabled"] === "boolean"
+        ? {
+            enabled: row["registration_enabled"],
+            nameEnabled: row["registration_name_enabled"] === true,
+            phoneEnabled: row["registration_phone_enabled"] === true,
+            attendanceEnabled: row["registration_attendance_enabled"] === true,
+          }
+        : undefined,
+  });
+}
+
+/**
+ * The columns an event or news save writes. Every column is sent, absent ones as
+ * null, so an edit clears what the editor removed, as the old whole-`data` write did.
+ * `featured` is never sent: editing must not reset it. Presenters save separately.
+ */
+export function articleToRow(kind: Article, value: Omit<Content, "id">) {
+  const row = {
+    title: value.title,
+    title_en: value.title_en,
+    description: value.description,
+    description_en: value.description_en,
+    summary: value.summary ?? null,
+    summary_en: value.summary_en ?? null,
+    images: value.images ?? [],
+    drive_image_urls: value.driveImageUrls ?? null,
+    date: value.date ?? null,
+  };
+
+  if (kind === "news") return row;
+
+  const registration = value.eventRegistration;
+
+  return {
+    ...row,
+    status: value.status ?? null,
+    event_time: value.eventTime ?? null,
+    duration_minutes: value.durationMinutes ?? null,
+    event_type: value.eventType ?? null,
+    event_type_en: value.eventType_en ?? null,
+    registration_enabled: registration?.enabled ?? null,
+    registration_name_enabled: registration?.nameEnabled ?? null,
+    registration_phone_enabled: registration?.phoneEnabled ?? null,
+    registration_attendance_enabled: registration?.attendanceEnabled ?? null,
+  };
+}
+
 /**
  * Whether one item exists right now, by id or slug, asked of the database directly.
  *
@@ -135,30 +228,31 @@ export async function contentExists(ref: string, kinds: ContentCollection[]) {
 export async function loadPublic(f: Fetcher = fetch, callerSignal?: AbortSignal) {
   const deadline = AbortSignal.timeout(8000);
   const signal = callerSignal ? AbortSignal.any([callerSignal, deadline]) : deadline;
+  const meta = "id,slug,created_at,updated_at,updated_by";
   const [members, events, news, partners, settings, people] = await Promise.all([
     rows(contentTables.members, "updated_at", f, signal),
-    rows(contentTables.events, "updated_at", f, signal),
-    rows(contentTables.news, "updated_at", f, signal),
+    rows(contentTables.events, "updated_at", f, signal, `${meta},${articleFields.events}`),
+    rows(contentTables.news, "updated_at", f, signal, `${meta},${articleFields.news}`),
     rows(contentTables.partners, "updated_at", f, signal),
     request<{ data?: Settings }[]>(
       "club_settings?select=data&id=eq.public&limit=1",
       { method: "GET", signal },
       f,
     ),
-    // A failure here must not blank the site (e.g. before the table's migration is
-    // live): events then fall back to their old single presenter.
+    // Presenters live only here now. A failed read fails the load like any other
+    // table, so the admin never opens an event with its people missing and saves that.
     rows(
       "club_event_people",
       "display_order",
       f,
       signal,
       "id,event_id,member_id,role,name,name_en,bio,bio_en,linkedin_url,github_url,display_order",
-    ).catch(() => null),
+    ),
   ]);
 
   const peopleByEvent = new Map<string, EventPerson[]>();
 
-  for (const row of [...(people ?? [])].sort(
+  for (const row of [...people].sort(
     (a, b) => Number(a["display_order"]) - Number(b["display_order"]),
   )) {
     const text = (key: string) => (typeof row[key] === "string" ? String(row[key]) : undefined);
@@ -193,17 +287,17 @@ export async function loadPublic(f: Fetcher = fetch, callerSignal?: AbortSignal)
   for (const [kind, content] of grouped) {
     for (const row of content)
       data[kind].push({
-        // SAFETY: content data is only written by saveContent, which validates
-        // the value against contentSchema before insert.
-        ...(row["data"] as Omit<Content, "id">),
+        ...(kind === "events" || kind === "news"
+          ? articleFromRow(kind, row)
+          : // SAFETY: content data is only written by saveContent, which validates
+            // the value against contentSchema before insert.
+            (row["data"] as Omit<Content, "id">)),
         id: String(row["id"]),
         ...(typeof row["slug"] === "string" ? { slug: row["slug"] } : {}),
         createdAt: String(row["created_at"] ?? ""),
         updatedAt: String(row["updated_at"] ?? ""),
         updatedBy: String(row["updated_by"] || ""),
-        ...(kind === "events" && people
-          ? { people: peopleByEvent.get(String(row["id"])) ?? [] }
-          : {}),
+        ...(kind === "events" ? { people: peopleByEvent.get(String(row["id"])) ?? [] } : {}),
       });
   }
 
