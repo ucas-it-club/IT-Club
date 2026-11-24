@@ -518,3 +518,14 @@ export async function deleteFeedback(id: string) {
   check(error);
   if (!data?.length) throw new Error("Feedback was not deleted. Check access and retry.");
 }
+
+/** Copied New items become Seen; Seen and Done keep their status. */
+export async function markFeedbackSeen(ids: string[]) {
+  if (!ids.length) return;
+  const { error } = await supabase()
+    .from("club_feedback")
+    .update({ status: "seen" })
+    .in("id", ids)
+    .eq("status", "new");
+  check(error);
+}
