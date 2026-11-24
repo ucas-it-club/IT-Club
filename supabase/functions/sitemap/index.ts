@@ -25,7 +25,8 @@ const itemKinds = ["events", "news", "partners"];
 type Row = {
   id: string;
   kind: string;
-  data: { date?: string } | null;
+  /** Events and news only; members and partners have no date column. */
+  date?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -81,16 +82,16 @@ Deno.serve(async (req) => {
     const teamVisible = settingsRows[0]?.data?.teamVisible !== false;
     const tables = (
       [
-        ["club_members", "members", ""],
-        ["club_events", "events", ""],
-        ["club_news", "news", ""],
-        ["club_partners", "partners", ""],
+        ["club_members", "members", "id,data,created_at,updated_at"],
+        ["club_events", "events", "id,date,created_at,updated_at"],
+        ["club_news", "news", "id,date,created_at,updated_at"],
+        ["club_partners", "partners", "id,data,created_at,updated_at"],
       ] as const
     ).filter(([, kind]) => kind !== "members" || teamVisible);
-    for (const [table, kind, filter] of tables) {
+    for (const [table, kind, fields] of tables) {
       for (let offset = 0; ;) {
         const response = await fetch(
-          `${Deno.env.get("SUPABASE_URL")}/rest/v1/${table}?select=id,data,created_at,updated_at&order=updated_at.desc,id.asc${filter}&offset=${offset}&limit=500`,
+          `${Deno.env.get("SUPABASE_URL")}/rest/v1/${table}?select=${fields}&order=updated_at.desc,id.asc&offset=${offset}&limit=500`,
           { headers, signal },
         );
         if (!response.ok) throw new Error("Content could not be read");
@@ -121,11 +122,11 @@ Deno.serve(async (req) => {
       .sort((a, b) => {
         const aOrder =
           kind === "events" || kind === "news"
-            ? a.data?.date || a.created_at || a.id
+            ? a.date || a.created_at || a.id
             : a.created_at || a.id;
         const bOrder =
           kind === "events" || kind === "news"
-            ? b.data?.date || b.created_at || b.id
+            ? b.date || b.created_at || b.id
             : b.created_at || b.id;
         return (
           aOrder.localeCompare(bOrder) ||

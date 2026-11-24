@@ -41,11 +41,13 @@ test("public reads use one stable order and propagate cancellation", async () =>
   assert.ok(calls.every((c) => c.init.signal.aborted));
 });
 
-test("events carry their people in display order, or the old presenter if people fail to load", async () => {
+test("events carry their people in display order, and a people failure fails the load", async () => {
   const event = {
     id: "event-1",
     slug: "demo",
-    data: { title: "فعالية", title_en: "Event", presenterName: "قديم", presenterBio: "نبذة" },
+    title: "فعالية",
+    title_en: "Event",
+    images: [],
     created_at: "2026-11-01T10:00:00Z",
     updated_at: "2026-11-01T10:00:00Z",
     updated_by: null,
@@ -85,9 +87,7 @@ test("events carry their people in display order, or the old presenter if people
   ]);
   assert.equal(people[1].memberId, undefined);
 
-  const fallback = await api.loadPublic(fetcher(null));
-  assert.equal(fallback.data.events[0].people, undefined, "the site still loads");
-  assert.equal(fallback.data.events[0].presenterName, "قديم");
+  await assert.rejects(api.loadPublic(fetcher(null)));
 });
 
 test("public partner reads return newly saved partnerships from the dedicated table", async () => {

@@ -413,7 +413,9 @@ function eventFromSupabase_(eventId) {
   if (!key) fail_("NOT_CONFIGURED");
   const url =
     CLUB.supabaseUrl +
-    "/rest/v1/club_events?select=id,data&id=eq." +
+    "/rest/v1/club_events?select=id,title,status,date,event_time,duration_minutes," +
+    "registration_enabled,registration_name_enabled,registration_phone_enabled," +
+    "registration_attendance_enabled&id=eq." +
     encodeURIComponent(eventId) +
     "&limit=1";
   const result = UrlFetchApp.fetch(url, {
@@ -428,7 +430,23 @@ function eventFromSupabase_(eventId) {
     fail_("SERVER_ERROR");
   }
   const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
-  const item = row && row.data;
+  // The event in the shape the checks below read; null columns stay null.
+  const item = row && {
+    title: row.title,
+    status: row.status,
+    date: row.date,
+    eventTime: row.event_time,
+    durationMinutes: row.duration_minutes,
+    eventRegistration:
+      typeof row.registration_enabled === "boolean"
+        ? {
+            enabled: row.registration_enabled,
+            nameEnabled: row.registration_name_enabled === true,
+            phoneEnabled: row.registration_phone_enabled === true,
+            attendanceEnabled: row.registration_attendance_enabled === true,
+          }
+        : null,
+  };
   if (
     !row ||
     String(row.id).toLowerCase() !== eventId.toLowerCase() ||

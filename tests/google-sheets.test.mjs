@@ -128,7 +128,27 @@ function harness(kind = "join", options = {}) {
           if (options.eventFetchStatus)
             return mockFetchResponse(options.eventFetchStatus, { message: "failed" });
           const event = options.event;
-          return mockFetchResponse(200, event ? [{ id: options.eventId, data: event }] : []);
+          // The typed columns Code.gs selects (issue #50).
+          const r = event?.eventRegistration;
+          return mockFetchResponse(
+            200,
+            event
+              ? [
+                  {
+                    id: options.eventId,
+                    title: event.title,
+                    status: event.status,
+                    date: event.date,
+                    event_time: event.eventTime ?? null,
+                    duration_minutes: event.durationMinutes ?? null,
+                    registration_enabled: r ? r.enabled : null,
+                    registration_name_enabled: r ? r.nameEnabled : null,
+                    registration_phone_enabled: r ? r.phoneEnabled : null,
+                    registration_attendance_enabled: r ? r.attendanceEnabled : null,
+                  },
+                ]
+              : [],
+          );
         }
         throw Error(`Unexpected fetch: ${url}`);
       },

@@ -13,11 +13,11 @@ import { slideCards } from "@/lib/club/card-slide";
 
 /** The news worth leading with: featured first, then newest. */
 export function topNews(news: Content[]) {
-  const featured = (item: Content) => (item as { featured?: boolean }).featured === true;
   return [...news]
     .sort(
       (a, b) =>
-        Number(featured(b)) - Number(featured(a)) || (b.date || "").localeCompare(a.date || ""),
+        Number(b.featured === true) - Number(a.featured === true) ||
+        (b.date || "").localeCompare(a.date || ""),
     )
     .slice(0, 5);
 }

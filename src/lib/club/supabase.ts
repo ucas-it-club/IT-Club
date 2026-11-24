@@ -1,5 +1,13 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import { url, key, configured, SetupRequiredError } from "./public-api";
+import {
+  url,
+  key,
+  configured,
+  SetupRequiredError,
+  articleFields,
+  articleFromRow,
+  articleToRow,
+} from "./public-api";
 import { prepareImage } from "./images";
 import {
   contentSchema,
@@ -48,13 +56,13 @@ const contentTables: Record<ContentCollection, string> = {
   partners: "club_partners",
 };
 
-async function rows(table: string, order = "id", tie = "id") {
+async function rows(table: string, order = "id", tie = "id", fields = "*") {
   const result: Row[] = [];
 
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await supabase()
       .from(table)
-      .select("*")
+      .select<string, Row>(fields)
       .order(order, { ascending: false })
       .order(tie)
       .range(offset, offset + 499);
@@ -142,6 +150,8 @@ export async function saveContent(
   contentSchema.parse(content);
 
   if (id && kind !== originalKind) {
+    // The RPC inserts `data`; the column trigger fills the columns from it.
+    // shortcut: still the app shape, rewrite the RPC to columns in the drop-`data` PR (#50).
     const moved = await supabase().rpc("club_move_article", {
       source_kind: originalKind,
       target_kind: kind,
@@ -156,8 +166,8 @@ export async function saveContent(
   }
 
   const table = contentTables[kind];
-  const values = {
-    data: content,
+  const values: Record<string, unknown> = {
+    ...(kind === "events" || kind === "news" ? articleToRow(kind, content) : { data: content }),
     ...(kind === "news" ? { publication_status: publicationStatus ?? "draft" } : {}),
     ...(slug === undefined ? {} : { slug }),
   };
@@ -309,8 +319,9 @@ export async function loadAdmins() {
 }
 
 export async function loadNews(): Promise<Content[]> {
-  return (await rows("club_news", "updated_at")).map((row) => ({
-    ...(row["data"] as Omit<Content, "id">),
+  const fields = `id,slug,publication_status,created_at,updated_at,${articleFields.news}`;
+  return (await rows("club_news", "updated_at", "id", fields)).map((row) => ({
+    ...articleFromRow("news", row),
     id: String(row["id"]),
     slug: String(row["slug"] || ""),
     publicationStatus: row["publication_status"] === "published" ? "published" : "draft",

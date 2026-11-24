@@ -57,7 +57,8 @@ def paragraph_text(value, width=95):
 raw = json.load(sys.stdin)
 news = []
 for row in raw:
-    data = row.get("data") or {}
+    # Typed columns (issue #50); a saved dump from before may still nest them in `data`.
+    data = row if "title" in row else (row.get("data") or {})
     title = clean_text(data.get("title"))
     details = clean_text(data.get("description"))
     if title or details:
