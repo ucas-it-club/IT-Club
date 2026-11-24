@@ -55,6 +55,7 @@ before(async () => {
       file.includes("visits") ||
       file.includes("visit_guard") ||
       file.includes("event_people") ||
+      file.includes("news_columns") ||
       file === target
     )
       continue;
