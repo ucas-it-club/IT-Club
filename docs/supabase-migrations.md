@@ -14,6 +14,65 @@ npx supabase@latest login
 npx supabase@latest link --project-ref jxweaxenswbjpxxjmihb
 ```
 
+## Test a migration locally before it merges
+
+The PGlite tests (`npm test`) cover rules and triggers. To run a migration on
+real Postgres with copies of live rows, and click through the admin against it,
+use the local Supabase stack. It needs Docker.
+
+**One stack per machine.** Every checkout and worktree shares `project_id`
+`jxweaxenswbjpxxjmihb`, so a second `start` takes over the first one's
+containers. Check `docker ps | grep jxweaxenswbjpxxjmihb` before starting, and
+reuse a running stack. Use the same pinned CLI version every time: a different
+version wants different images, pulls them (the first pull is about 20 minutes)
+and restarts the stack.
+
+1. Start the stack without the services the site doesn't use:
+
+   ```bash
+   npx supabase@2.121.0 start -x logflare,vector,realtime,imgproxy,edge-runtime,supavisor
+   ```
+
+   `npx supabase@2.121.0 status` prints the API URL, the publishable key and the
+   secret key used below.
+
+2. Reset to just before the new migration. `<ts>` is the timestamp of the last
+   migration already in production:
+
+   ```bash
+   npx supabase@2.121.0 db reset --local --version <ts>
+   ```
+
+3. Load copies of the live rows the migration touches. Read them from production
+   with a read-only `select json_agg(...)` query, then insert them locally with
+   `jsonb_to_recordset`, wrapped in `set session_replication_role=replica;` so the
+   triggers don't rewrite them. Keep a
+   `<table>_before` copy to compare against afterwards. Run SQL locally with:
+
+   ```bash
+   docker exec -i supabase_db_jxweaxenswbjpxxjmihb psql -U postgres -v ON_ERROR_STOP=1
+   ```
+
+4. Apply the pending migrations, then compare every row with its copy:
+
+   ```bash
+   npx supabase@2.121.0 migration up --local
+   ```
+
+5. Create the local super admin: create `itclub@ucas.edu.ps` with
+   `POST http://127.0.0.1:54321/auth/v1/admin/users` (secret key as `apikey` and
+   bearer token, `"email_confirm": true`) or in Studio at http://127.0.0.1:54323,
+   then pipe `supabase/bootstrap-admin.sql` into the `psql` command above.
+
+6. Run the site against the local stack:
+
+   ```bash
+   VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key> npm run dev -- --port 8082
+   ```
+
+   Confirm in the browser's network requests that calls go to `127.0.0.1:54321`,
+   not production.
+
 ## After a PR with a migration merges
 
 From an up-to-date `master` checkout, preview the pending migrations:

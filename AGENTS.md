@@ -18,3 +18,5 @@ not apply them. Never change production schema, policies, functions or Edge
 Functions from the Supabase dashboard, the SQL editor or an MCP connection: that
 puts the migration history out of step with the repo and breaks the next push.
 Never edit a migration file that has already run; fix forward with a new one.
+To test a migration on local Postgres with copies of live rows, follow "Test a
+migration locally" in `docs/supabase-migrations.md`.
