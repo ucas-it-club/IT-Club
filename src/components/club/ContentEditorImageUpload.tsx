@@ -100,15 +100,13 @@ export function ContentEditorImageUpload({
             className="aspect-video w-full max-w-xl rounded-xl object-cover"
           />
           <div className="mt-3 flex gap-3">
-            <BrandButton type="button" disabled={disabled || uploading} onClick={() => void upload()}>
+            <BrandButton
+              type="button"
+              disabled={disabled || uploading}
+              onClick={() => void upload()}
+            >
               <Upload size={16} />
-              {uploading
-                ? ar
-                  ? "جارٍ الرفع…"
-                  : "Uploading…"
-                : ar
-                  ? "رفع الصورة"
-                  : "Upload image"}
+              {uploading ? (ar ? "جارٍ الرفع…" : "Uploading…") : ar ? "رفع الصورة" : "Upload image"}
             </BrandButton>
             <BrandButton
               type="button"
@@ -124,7 +122,11 @@ export function ContentEditorImageUpload({
           </div>
         </div>
       )}
-      {error && <p role="alert" className="mt-3">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-3">
+          {error}
+        </p>
+      )}
     </>
   );
 }

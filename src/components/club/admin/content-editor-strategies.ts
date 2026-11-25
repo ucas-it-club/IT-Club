@@ -29,9 +29,7 @@ export type ContentEditorStrategy = {
   partner?: boolean;
   event?: boolean;
   fields: (ar: boolean) => ContentEditorField[];
-  buildData: (context: ContentEditorContext) =>
-    | { data: Partial<Content> }
-    | { error: string };
+  buildData: (context: ContentEditorContext) => { data: Partial<Content> } | { error: string };
   afterSave?: (id: string, content: Omit<Content, "id">) => Promise<void>;
   sanitizeUpdated?: (content: Content) => void;
   getSaveError?: (error: unknown, ar: boolean) => string | undefined;
@@ -47,7 +45,12 @@ const fields: {
     { key: "linkedinUrl", ar: "رابط LinkedIn", en: "LinkedIn URL", type: "url" },
   ],
   partners: () => [
-    { key: "partnershipType", ar: "نوع الشراكة بالعربية", en: "Partnership type in Arabic", type: "text" },
+    {
+      key: "partnershipType",
+      ar: "نوع الشراكة بالعربية",
+      en: "Partnership type in Arabic",
+      type: "text",
+    },
     {
       key: "partnershipType_en",
       ar: "نوع الشراكة بالإنجليزية",

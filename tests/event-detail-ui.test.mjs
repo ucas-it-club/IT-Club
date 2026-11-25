@@ -49,7 +49,10 @@ test("admin enters event duration in hours while storage remains in minutes", ()
   assert.match(admin, /مدة الفعالية بالساعات/);
   assert.match(admin, /Duration in hours/);
   assert.match(admin, /name="durationHours"/);
-  assert.match(editorStrategies, /durationMinutes: Number\(context\.values\["durationHours"\]\) \* 60/);
+  assert.match(
+    editorStrategies,
+    /durationMinutes: Number\(context\.values\["durationHours"\]\) \* 60/,
+  );
   assert.match(admin, /item\.durationMinutes \/ 60/);
 });
 
@@ -63,7 +66,10 @@ test("news and events use Google Drive image links instead of uploads", () => {
 });
 
 test("content editor behavior is registered by collection", () => {
-  assert.match(editorStrategies, /const strategies: Record<ContentCollection, ContentEditorStrategy>/);
+  assert.match(
+    editorStrategies,
+    /const strategies: Record<ContentCollection, ContentEditorStrategy>/,
+  );
   assert.match(admin, /contentEditorStrategy\(targetKind\)/);
 });
 
