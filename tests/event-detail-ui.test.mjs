@@ -7,6 +7,11 @@ const pages = readFileSync("src/components/club/ClubPages.tsx", "utf8");
 const events = readFileSync("src/components/club/EventsPage.tsx", "utf8");
 const content = readFileSync("src/components/club/ClubContent.tsx", "utf8");
 const admin = readFileSync("src/components/club/AdminPanel.tsx", "utf8");
+const imageUpload = readFileSync("src/components/club/ContentEditorImageUpload.tsx", "utf8");
+const editorStrategies = readFileSync(
+  "src/components/club/admin/content-editor-strategies.ts",
+  "utf8",
+);
 
 test("event details use a dedicated maintainable component", () => {
   assert.match(pages, /import \{ EventDetail \} from "\.\/EventDetail"/);
@@ -44,7 +49,7 @@ test("admin enters event duration in hours while storage remains in minutes", ()
   assert.match(admin, /مدة الفعالية بالساعات/);
   assert.match(admin, /Duration in hours/);
   assert.match(admin, /name="durationHours"/);
-  assert.match(admin, /durationMinutes: Number\(values\["durationHours"\]\) \* 60/);
+  assert.match(editorStrategies, /durationMinutes: Number\(context\.values\["durationHours"\]\) \* 60/);
   assert.match(admin, /item\.durationMinutes \/ 60/);
 });
 
@@ -52,8 +57,14 @@ test("news and events use Google Drive image links instead of uploads", () => {
   assert.match(admin, /صور Google Drive/);
   assert.match(admin, /name="durationHours"/);
   assert.match(admin, /googleDriveImageUrl\(driveImageLink\)/);
-  assert.match(admin, /if \(isArticle\) value\.driveImageUrls = driveImageUrls/);
-  assert.match(admin, /\{!isArticle && \([\s\S]*type="file"/);
+  assert.match(admin, /if \(editorStrategy\.article\) value\.driveImageUrls = driveImageUrls/);
+  assert.match(admin, /\{!isArticle && \([\s\S]*<ContentEditorImageUpload/);
+  assert.match(imageUpload, /type="file"/);
+});
+
+test("content editor behavior is registered by collection", () => {
+  assert.match(editorStrategies, /const strategies: Record<ContentCollection, ContentEditorStrategy>/);
+  assert.match(admin, /contentEditorStrategy\(targetKind\)/);
 });
 
 test("presenter section supports localized name and one-line bio", () => {

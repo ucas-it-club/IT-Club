@@ -4,10 +4,10 @@ import { EventRegistrationAdmin } from "./EventRegistrationAdmin";
 import { ContentCard } from "./ClubContent";
 import { EventDetail } from "./EventDetail";
 import { NewsDetail } from "./NewsDetail";
-import { ensureEventSheet, sheetLinks } from "@/lib/club/sheets";
+import { sheetLinks } from "@/lib/club/sheets";
 import { MediaLibrary } from "./MediaLibrary";
 import { RichTextEditor } from "./RichTextEditor";
-import { ImageCropper } from "./ImageCropper";
+import { ContentEditorImageUpload } from "./ContentEditorImageUpload";
 import { DeleteButton } from "./admin/DeleteButton";
 import { SettingsEditor } from "./admin/SettingsEditor";
 import { AdminUsersEditor } from "./admin/AdminUsersEditor";
@@ -29,7 +29,6 @@ import {
   watchQuery,
   saveContent,
   removeContent,
-  uploadImage,
   saveSettings,
   setTeamVisibility,
 } from "@/lib/club/supabase";
@@ -42,11 +41,11 @@ import {
   committees,
   contentSchema,
   defaultEventRegistration,
-  eventDetailsSchema,
   safeUrl,
   type Content,
   type ContentCollection,
 } from "@/lib/club/model";
+import { contentEditorStrategy } from "./admin/content-editor-strategies";
 import { BrandButton } from "@/components/club/BrandButton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,7 +60,6 @@ import {
   Plus,
   LogOut,
   Pencil,
-  Upload,
   Users,
   CalendarDays,
   Newspaper,
@@ -704,11 +702,13 @@ function ContentEditor({
   const [images, setImages] = useState(item?.images || []);
   const [driveImageUrls, setDriveImageUrls] = useState(item?.driveImageUrls || []);
   const [driveImageLink, setDriveImageLink] = useState("");
-  const isArticle = kind === "events" || kind === "news";
+  const editorStrategy = contentEditorStrategy(kind);
+  const isArticle = editorStrategy.article === true;
   const [articleKind, setArticleKind] = useState<"events" | "news">(
-    kind === "news" ? "news" : "events",
+    editorStrategy.initialArticleKind ?? "events",
   );
   const targetKind: ContentCollection = isArticle ? articleKind : kind;
+  const targetStrategy = contentEditorStrategy(targetKind);
   const [showFinalPreview, setShowFinalPreview] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>(() => {
     const values = Object.fromEntries(
@@ -736,26 +736,13 @@ function ContentEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [cropSource, setCropSource] = useState<File | null>(null);
-  useEffect(() => {
-    if (!file) {
-      setPreview("");
-
-      return;
-    }
-
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  const [imagePending, setImagePending] = useState(false);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
 
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (busy || file) return;
+    if (busy || imagePending) return;
     // SAFETY: this form has no file inputs, so every FormData entry value is a string.
     const values = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
     const parsed = contentSchema.safeParse(values);
@@ -777,70 +764,20 @@ function ContentEditor({
       images,
     };
 
-    if (isArticle) value.driveImageUrls = driveImageUrls;
-
-    if (kind === "members") {
-      value.role = values["role"] || "";
-      value.role_en = values["role_en"] || "";
-      value.profileEnabled = values["profileEnabled"] === "on";
-      value.committee = committee;
-      value.gender = gender === "female" ? "female" : "male";
-      value.isFounder = committee === "administrative";
-      if (value.isFounder && values["boardOrder"]?.trim()) {
-        const order = Number(values["boardOrder"]);
-        if (!Number.isInteger(order) || order < 1 || order > 9999) {
-          setError(
-            ar
-              ? "ترتيب العرض يجب أن يكون رقمًا صحيحًا من 1 إلى 9999."
-              : "Display order must be an integer from 1 to 9999.",
-          );
-          return;
-        }
-        value.displayOrder = order;
-      }
+    const specific = targetStrategy.buildData({
+      ar,
+      values,
+      committee,
+      gender: gender === "female" ? "female" : "male",
+      status,
+      eventRegistration,
+    });
+    if ("error" in specific) {
+      setError(specific.error);
+      return;
     }
-
-    if (isArticle) {
-      value.date = values["date"] || "";
-
-      // Optional; left out entirely when blank so clearing it removes it.
-      for (const key of ["summary", "summary_en"] as const) {
-        const summary = values[key]?.trim();
-
-        if (summary) value[key] = summary;
-      }
-    }
-
-    if (targetKind === "events") {
-      const eventDetails = eventDetailsSchema.safeParse({
-        eventTime: values["eventTime"],
-        durationMinutes: Number(values["durationHours"]) * 60,
-        eventType: values["eventType"],
-        eventType_en: values["eventType_en"],
-        presenterName: values["presenterName"],
-        presenterName_en: values["presenterName_en"],
-        presenterBio: values["presenterBio"],
-        presenterBio_en: values["presenterBio_en"],
-      });
-
-      if (!eventDetails.success) {
-        setError(
-          ar
-            ? "أكمل معلومات الفعالية والمقدم. يجب أن تكون المدة بين ربع ساعة و24 ساعة."
-            : "Complete the event and presenter details. Duration must be between 0.25 and 24 hours.",
-        );
-        return;
-      }
-
-      Object.assign(value, eventDetails.data);
-      value.status = status;
-      value.eventRegistration = eventRegistration;
-    }
-
-    if (kind === "partners") {
-      value.partnershipType = values["partnershipType"] || "";
-      value.partnershipType_en = values["partnershipType_en"] || "";
-    }
+    Object.assign(value, specific.data);
+    if (editorStrategy.article) value.driveImageUrls = driveImageUrls;
 
     for (const key of ["websiteUrl", "githubUrl", "linkedinUrl"] as const) {
       const url = values[key]?.trim();
@@ -874,16 +811,14 @@ function ContentEditor({
     try {
       const savedId = await saveContent(targetKind, value, item?.id, kind, typedSlug || null);
 
-      if (targetKind === "events" && status === "upcoming" && eventRegistration.enabled) {
-        await ensureEventSheet(savedId, value.title);
-      }
+      await targetStrategy.afterSave?.(savedId, value);
 
       if (item?.id) {
         queryClient.setQueryData<Awaited<ReturnType<typeof loadPublic>>>(clubPublicKey, (old) => {
           if (!old) return old;
           const updated = { ...item, ...value };
           if (value.displayOrder === undefined) delete updated.displayOrder;
-          if (targetKind === "news") delete updated.status;
+          targetStrategy.sanitizeUpdated?.(updated);
           const nextData = { ...old.data };
           nextData[kind] = old.data[kind].filter((c) => c.id !== item.id);
           nextData[targetKind] = [updated, ...nextData[targetKind].filter((c) => c.id !== item.id)];
@@ -902,39 +837,12 @@ function ContentEditor({
         );
         return;
       }
-      const rejectedBoard =
-        kind === "members" &&
-        error instanceof Error &&
-        error.message.includes("club_members_data_check");
+      const specificError = editorStrategy.getSaveError?.(error, ar);
       setError(
-        rejectedBoard
-          ? ar
-            ? "قاعدة البيانات ترفض بيانات العضو. تأكد من تشغيل تحديث ترتيب الهيئة الإدارية في Supabase."
-            : "The database rejected member data. Check that the board order migration has been applied in Supabase."
-          : ar
+        specificError ??
+          (ar
             ? "تعذر حفظ المحتوى. تحقق من الصلاحيات والاتصال."
-            : "Content could not be saved. Check permissions and connection.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function upload() {
-    if (!file) return;
-    setBusy(true);
-    setError("");
-
-    try {
-      const url = await uploadImage(file);
-      setImages((prev) => [...prev, url]);
-      setDirty(true);
-      setFile(null);
-    } catch {
-      setError(
-        ar
-          ? "تعذر رفع الصورة. استخدم JPG أو PNG أو WebP حتى 5 ميغابايت وتحقق من إعداد التخزين."
-          : "Upload failed. Use JPG, PNG or WebP up to 5 MB and check storage setup.",
+            : "Content could not be saved. Check permissions and connection."),
       );
     } finally {
       setBusy(false);
@@ -972,31 +880,7 @@ function ContentEditor({
     setDraft((current) => ({ ...current, ...values }));
   }
 
-  const extraFields: [keyof Content, string, string, string][] =
-    kind === "members"
-      ? [
-          ["githubUrl", "رابط GitHub", "GitHub URL", "url"],
-          ["linkedinUrl", "رابط LinkedIn", "LinkedIn URL", "url"],
-        ]
-      : kind === "partners"
-        ? [
-            ["partnershipType", "نوع الشراكة بالعربية", "Partnership type in Arabic", "text"],
-            [
-              "partnershipType_en",
-              "نوع الشراكة بالإنجليزية",
-              "Partnership type in English",
-              "text",
-            ],
-            ["websiteUrl", "موقع الشريك", "Partner website", "url"],
-          ]
-        : [
-            [
-              "date",
-              targetKind === "news" ? "تاريخ الخبر" : "موعد الفعالية",
-              targetKind === "news" ? "News date" : "Event date",
-              "date",
-            ],
-          ];
+  const extraFields = targetStrategy.fields(ar);
 
   const previewItem: Content = {
     id: item?.id || "admin-preview",
@@ -1039,7 +923,7 @@ function ContentEditor({
         <h2 className="text-2xl font-black">
           {item ? (ar ? "تعديل المحتوى" : "Edit content") : ar ? "إضافة محتوى" : "Add content"}
         </h2>
-        {(kind === "partners" || isArticle) && (
+        {(editorStrategy.partner || isArticle) && (
           <BrandButton
             type="button"
             variant={showFinalPreview ? "primary" : "outline"}
@@ -1113,9 +997,9 @@ function ContentEditor({
             )}
           </label>
         ))}
-        {extraFields.map(([key, a, en, type]) => (
+        {extraFields.map(({ key, ar: arabic, en, type }) => (
           <label key={key} className="block text-sm font-bold">
-            <span className="mb-2 block">{ar ? a : en}</span>
+            <span className="mb-2 block">{ar ? arabic : en}</span>
             <Input
               name={key}
               type={type}
@@ -1127,7 +1011,7 @@ function ContentEditor({
           </label>
         ))}
       </div>
-      {kind === "members" && (
+      {editorStrategy.member && (
         <fieldset className="rounded-2xl border border-primary/30 bg-brand-gradient-soft/30 p-5">
           <legend className="px-2 font-bold">
             {ar ? "المسمّى الظاهر على بطاقة العضو" : "Member title shown on the card"}
@@ -1158,7 +1042,7 @@ function ContentEditor({
           </div>
         </fieldset>
       )}
-      {kind === "members" && (
+      {editorStrategy.member && (
         <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border p-4">
           <input
             type="checkbox"
@@ -1178,7 +1062,7 @@ function ContentEditor({
           </span>
         </label>
       )}
-      {kind === "members" && (
+      {editorStrategy.member && (
         <label className="block text-sm font-bold">
           <span className="mb-2 block">
             {ar ? "اسم رابط صفحة العضو (بالإنجليزية)" : "Member page URL name (English)"}
@@ -1229,7 +1113,7 @@ function ContentEditor({
           </p>
         </div>
       )}
-      {kind === "members" && (
+      {editorStrategy.member && (
         <>
           {committee === "administrative" && (
             <label className="block">
@@ -1296,7 +1180,7 @@ function ContentEditor({
           </label>
         </>
       )}
-      {targetKind === "events" && (
+      {targetStrategy.event && (
         <>
           <fieldset className="space-y-5 rounded-2xl border border-border p-5">
             <legend className="px-2 font-bold">
@@ -1521,52 +1405,16 @@ function ContentEditor({
               </div>
             ))}
           </div>
-          <label className="mt-4 block">
-            <span className="mb-2 block text-sm">
-              {ar ? "JPG / PNG / WebP، حتى 5 ميغابايت" : "JPG / PNG / WebP, up to 5 MB"}
-            </span>
-            <Input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              disabled={busy}
-              onChange={(e) => {
-                const selected = e.target.files?.[0] || null;
-                setFile(null);
-                setCropSource(selected);
-                e.target.value = "";
-              }}
-            />
-          </label>
-          {cropSource && (
-            <ImageCropper
-              file={cropSource}
-              ar={ar}
-              onConfirm={(cropped) => {
-                setFile(cropped);
-                setCropSource(null);
-                setDirty(true);
-              }}
-              onCancel={() => setCropSource(null)}
-            />
-          )}
-          {preview && (
-            <div className="mt-4">
-              <img
-                src={preview}
-                alt={ar ? "معاينة قبل الرفع" : "Preview before upload"}
-                className="aspect-video w-full max-w-xl rounded-xl object-cover"
-              />
-              <div className="mt-3 flex gap-3">
-                <BrandButton type="button" disabled={busy} onClick={() => void upload()}>
-                  <Upload size={16} />
-                  {ar ? "رفع الصورة" : "Upload image"}
-                </BrandButton>
-                <BrandButton type="button" variant="ghost" onClick={() => setFile(null)}>
-                  {ar ? "إلغاء الصورة" : "Discard image"}
-                </BrandButton>
-              </div>
-            </div>
-          )}
+          <ContentEditorImageUpload
+            ar={ar}
+            disabled={busy}
+            onUploaded={(url) => {
+              setImages((current) => [...current, url]);
+              setDirty(true);
+            }}
+            onPendingChange={setImagePending}
+            onPreviewChange={setPreview}
+          />
         </fieldset>
       )}
       {showFinalPreview && (
@@ -1582,7 +1430,7 @@ function ContentEditor({
             </p>
           </div>
           <div inert className="space-y-6">
-            {kind === "partners" && (
+            {editorStrategy.partner && (
               <div>
                 <h4 className="mb-3 font-bold">{ar ? "بطاقة الشراكة" : "Partnership card"}</h4>
                 <div className="max-w-xl">
@@ -1605,7 +1453,7 @@ function ContentEditor({
                 </div>
                 <div>
                   <h4 className="mb-3 font-bold">{ar ? "صفحة التفاصيل" : "Details page"}</h4>
-                  {articleKind === "events" ? (
+                  {targetStrategy.event ? (
                     <EventDetail event={previewItem} lang={lang} previewImage={preview} />
                   ) : (
                     <NewsDetail news={previewItem} lang={lang} previewImage={preview} />
@@ -1618,7 +1466,7 @@ function ContentEditor({
       )}
       {error && <p role="alert">{error}</p>}
       <div className="flex flex-wrap gap-3">
-        <BrandButton type="submit" disabled={busy || !!file || !!cropSource}>
+        <BrandButton type="submit" disabled={busy || imagePending}>
           {busy ? (ar ? "جارٍ الحفظ…" : "Saving…") : ar ? "حفظ ونشر" : "Save and publish"}
         </BrandButton>
         <BrandButton type="button" variant="outline" disabled={busy} onClick={onCancel}>

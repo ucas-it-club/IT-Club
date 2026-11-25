@@ -5,6 +5,10 @@ import { readFileSync } from "node:fs";
 const cards = readFileSync("src/components/ui/information-drawer.tsx", "utf8");
 const pages = readFileSync("src/components/club/ClubPages.tsx", "utf8");
 const admin = readFileSync("src/components/club/AdminPanel.tsx", "utf8");
+const editorStrategies = readFileSync(
+  "src/components/club/admin/content-editor-strategies.ts",
+  "utf8",
+);
 const detailPage = pages.slice(pages.indexOf("export function DetailPage"));
 const memberPage = detailPage.match(/kind === "members" \? \(([\s\S]*?)\n      \) : \(/)?.[1];
 
@@ -34,6 +38,6 @@ test("admins can edit a separate Arabic and English title saved to the member re
   assert.match(admin, /المسمّى الظاهر على بطاقة العضو/);
   assert.match(admin, /\["role", "بالعربية", "Arabic", "نائب الرئيس"\]/);
   assert.match(admin, /\["role_en", "بالإنجليزية", "English", "Vice President"\]/);
-  assert.match(admin, /value\.role = values\["role"\] \|\| ""/);
-  assert.match(admin, /value\.role_en = values\["role_en"\] \|\| ""/);
+  assert.match(editorStrategies, /role: values\["role"\] \|\| ""/);
+  assert.match(editorStrategies, /role_en: values\["role_en"\] \|\| ""/);
 });
