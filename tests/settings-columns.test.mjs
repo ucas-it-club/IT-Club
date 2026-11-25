@@ -1,9 +1,8 @@
 import { PGlite } from "@electric-sql/pglite";
-import { readFileSync, readdirSync } from "node:fs";
 import assert from "node:assert/strict";
+import { applyMigration, migrate } from "./helpers/migrations.mjs";
 import { before, after, test } from "node:test";
 
-const target = readdirSync("supabase/migrations").find((file) => file.includes("settings_columns"));
 let db;
 const owner = "00000000-0000-4000-8000-000000000001",
   editor = "00000000-0000-4000-8000-000000000002",
@@ -37,15 +36,11 @@ const one = async (sql, params = []) => (await db.query(sql, params)).rows[0];
 const row = () => one("select s.*, club_private.settings_data(s) rebuilt from club_settings s");
 
 before(async () => {
-  assert.ok(target, "the settings_columns migration exists");
   db = new PGlite();
   await db.exec(
     `create role anon;create role authenticated;create schema auth;create schema storage;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth,storage to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;grant select,insert,delete on storage.objects to authenticated;create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;`,
   );
-  for (const file of readdirSync("supabase/migrations").sort()) {
-    if (file.includes("visits") || file.includes("visit_guard") || file === target) continue;
-    await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
-  }
+  await migrate(db, { before: "settings_columns" });
   for (const [id, role] of [
     [owner, "super_admin"],
     [editor, "editor"],
@@ -64,7 +59,7 @@ before(async () => {
   // Written the way the live admin writes it today: data only.
   await db.query("insert into club_settings values('public',$1)", [JSON.stringify(live)]);
   legacy = (await one("select data from club_settings")).data;
-  await db.exec(readFileSync("supabase/migrations/" + target, "utf8"));
+  await applyMigration(db, "settings_columns");
 });
 after(async () => db?.close());
 
