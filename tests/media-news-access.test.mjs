@@ -1,6 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
-import { readFileSync, readdirSync } from "node:fs";
 import assert from "node:assert/strict";
+import { migrate } from "./helpers/migrations.mjs";
 import { before, after, test } from "node:test";
 
 let db, newsId;
@@ -26,28 +26,12 @@ before(async () => {
   await db.exec(
     `create role anon;create role authenticated;create schema auth;create schema storage;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth,storage to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;grant select,insert,delete on storage.objects to authenticated;create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;`,
   );
-  for (const file of readdirSync("supabase/migrations").sort()) {
-    if (
-      file.includes("visits") ||
-      file.includes("visit_guard") ||
-      file.includes("media_news_access") ||
-      file.includes("partnerships_committee_access") ||
-      file.includes("communications_role") ||
-      file.includes("events_committee_role") ||
-      file.includes("legacy_event_reader") ||
-      file.includes("event_columns") ||
-      file.includes("news_columns") ||
-      file.includes("partner_columns") ||
-      file.includes("event_people")
-    )
-      continue;
-    await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
-  }
+  await migrate(db, { before: "media_news_access" });
   // Preserve a legacy published item through the additive change.
   newsId = (
     await db.query("insert into club_news(data) values($1) returning id", [JSON.stringify(payload)])
   ).rows[0].id;
-  await db.exec(readFileSync("supabase/migrations/20261102191622_media_news_access.sql", "utf8"));
+  await migrate(db, { from: "media_news_access" });
   for (const [id, role] of [
     [owner, "super_admin"],
     [editor, "editor"],
