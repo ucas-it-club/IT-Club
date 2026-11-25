@@ -112,6 +112,11 @@
     width: max-content;
     font-size: clamp(3rem, 6.2vw, 6.25rem);
   }
+  /* "UCAS IT Club" sets about two thirds the width of "النادي التكنولوجي" at one size;
+     larger, it fills the brackets the way the Arabic does. */
+  .bh-name[dir="ltr"] {
+    font-size: clamp(4.5rem, 9.3vw, 9.4rem);
+  }
 }
 .bh-mask {
   display: inline-block;
@@ -221,6 +226,9 @@
   line-height: 1;
   color: var(--bh-ink-1);
   font-variant-numeric: tabular-nums;
+  /* Sized to its figure (see min-width on the element), not the column. */
+  width: fit-content;
+  margin-inline: auto;
 }
 .bh-facts dd {
   margin-top: 0.5rem;

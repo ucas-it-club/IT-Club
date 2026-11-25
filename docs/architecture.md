@@ -36,7 +36,7 @@ is kept separate and must not gain registration or configuration actions.
 | --- | --- | --- |
 | `src/routes` | URL parsing, loaders, page metadata | Business forms or database mutations |
 | `src/lib/club/model.ts` | Shared domain types, schemas, pure rules | Network calls or React state |
-| `src/lib/club/public-api.ts` | Anonymous public reads | Authenticated administration |
+| `src/lib/club/public-api.ts` | Anonymous public reads and the Site Feedback RPC | Authenticated administration |
 | `src/lib/club/supabase.ts` | Authenticated CRUD, auth, and storage | Page rendering |
 | `src/lib/club/sheets.ts` | Apps Script transport and response validation | UI messages beyond error mapping |
 | `src/components/club` | Rendering and interaction orchestration | Authorization guarantees |

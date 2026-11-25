@@ -11,6 +11,7 @@
 @import "./components/club/club.css";
 @import "./components/club/events-page.css";
 @import "./components/club/contact-page.css";
+@import "./components/club/ask-page.css";
 @import "./components/ui/hero-section-4.css";
 @import "./components/club/motion-proto.css";
 
@@ -97,6 +98,17 @@
   --brand-blue: oklch(0.509 0.156 255.7);
   --brand-green: oklch(0.73 0.17 136.1);
   --brand-gray: oklch(0.675 0.004 247.9);
+  /* The one brand ramp. Fills, outlines and hovers read --brand-gradient; nothing else should
+     hardcode these stops. --brand-ramp-text is the darker twin for gradient *text* on a light
+     page, where full-strength green is too faint to read. */
+  --brand-teal: oklch(0.62 0.15 190);
+  --brand-gradient: linear-gradient(100deg, var(--brand-blue) 0%, var(--brand-teal) 50%, var(--brand-green) 100%);
+  --brand-ramp-text: linear-gradient(
+    100deg,
+    var(--brand-blue) 0%,
+    oklch(0.53 0.13 195) 50%,
+    oklch(0.53 0.15 138) 100%
+  );
   --navy: oklch(0.283 0.068 254.4);
   /* The navy behind the full-bleed bands. In dark mode the navy would sit on
      a dark page with almost no contrast between them, so the bands lift one
@@ -208,17 +220,11 @@
 /* ---------- Brand utilities ---------- */
 
 @utility bg-brand-gradient {
-  /* The ramp carries white text, so every stop has to clear 4.5:1 against
-     white: the brand blue is 5.9:1, the deep teal 4.7:1, the deep green 5:1.
-     A plain blue->green lerp sags to 0.082 chroma (muddy teal), and 100deg
-     keeps the ramp on the long axis so pills show both brand ends, not the
-     middle. */
-  background-image: linear-gradient(
-    100deg,
-    var(--brand-blue) 0%,
-    oklch(0.53 0.13 195) 50%,
-    oklch(0.53 0.15 138) 100%
-  );
+  /* Full-strength brand ramp (blue, bright teal, brand green). White text on the green end
+     is under 4.5:1; keep labels on it bold and large, or use the soft gradient. A plain
+     blue->green lerp sags to 0.082 chroma (muddy teal), so the mid stop holds its chroma, and
+     100deg keeps the ramp on the long axis so pills show both brand ends, not the middle. */
+  background-image: var(--brand-gradient);
   /* Without this the ramp is sized to the padding box but painted over the
      border box, so a transparent border shows the next repeat tile as a slit. */
   background-origin: border-box;
@@ -231,6 +237,31 @@
     color-mix(in oklab, var(--brand-green) 9%, transparent)
   );
   background-origin: border-box;
+}
+
+/* A 2px brand-gradient outline that appears on hover. It is a masked ring laid over the
+   element's own border, so the fill, radius and layout stay untouched. */
+@utility hover-gradient-outline {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background-image: var(--brand-gradient);
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+  &:hover::before {
+    opacity: 1;
+  }
 }
 
 @utility shadow-card {
@@ -322,91 +353,12 @@
   }
 }
 
-/* Home stories taking turns (HomeStories): the page stays still while the cards
-   run as a strip. A card changing place glides into it; the new story slides in
-   from off screen on the large card's side and the last one slides off the other
-   side (reversed when going back). */
-/* Only the cards are captured; the rest of the page stays live underneath. */
-html[data-vt="stories"],
-html[data-vt="stories"] .club-header,
-html[data-vt="stories"] .club-site main {
-  view-transition-name: none;
-}
-/* A sliding card fades out just outside the cards' edges, so at rest nothing is
-   clipped. --hs-line is where it is fully gone (negative: outside the cards) and the
-   fade runs from there back to the cards' edge. Over a phone-width card that is the
-   page gutter; where the arrows sit outside, it is the gap before them. The fade
-   shows the page itself, not a colour laid over it. */
-/* In a layer, so the md:/min-[85rem]: utilities on the element can override it. */
-@layer components {
-  .hs-stage {
-    --hs-line: -16px;
-    --hs-fade: 16px;
-  }
-}
-/* The same line in page coordinates, set from .hs-stage when a slide starts. */
-html[data-vt="stories"]::view-transition {
-  mask-image: linear-gradient(
-    to right,
-    transparent var(--hs-l, 0px),
-    #000 calc(var(--hs-l, 0px) + var(--hs-f, 16px)),
-    #000 calc(var(--hs-r, 100vw) - var(--hs-f, 16px)),
-    transparent var(--hs-r, 100vw)
-  );
-}
-/* Arrows over the card ride above the sliding cards; arrows outside stay in the page. */
-.hs-side {
-  view-transition-name: var(--hs-arrow, none);
-}
-@media (min-width: 48rem) {
-  .hs-out-md {
-    view-transition-name: none !important;
-  }
-}
-@media (min-width: 85rem) {
-  .hs-out-xl {
-    view-transition-name: none !important;
-  }
-}
-html[data-vt="stories"]::view-transition-group(*.hs-card) {
-  animation-duration: 800ms;
-  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
-}
-html[data-vt="stories"]::view-transition-new(*.hs-from-left):only-child,
-html[data-vt="stories"][data-vt-dir="back"]::view-transition-new(*.hs-from-right):only-child {
-  animation: hs-in-left 800ms cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-html[data-vt="stories"]::view-transition-new(*.hs-from-right):only-child,
-html[data-vt="stories"][data-vt-dir="back"]::view-transition-new(*.hs-from-left):only-child {
-  animation: hs-in-right 800ms cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-html[data-vt="stories"]::view-transition-old(*.hs-from-left):only-child,
-html[data-vt="stories"][data-vt-dir="back"]::view-transition-old(*.hs-from-right):only-child {
-  animation: hs-out-right 800ms cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-html[data-vt="stories"]::view-transition-old(*.hs-from-right):only-child,
-html[data-vt="stories"][data-vt-dir="back"]::view-transition-old(*.hs-from-left):only-child {
-  animation: hs-out-left 800ms cubic-bezier(0.65, 0, 0.35, 1) both;
-}
-@keyframes hs-in-left {
-  from {
-    transform: translateX(calc(-100% - 3rem));
-  }
-}
-@keyframes hs-in-right {
-  from {
-    transform: translateX(calc(100% + 3rem));
-  }
-}
-@keyframes hs-out-left {
-  to {
-    transform: translateX(calc(-100% - 3rem));
-  }
-}
-@keyframes hs-out-right {
-  to {
-    transform: translateX(calc(100% + 3rem));
-  }
+/* Home stories taking turns (HomeStories, card-slide.ts): the cards move in the page.
+   While they move, the stage clips at its own left and right edges with a hard cut, so
+   cards are seen in the same box as at rest: one leaves across one edge, one enters
+   across the other, and nothing passes over the arrows outside it. */
+.hs-stage[data-sliding] {
+  overflow-x: clip;
 }
 .hs-btn {
   display: inline-grid;

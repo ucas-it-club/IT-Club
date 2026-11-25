@@ -8,37 +8,73 @@ function harness(role = "super_admin") {
   const props = new Map([["SUPABASE_PUBLISHABLE_KEY", "test-publishable-key"]]);
   let locked = false;
 
-  function makeSheet() {
+  function makeSheet(name) {
     const rows = [];
     return {
+      rows,
+      getName: () => name,
       getLastRow: () => rows.length,
       getLastColumn: () => Math.max(0, ...rows.map((row) => row.length)),
+      getMaxRows: () => 1000,
+      getFilter: () => null,
+      getBandings: () => [],
       setFrozenRows() {},
+      setFrozenColumns() {},
+      setRowHeight() {},
+      autoResizeRows() {},
+      setColumnWidth() {},
       setRightToLeft() {},
       getRange(row, col, n, width) {
-        const range = {
-          setValues(values) {
-            values.forEach((value, i) => {
-              rows[row - 1 + i] ??= [];
-              value.forEach((cell, j) => (rows[row - 1 + i][col - 1 + j] = cell));
-            });
-            return range;
+        // Layout calls (colours, widths, alignment) change nothing the tests read, so unknown methods chain.
+        const range = new Proxy(
+          {
+            // Like Sheets' parser: a leading ' is dropped and keeps the rest as typed; a bare "+970…" becomes "=+970…".
+            setValues(values) {
+              values = values.map((line) =>
+                line.map((cell) =>
+                  /^'/.test(cell) ? cell.slice(1) : /^\+\d/.test(cell) ? `=${cell}` : cell,
+                ),
+              );
+              values.forEach((value, i) => {
+                rows[row - 1 + i] ??= [];
+                value.forEach((cell, j) => (rows[row - 1 + i][col - 1 + j] = cell));
+              });
+              return range;
+            },
+            setRichTextValues(values) {
+              return range.setValues(values.map((line) => line.map((cell) => cell.text)));
+            },
+            setFontWeight() {
+              return range;
+            },
+            setWrap() {
+              return range;
+            },
+            getValues: () =>
+              Array.from({ length: n }, (_, i) =>
+                Array.from({ length: width }, (_, j) => rows[row - 1 + i]?.[col - 1 + j] ?? ""),
+              ),
+            // A formula cell like =+970… reports only its digits, as in Sheets.
+            // A String object stands for a plain-text cell whose text merely starts with "=".
+            getDisplayValues: () =>
+              range
+                .getValues()
+                .map((line) =>
+                  line.map((cell) =>
+                    typeof cell === "string" ? cell.replace(/^=\+?(\d+)$/, "$1") : String(cell),
+                  ),
+                ),
+            getFormulas: () =>
+              range
+                .getValues()
+                .map((line) =>
+                  line.map((cell) =>
+                    typeof cell === "string" && cell.startsWith("=") ? cell : "",
+                  ),
+                ),
           },
-          setRichTextValues(values) {
-            return range.setValues(values.map((line) => line.map((cell) => cell.text)));
-          },
-          setFontWeight() {
-            return range;
-          },
-          setWrap() {
-            return range;
-          },
-          getValues: () =>
-            Array.from({ length: n }, (_, i) =>
-              Array.from({ length: width }, (_, j) => rows[row - 1 + i]?.[col - 1 + j] ?? ""),
-            ),
-          getDisplayValues: () => range.getValues().map((line) => line.map(String)),
-        };
+          { get: (target, key) => target[key] ?? (() => range) },
+        );
         return range;
       },
     };
@@ -67,7 +103,11 @@ function harness(role = "super_admin") {
         },
       }),
     },
+    Utilities: { formatDate: () => "2026-11-17 18:00" },
     SpreadsheetApp: {
+      flush() {},
+      BandingTheme: { LIGHT_GREY: "grey" },
+      WrapStrategy: { WRAP: "wrap", CLIP: "clip" },
       openById(id) {
         if (!books.has(id)) books.set(id, new Map());
         const book = books.get(id);
@@ -75,7 +115,7 @@ function harness(role = "super_admin") {
           getUrl: () => `https://docs.google.com/spreadsheets/d/${id}/edit`,
           getSheetByName: (name) => book.get(name),
           insertSheet(name) {
-            const sheet = makeSheet();
+            const sheet = makeSheet(name);
             book.set(name, sheet);
             return sheet;
           },
@@ -105,7 +145,7 @@ function harness(role = "super_admin") {
   const post = (body) => context.doPost({ postData: { contents: JSON.stringify(body) } });
   const configure = (enabled, limit = 100) =>
     post({ action: "configure", accessToken: "valid-test-token-long-enough", enabled, limit });
-  return { context, post, configure };
+  return { context, post, configure, books };
 }
 
 const requestId = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -288,4 +328,87 @@ test("committee admin reads legacy shared-sheet rows without changing their colu
   assert.equal(response.applications[0].studyYear, "2");
   assert.equal(response.applications[0].answers["المهارات"], "أجيد التصميم");
   assert.deepEqual(media.getRange(1, 1, 1, legacyHeaders.length).getValues()[0], legacyHeaders);
+});
+
+test("rows are stored for people: Arabic names and answers, plain-text phone, Gaza time", () => {
+  const app = harness();
+  app.context.setup();
+  app.configure(true, 10);
+  assert.equal(
+    app.post({ action: "apply", requestId: requestId(1), data: makeApplication("activities", 1) })
+      .ok,
+    true,
+  );
+  const [record] = app.post({
+    action: "listApplications",
+    accessToken: "valid-test-token-long-enough",
+  }).applications;
+  assert.equal(record.committeeName, "الأنشطة");
+  assert.equal(record.whatsapp, "+970591234567");
+  assert.equal(record.submittedAt, "2026-11-17 18:00");
+  assert.equal(record.answers["الالتزام الأسبوعي"], "أستطيع الالتزام مع تنظيم وقتي");
+  assert.equal(record.answers["الساعات الأسبوعية"], "من ساعتين إلى 4 ساعات");
+});
+
+test("repairRows restores the plus and the Arabic committee name on old rows only", () => {
+  const app = harness();
+  app.context.setup();
+  const book = app.books.values().next().value;
+  book
+    .get("العلاقات العامة")
+    .rows.push(["id-1", "t", "relations", "n", "220220642", "972594890620"]);
+  book.get("الإعلام").rows.push(["id-2", "t", "الإعلام", "n", "220220643", "+970567344834"]);
+  app.context.repairRows();
+  assert.deepEqual(book.get("العلاقات العامة").rows[1].slice(2, 6), [
+    "العلاقات العامة",
+    "n",
+    "220220642",
+    "+972594890620",
+  ]);
+  assert.deepEqual(book.get("الإعلام").rows[1].slice(2, 6), [
+    "الإعلام",
+    "n",
+    "220220643",
+    "+970567344834",
+  ]);
+});
+
+test("repairRows also fixes phone cells that Sheets stored as a formula (=+970…)", () => {
+  const app = harness();
+  app.context.setup();
+  const book = app.books.values().next().value;
+  book.get("الأنشطة").rows.push(["id-3", "t", "activities", "n", "229000003", "=+970591234567"]);
+  app.context.repairRows();
+  assert.deepEqual(book.get("الأنشطة").rows[1].slice(2, 6), [
+    "الأنشطة",
+    "n",
+    "229000003",
+    "+970591234567",
+  ]);
+});
+
+test("new rows keep the WhatsApp number as +970… in the sheet itself", () => {
+  const app = harness();
+  app.context.setup();
+  app.configure(true, 10);
+  app.post({ action: "apply", requestId: requestId(9), data: makeApplication("media", 9) });
+  const book = app.books.values().next().value;
+  assert.match(book.get("الإعلام").rows[1][5], /^\+970\d+$/);
+});
+
+test("repairRows turns old UTC timestamps into the sheet's Gaza-time format", () => {
+  const app = harness();
+  app.context.setup();
+  const book = app.books.values().next().value;
+  book
+    .get("الإعلام")
+    .rows.push(["id-4", "2026-11-17T16:11:45.036Z", "الإعلام", "n", "1", "+970567344834"]);
+  book.get("الإعلام").rows.push(["id-5", "2026-11-17 18:10", "الإعلام", "n", "2", "+970567344835"]);
+  app.context.repairRows();
+  assert.equal(book.get("الإعلام").rows[1][1], "2026-11-17 18:00");
+  assert.equal(
+    book.get("الإعلام").rows[2][1],
+    "2026-11-17 18:10",
+    "already-new dates are left alone",
+  );
 });

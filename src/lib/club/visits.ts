@@ -24,7 +24,7 @@ export function recordVisit(): Promise<number> {
 
   // Editors, automated browsers and dev/preview hosts read the count without adding to it.
   const counts =
-    pageOf(location.pathname).split("/")[0] !== "admin" &&
+    !["admin", "ask"].includes(pageOf(location.pathname).split("/")[0] ?? "") &&
     !navigator.webdriver &&
     !/^(localhost|127\.|\[::1\]|id-preview--)|\.lovableproject\.com$/.test(location.hostname);
 

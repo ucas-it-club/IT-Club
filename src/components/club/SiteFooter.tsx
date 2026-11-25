@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Mail, Facebook, Instagram, Linkedin, Github } from "lucide-react";
+import { Mail, Facebook, Instagram, Linkedin, Github, MessageSquareWarning } from "lucide-react";
 import { useClub } from "./club-context";
 import { Reveal } from "./Reveal";
 import { collegeUrl, isUnavailableSection, safeUrl } from "@/lib/club/model";
 import { hrefOf } from "@/lib/club/paths";
+import { rememberFeedbackSource } from "@/lib/club/feedback";
 import logo from "@/assets/ucas-logo.webp";
 
 const sections: [string, string, string][] = [
@@ -102,6 +103,14 @@ export function SiteFooter() {
                 {ar ? a : e}
               </a>
             ))}
+            <Link
+              to={hrefOf(lang, "feedback")}
+              onClick={rememberFeedbackSource}
+              className={itemClass}
+            >
+              <MessageSquareWarning size={16} aria-hidden="true" />
+              {ar ? "ملاحظات على الموقع" : "Site feedback"}
+            </Link>
           </Column>
 
           <Column title={ar ? "تصميم وتطوير" : "Designed & developed"}>

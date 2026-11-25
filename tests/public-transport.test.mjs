@@ -26,12 +26,68 @@ test("public reads use one stable order and propagate cancellation", async () =>
   const content = calls.find((c) => c.url.pathname.endsWith("club_partners"));
   assert.deepEqual(
     new Set(calls.map((call) => call.url.pathname.split("/").at(-1))),
-    new Set(["club_members", "club_events", "club_news", "club_partners", "club_settings"]),
+    new Set([
+      "club_members",
+      "club_events",
+      "club_news",
+      "club_partners",
+      "club_settings",
+      "club_event_people",
+    ]),
   );
   assert.deepEqual(content.url.searchParams.getAll("order"), ["updated_at.desc,id.asc"]);
   assert.notEqual(content.url.searchParams.get("select"), "*");
   controller.abort();
   assert.ok(calls.every((c) => c.init.signal.aborted));
+});
+
+test("events carry their people in display order, and a people failure fails the load", async () => {
+  const event = {
+    id: "event-1",
+    slug: "demo",
+    title: "فعالية",
+    title_en: "Event",
+    images: [],
+    created_at: "2026-11-01T10:00:00Z",
+    updated_at: "2026-11-01T10:00:00Z",
+    updated_by: null,
+  };
+  const person = (order, name, role = "presenter") => ({
+    id: "p" + order + role,
+    event_id: "event-1",
+    member_id: null,
+    role,
+    name,
+    name_en: null,
+    bio: "نبذة",
+    bio_en: null,
+    linkedin_url: null,
+    github_url: null,
+    display_order: order,
+  });
+  const fetcher = (people) => async (input) => {
+    const url = new URL(input);
+    if (url.pathname.endsWith("club_events")) return Response.json([event]);
+    if (url.pathname.endsWith("club_event_people"))
+      return people
+        ? Response.json(people)
+        : Response.json({ code: "PGRST205", message: "missing" }, { status: 404 });
+    return Response.json([]);
+  };
+  const api = compile("src/lib/club/public-api.ts", { fetch: fetcher(null) });
+
+  const loaded = await api.loadPublic(
+    fetcher([person(1, "الثاني"), person(0, "منظم", "organizer"), person(0, "الأول")]),
+  );
+  const people = loaded.data.events[0].people;
+  assert.deepEqual(JSON.parse(JSON.stringify(people.map((p) => [p.role, p.name]))), [
+    ["organizer", "منظم"],
+    ["presenter", "الأول"],
+    ["presenter", "الثاني"],
+  ]);
+  assert.equal(people[1].memberId, undefined);
+
+  await assert.rejects(api.loadPublic(fetcher(null)));
 });
 
 test("public partner reads return newly saved partnerships from the dedicated table", async () => {

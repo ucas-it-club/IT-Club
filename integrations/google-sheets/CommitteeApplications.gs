@@ -29,6 +29,18 @@ const MAJORS = [
   "تصميم و برمجة صفحات الويب", "تكنولوجيا الوسائط المتعددة",
 ];
 const SETTINGS_KEY = "APPLICATION_SETTINGS";
+// The form sends short codes for these two answers; the sheet is read by people, so store the words.
+const LABELS = {
+  commitment: {
+    full: "أستطيع الالتزام بشكل كامل", organised: "أستطيع الالتزام مع تنظيم وقتي",
+    difficulty: "قد أواجه صعوبة في بعض الفترات", unsure: "لست متأكدًا من قدرتي على الالتزام",
+  },
+  hours: {
+    lt2: "أقل من ساعتين", "2to4": "من ساعتين إلى 4 ساعات", "4to6": "من 4 إلى 6 ساعات",
+    gt6: "أكثر من 6 ساعات", variable: "حسب طبيعة المهام والفعاليات",
+  },
+};
+function label_(key, value) { return (LABELS[key] && LABELS[key][value]) || value; }
 
 function response_(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
@@ -50,9 +62,9 @@ function sheet_(committee) {
   let sheet = book.getSheetByName(tab);
   if (!sheet) sheet = book.insertSheet(tab);
   if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 1, APPLICATION_HEADERS.length).setValues([APPLICATION_HEADERS]).setFontWeight("bold");
-    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, APPLICATION_HEADERS.length).setValues([APPLICATION_HEADERS]);
     sheet.setRightToLeft(true);
+    format_(sheet);
   } else {
     const lastColumn = sheet.getLastColumn();
     const actual = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
@@ -67,9 +79,54 @@ function sheet_(committee) {
   }
   return sheet;
 }
+/** Layout only, never data. Run from setup(), not per request: it is slow. */
+function format_(sheet) {
+  const columns = APPLICATION_HEADERS.length;
+  sheet.getRange(1, 1, 1, columns).setBackground("#1b3a5c").setFontColor("#ffffff").setFontWeight("bold");
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(0);
+  // Centred, wrapped, direction left to Sheets: old rows carried a per-cell right-to-left direction
+  // and a left/top alignment, which made text start in one cell and run into the next.
+  // Plain text, or Sheets turns "+970…" into a number and drops the plus.
+  sheet.getRange(1, 1, sheet.getMaxRows(), columns).setFontFamily("Cairo")
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setTextDirection(null).setWrap(true);
+  sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), columns).setNumberFormat("@");
+}
+/** One-off: fixes rows saved before this version (lost "+" on WhatsApp, English committee ids, UTC dates). */
+function repairRows() {
+  return locked_(function () {
+    Object.keys(APPLICATIONS.tabs).forEach(function (committee) {
+      const sheet = sheet_(committee);
+      const count = sheet.getLastRow() - 1;
+      if (count < 1) return;
+      // Read before changing the format: switching a cell to plain text changes what it reports.
+      const dateCells = sheet.getRange(2, 2, count, 1);
+      const dates = dateCells.getDisplayValues().map(function (row) {
+        return [/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(row[0])
+          ? Utilities.formatDate(new Date(row[0]), "Asia/Gaza", "yyyy-MM-dd HH:mm") : row[0]];
+      });
+      const committeeCells = sheet.getRange(2, 3, count, 1);
+      const committeeNames = committeeCells.getDisplayValues()
+        .map(function (row) { return [APPLICATIONS.tabs[row[0]] || row[0]]; });
+      const phoneCells = sheet.getRange(2, 6, count, 1);
+      const shown = phoneCells.getDisplayValues();
+      const formulas = phoneCells.getFormulas();
+      // "+970…" typed into an automatic cell becomes the formula =+970…, which shows only the digits.
+      const phones = shown.map(function (row, index) {
+        const formula = /^=\+?(\d{8,16})$/.exec(formulas[index][0]);
+        const digits = formula ? formula[1] : row[0];
+        return [/^\d{8,16}$/.test(digits) ? "+" + digits : digits];
+      });
+      dateCells.setNumberFormat("@").setValues(dates);
+      committeeCells.setNumberFormat("@").setValues(committeeNames);
+      phoneCells.setNumberFormat("General").setValues(phones.map((row) => ["'" + row[0]]));
+    });
+    return { repaired: true };
+  });
+}
 function setup() {
   return locked_(function () {
-    Object.keys(APPLICATIONS.tabs).forEach(sheet_);
+    Object.keys(APPLICATIONS.tabs).forEach(function (committee) { format_(sheet_(committee)); });
     if (!PropertiesService.getScriptProperties().getProperty(SETTINGS_KEY))
       PropertiesService.getScriptProperties().setProperty(SETTINGS_KEY, JSON.stringify({ enabled: false, limit: 40 }));
     return { ready: true, spreadsheet: book_().getUrl(), registration: status_() };
@@ -140,12 +197,12 @@ function validate_(data) {
   if (data.hasExperience !== undefined && ["yes", "no"].indexOf(data.hasExperience) < 0) fail_("INVALID_INPUT");
   if (data.portfolio && (!/^https:\/\//i.test(data.portfolio) || data.portfolio.length > 300)) fail_("INVALID_INPUT");
   if (data.leadership !== undefined && (typeof data.leadership !== "string" || data.leadership.length > 1000)) fail_("INVALID_INPUT");
-  return [committee, text_(data, "fullName", 2, 200), studentId, whatsapp, email, major, year,
+  return [APPLICATIONS.tabs[committee], text_(data, "fullName", 2, 200), studentId, whatsapp, email, major, year,
     optional_(data, "why", 1000), optional_(data, "contribution", 1000), optional_(data, "skills", 1000),
     data.roles.join("، "), optional_(data, "experience", 1000), optional_(data, "portfolio", 300),
     optional_(data, "leadership", 1000),
     data.hasExperience === "yes" ? "نعم" : data.hasExperience === "no" ? "لا" : "",
-    optional_(data, "commitment", 50), optional_(data, "hours", 50), optional_(data, "lateTask", 1000),
+    label_("commitment", optional_(data, "commitment", 50)), label_("hours", optional_(data, "hours", 50)), optional_(data, "lateTask", 1000),
     optional_(data, "outsidePreference", 1000), optional_(data, "eventIdea", 1000), optional_(data, "workshopPrep", 1000),
     optional_(data, "initiative", 1000), optional_(data, "teamIssue", 1000), optional_(data, "eventChange", 1000)];
 }
@@ -158,8 +215,12 @@ function studentExists_(sheet, studentId) {
     .getDisplayValues().some((row) => row[0] === studentId);
 }
 function append_(sheet, values) {
-  const cells = values.map((value) => SpreadsheetApp.newRichTextValue().setText(String(value)).build());
-  sheet.getRange(sheet.getLastRow() + 1, 1, 1, cells.length).setRichTextValues([cells]).setWrap(true);
+  const range = sheet.getRange(sheet.getLastRow() + 1, 1, 1, values.length).setNumberFormat("@");
+  // A plain-text cell still saved "+970…" as "=+970…"; a leading ' in a normal cell keeps it as typed.
+  range.getCell(1, 6).setNumberFormat("General");
+  values[5] = "'" + values[5];
+  range.setValues([values.map(String)]).setFontFamily("Cairo")
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setTextDirection(null).setWrap(true);
 }
 function requireAdmin_(token) {
   if (typeof token !== "string" || token.length < 20 || token.length > 10000) fail_("UNAUTHORIZED");
@@ -231,7 +292,7 @@ function doPost(event) {
       if (exists_(sheet, body.requestId)) return { ok: true, duplicate: true, registration: status_() };
       if (!status_().open) fail_("JOIN_CLOSED");
       if (studentExists_(sheet, row[2])) fail_("ALREADY_REGISTERED");
-      append_(sheet, [body.requestId, new Date().toISOString()].concat(row));
+      append_(sheet, [body.requestId, Utilities.formatDate(new Date(), "Asia/Gaza", "yyyy-MM-dd HH:mm")].concat(row));
       return { ok: true, registration: status_() };
     }));
   } catch (error) { return errorResponse_(error); }

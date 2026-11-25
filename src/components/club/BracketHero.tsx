@@ -14,7 +14,7 @@ import dotBottom from "@/assets/logo/dot-bottom.webp";
 import { HeroOpening } from "./HeroOpening";
 import { weakDevice } from "@/lib/club/device";
 import { CountUp } from "./CountUp";
-import { buildScrub } from "./hero-story";
+import { buildScrub, hugShift } from "./hero-story";
 
 /**
  * Home hero: the club name between the logo's two brackets.
@@ -257,10 +257,9 @@ export function BracketHero() {
     let cancelled = false;
 
     void (async () => {
-      const loaded = await Promise.all([
-        import("gsap"),
-        import("gsap/ScrollTrigger"),
-      ]).catch(() => null);
+      const loaded = await Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).catch(
+        () => null,
+      );
 
       if (cancelled) return;
       if (!loaded) {
@@ -373,6 +372,65 @@ export function BracketHero() {
         const toLeft = () => -Math.max(0, left.offsetLeft - edge());
         const toRight = () =>
           Math.max(0, stage.clientWidth - right.offsetLeft - right.offsetWidth - edge());
+        // Each panel's arm targets: they stay around the name unless the panel is clearly
+        // wider, then open to a little more than the name's gap (see hugShift). Read when the tween first runs, so the layout is settled.
+        const gap = () =>
+          parseFloat(getComputedStyle(node.querySelector(".bh-row")!).columnGap) || 0;
+        const hug = (panel: string) => {
+          // Where its ink starts and ends, in the stage's own coordinates: text lines,
+          // pills, buttons and counters, not the blocks around them, which stretch to
+          // the panel's max width.
+          const ink = () => {
+            const box = node.querySelector<HTMLElement>(panel);
+            const rects = box
+              ? [...box.querySelectorAll("li, a, dt")].map((el) => el.getBoundingClientRect())
+              : [];
+            if (box) {
+              const walk = document.createTreeWalker(box, NodeFilter.SHOW_TEXT);
+              const range = document.createRange();
+              while (walk.nextNode()) {
+                range.selectNodeContents(walk.currentNode);
+                rects.push(...range.getClientRects());
+              }
+            }
+            const shown = rects.filter((r) => r.width);
+            const x = stage.getBoundingClientRect().left;
+            const mid = stage.clientWidth / 2;
+            if (!shown.length) return { start: mid, end: mid };
+            return {
+              start: Math.min(...shown.map((r) => r.left)) - x,
+              end: Math.max(...shown.map((r) => r.right)) - x,
+            };
+          };
+          return {
+            left: () =>
+              hugShift({
+                side: "left",
+                inner: left.offsetLeft + left.offsetWidth,
+                edge: ink().start,
+                gap: gap(),
+                slack: gap() / 2,
+                limit: toLeft(),
+              }),
+            right: () =>
+              hugShift({
+                side: "right",
+                inner: right.offsetLeft,
+                edge: ink().end,
+                gap: gap(),
+                slack: gap() / 2,
+                limit: toRight(),
+              }),
+          };
+        };
+        const arms = (panel: string, at: number, duration: number) => {
+          const to = hug(panel);
+          tl.to(left, { x: to.left, duration, ease: "power2.inOut" }, at).to(
+            right,
+            { x: to.right, duration, ease: "power2.inOut" },
+            at,
+          );
+        };
 
         const tl = gsap.timeline({
           defaults: { ease: "none" },
@@ -403,14 +461,16 @@ export function BracketHero() {
             );
         };
 
-        tl.to(".bh-cue", { opacity: 0, duration: 0.2 }, 0)
-          .to(left, { x: toLeft, duration: 1, ease: "power2.inOut" }, 0)
-          .to(right, { x: toRight, duration: 1, ease: "power2.inOut" }, 0);
+        tl.to(".bh-cue", { opacity: 0, duration: 0.2 }, 0);
+        arms(".bh-who", 0, 1);
 
         // The panels change on their own clock, whatever the scroll does, and the
         // story loops. It pauses while the hero is off screen.
         if (story) {
           buildScrub(gsap, node, tl, true);
+          // Between panels, while one line leaves and the next rises.
+          arms(".bh-numbers", 3.2, 0.6);
+          arms(".bh-join", 5.2, 0.6);
           // The arms close again as the last panel leaves.
           tl.to(left, { x: 0, duration: 1, ease: "power2.inOut" }, 8.5).to(
             right,
@@ -430,6 +490,8 @@ export function BracketHero() {
         swap(".bh-name", ".bh-who", 0.2);
         swap(".bh-who", ".bh-numbers", 1.4);
         swap(".bh-numbers", ".bh-join", 2.6);
+        arms(".bh-numbers", 1.4, 1);
+        arms(".bh-join", 2.6, 1);
         tl.to({}, { duration: 0.4 }, 3.6);
 
         q<HTMLElement>("[data-count]").forEach((el) => {
@@ -587,7 +649,11 @@ export function BracketHero() {
                     ] as const
                   ).map(([v, label]) => (
                     <div key={label}>
-                      <dt data-count={v}>{n(v)}</dt>
+                      {/* Holds the final figure's width while it counts up from 0, so the
+                          columns stay put and the brackets measure the real width. */}
+                      <dt data-count={v} style={{ minWidth: `${n(v).length}ch` }}>
+                        {n(v)}
+                      </dt>
                       <dd>{label}</dd>
                     </div>
                   ))}

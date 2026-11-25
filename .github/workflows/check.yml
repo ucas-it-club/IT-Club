@@ -1,0 +1,35 @@
+# The full project check (typecheck, tests, lint, build) on every pull request to master.
+name: Check
+
+on:
+  pull_request:
+    branches: [master]
+    # edited: retargeting a stacked PR to master must re-run the check. Title
+    # and body edits re-run it too; a skipped run would hide an earlier failure.
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [master]
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Tests import .ts files directly, which needs Node's built-in type stripping (22.18+).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - run: npm run check

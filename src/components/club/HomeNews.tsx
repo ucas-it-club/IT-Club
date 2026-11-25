@@ -9,14 +9,15 @@ import { useClub } from "./club-context";
 import { ClubLink } from "./ClubContent";
 import { ContentImage } from "./ContentImage";
 import { Reveal } from "./Reveal";
+import { slideCards } from "@/lib/club/card-slide";
 
 /** The news worth leading with: featured first, then newest. */
 export function topNews(news: Content[]) {
-  const featured = (item: Content) => (item as { featured?: boolean }).featured === true;
   return [...news]
     .sort(
       (a, b) =>
-        Number(featured(b)) - Number(featured(a)) || (b.date || "").localeCompare(a.date || ""),
+        Number(b.featured === true) - Number(a.featured === true) ||
+        (b.date || "").localeCompare(a.date || ""),
     )
     .slice(0, 5);
 }
@@ -48,9 +49,6 @@ export function HomeNews() {
   );
 }
 
-// Two sections may tick at once; the page-change animation stays off until both finish.
-let running = 0;
-
 /**
  * A few stories that take turns. Each is a 16:9 photograph (club posts are 16:9; any other
  * ratio is trimmed to fit, so the two columns always line up) with
@@ -59,7 +57,7 @@ let running = 0;
  * width, for the top of the news and events pages; `flip` puts the large card on the
  * other side). The cards run as a strip: on a timer the next story slides in from off
  * screen into the large place, the large card moves down to the first small place, and
- * the last small card slides off the far side, animated with a view transition. The timer is the fill in the current dot: it pauses on hover, on
+ * the last small card slides off the far side (see card-slide.ts). The timer is the fill in the current dot: it pauses on hover, on
  * focus and off screen, and never runs with reduced motion.
  */
 export function HomeStories({
@@ -109,39 +107,15 @@ export function HomeStories({
 
   // Stories arrive from the large card's side: the left in Arabic unless flipped.
   const bigOnLeft = ar ? flip : !flip;
-  const side = bigOnLeft ? "hs-from-left" : "hs-from-right";
   const [next, prev] = ar ? ["التالي", "السابق"] : ["Next", "Previous"];
   const go = (to: number, back = false) => {
     const update = () => flushSync(() => setStart(((to % n) + n) % n));
-    const html = document.documentElement;
-
-    if (
-      !document.startViewTransition ||
-      document.hidden ||
-      matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
-      return update();
-    // The slide fades out at the same line as the cards at rest (.hs-stage), so the
-    // fade never switches on or off.
     const stage = root.current?.querySelector<HTMLElement>(".hs-stage");
-    if (stage) {
-      const box = stage.getBoundingClientRect();
-      const css = getComputedStyle(stage);
-      const line = parseFloat(css.getPropertyValue("--hs-line")) || 0;
-      html.style.setProperty("--hs-l", `${box.left + line}px`);
-      html.style.setProperty("--hs-r", `${box.right - line}px`);
-      html.style.setProperty("--hs-f", css.getPropertyValue("--hs-fade"));
-    }
-    running += 1;
-    html.dataset["vt"] = "stories";
-    html.dataset["vtDir"] = back ? "back" : "fwd";
-    const transition = document.startViewTransition(update);
-    // A skipped transition (hidden tab, a second one starting) rejects `ready`; the swap still happens.
-    transition.ready.catch(() => {});
-    void transition.finished.finally(() => {
-      running -= 1;
-      if (!running) delete html.dataset["vt"];
-    });
+
+    if (!stage || document.hidden || matchMedia("(prefers-reduced-motion: reduce)").matches)
+      return update();
+    // Forward, the new story comes from the large card's side; back, from the other.
+    slideCards(stage, update, bigOnLeft !== back ? "left" : "right");
   };
   // The large card leads; the small ones trail behind it with the stories shown before.
   const order = items.map((_, i) => items[(start - i + n) % n]!);
@@ -177,7 +151,7 @@ export function HomeStories({
       )}
       <Reveal className="relative">
         <div
-          className={`hs-stage grid items-start gap-4 ${single ? "md:[--hs-fade:40px] md:[--hs-line:-40px]" : "min-[85rem]:[--hs-fade:40px] min-[85rem]:[--hs-line:-40px]"} ${n > 1 && !single ? `lg:grid-rows-[auto_1fr] ${flip ? "lg:grid-cols-[calc((100%_-_2.78rem)/3)_1fr]" : "lg:grid-cols-[1fr_calc((100%_-_2.78rem)/3)]"}` : ""}`}
+          className={`hs-stage relative grid items-start gap-4 ${n > 1 && !single ? `lg:grid-rows-[auto_1fr] ${flip ? "lg:grid-cols-[calc((100%_-_2.78rem)/3)_1fr]" : "lg:grid-cols-[1fr_calc((100%_-_2.78rem)/3)]"}` : ""}`}
         >
           {/* Keyed by story, so React moves a card instead of rebuilding it. */}
           {order.map((item, i) => (
@@ -190,12 +164,7 @@ export function HomeStories({
                     ? `hidden lg:block ${flip ? "lg:col-start-1" : ""}`
                     : "hidden"
               }
-              style={
-                {
-                  viewTransitionName: `hs-${kind}-${item.id.replace(/[^\w-]/g, "_")}`,
-                  viewTransitionClass: `hs-card ${side}`,
-                } as CSSProperties
-              }
+              data-key={item.id}
             >
               <Story item={item} kind={kind} lead={i === 0} hero={single} eager={seen} />
             </div>
@@ -208,8 +177,7 @@ export function HomeStories({
                 card's side moves forward, the other goes back. */}
             <button
               type="button"
-              className={`hs-btn hs-side left-3 ${single ? "hs-out-md md:-left-20" : "hs-out-xl min-[85rem]:-left-20"}`}
-              style={{ "--hs-arrow": `hs-${kind}-left` } as CSSProperties}
+              className={`hs-btn hs-side left-3 ${single ? "md:-left-20" : "min-[85rem]:-left-20"}`}
               onClick={() => (bigOnLeft ? go(start + 1) : go(start - 1, true))}
               aria-label={bigOnLeft ? next : prev}
             >
@@ -217,8 +185,7 @@ export function HomeStories({
             </button>
             <button
               type="button"
-              className={`hs-btn hs-side right-3 ${single ? "hs-out-md md:-right-20" : "hs-out-xl min-[85rem]:-right-20"}`}
-              style={{ "--hs-arrow": `hs-${kind}-right` } as CSSProperties}
+              className={`hs-btn hs-side right-3 ${single ? "md:-right-20" : "min-[85rem]:-right-20"}`}
               onClick={() => (bigOnLeft ? go(start - 1, true) : go(start + 1))}
               aria-label={bigOnLeft ? prev : next}
             >

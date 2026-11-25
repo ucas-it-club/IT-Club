@@ -1,5 +1,5 @@
 import { contentImageUrls } from "@/lib/club/google-drive";
-import { local } from "@/lib/club/model";
+import { eventPeople, local, personField } from "@/lib/club/model";
 import { dateParts, eventDisplayStatus } from "@/lib/club/event-timing";
 import { itemPage } from "@/lib/club/paths";
 import { useClub } from "./club-context";
@@ -18,7 +18,9 @@ function useEvents() {
       item,
       title: local(item, "title", lang),
       type: both(item.eventType, item.eventType_en),
-      by: both(item.presenterName, item.presenterName_en),
+      by: eventPeople(item, "presenter")
+        .map((person) => personField(person, "name", lang))
+        .join(ar ? "، " : ", "),
       date: dateParts(item.date, lang),
       src: contentImageUrls(item)[0],
       past: eventDisplayStatus(item, now) === "past",

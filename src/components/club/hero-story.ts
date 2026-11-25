@@ -6,6 +6,30 @@
 
 type G = typeof import("gsap").gsap;
 
+/**
+ * How far one arm moves from rest for a line whose outer edge on that side is `edge`.
+ * The arm stays where it rests around the name unless the line would come closer than
+ * `gap - slack` to it: small differences in width never move it, and it never closes in.
+ * When it does move, it opens to `gap + slack` from the line, a little roomier than the
+ * name. `inner` is its resting inner edge; `limit` its farthest travel (the content
+ * edge), never passed.
+ */
+export function hugShift(a: {
+  side: "left" | "right";
+  inner: number;
+  edge: number;
+  gap: number;
+  slack: number;
+  limit: number;
+}) {
+  if (a.side === "left") {
+    const need = a.edge - a.gap - a.inner;
+    return need >= -a.slack ? 0 : Math.max(need - a.slack, a.limit);
+  }
+  const need = a.edge + a.gap - a.inner;
+  return need <= a.slack ? 0 : Math.min(need + a.slack, a.limit);
+}
+
 type Step = "name" | "who" | "numbers" | "join";
 
 const lines: Record<Step, string> = {

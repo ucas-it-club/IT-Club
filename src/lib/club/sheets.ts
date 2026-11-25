@@ -14,7 +14,7 @@ const endpoints = {
     "https://script.google.com/a/macros/ucas.edu.ps/s/AKfycbxbRhHH3dTxdsvpAD0TSGFae6mtBmLwf3zUApDqe6VGiNvZrE-M4Ni164_0LDu-e1MTow/exec",
   join: "https://script.google.com/macros/s/AKfycbxV5GRTEe8Y2QEcEPHDFURBXZsZpg6JTZxkya40NJFTBL-sklDQSKrkwmJYmTSQBn1q/exec",
   applications:
-    "https://script.google.com/macros/s/AKfycbx6bAvYL5tKv0dUxwtpoLsgmls-xvGxrLZQsOP2VvSJK9s0uT3Z8VpAg20hci61BCeUdA/exec",
+    "https://script.google.com/macros/s/AKfycbwCYy0Q3hh5Ez7k2tUkefoQu29t8Y4bdpVeVzvJoUTXBGnIdvgYXw_Zo0rGREdrYhlE/exec",
 };
 
 const registrationSchema = z.object({
@@ -185,7 +185,9 @@ export async function ensureEventSheet(eventId: string, title: string) {
     eventId: validEventId,
     title,
   });
-  return eventSheetSchema.parse(value.sheet);
+  const sheet = eventSheetSchema.parse(value.sheet);
+  if (!sheet.linked) throw new SheetsError("EVENT_SHEET_MISSING");
+  return sheet;
 }
 
 export async function submitEventSignup(

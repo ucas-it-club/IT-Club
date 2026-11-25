@@ -413,7 +413,9 @@ function eventFromSupabase_(eventId) {
   if (!key) fail_("NOT_CONFIGURED");
   const url =
     CLUB.supabaseUrl +
-    "/rest/v1/club_events?select=id,data&id=eq." +
+    "/rest/v1/club_events?select=id,title,status,date,event_time,duration_minutes," +
+    "registration_enabled,registration_name_enabled,registration_phone_enabled," +
+    "registration_attendance_enabled&id=eq." +
     encodeURIComponent(eventId) +
     "&limit=1";
   const result = UrlFetchApp.fetch(url, {
@@ -428,7 +430,23 @@ function eventFromSupabase_(eventId) {
     fail_("SERVER_ERROR");
   }
   const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
-  const item = row && row.data;
+  // The event in the shape the checks below read; null columns stay null.
+  const item = row && {
+    title: row.title,
+    status: row.status,
+    date: row.date,
+    eventTime: row.event_time,
+    durationMinutes: row.duration_minutes,
+    eventRegistration:
+      typeof row.registration_enabled === "boolean"
+        ? {
+            enabled: row.registration_enabled,
+            nameEnabled: row.registration_name_enabled === true,
+            phoneEnabled: row.registration_phone_enabled === true,
+            attendanceEnabled: row.registration_attendance_enabled === true,
+          }
+        : null,
+  };
   if (
     !row ||
     String(row.id).toLowerCase() !== eventId.toLowerCase() ||
@@ -452,7 +470,7 @@ function validateEvent_(data, config) {
   if (config.attendanceEnabled && attendance !== "yes") fail_("INVALID_INPUT");
   return [name, code, phone, attendance === "yes" ? "نعم" : ""];
 }
-function requireAdmin_(token) {
+function requireAdmin_(token, allowEvents) {
   if (typeof token !== "string" || token.length < 20 || token.length > 10000) fail_("UNAUTHORIZED");
   const key = PropertiesService.getScriptProperties().getProperty("SUPABASE_PUBLISHABLE_KEY");
   if (!key) fail_("NOT_CONFIGURED");
@@ -471,7 +489,7 @@ function requireAdmin_(token) {
   );
   if (result.getResponseCode() !== 200) fail_("UNAUTHORIZED");
   const rows = JSON.parse(result.getContentText());
-  if (!rows.length || rows[0].role !== "super_admin") fail_("UNAUTHORIZED");
+  if (!rows.length || (rows[0].role !== "super_admin" && !(allowEvents && rows[0].role === "events_editor"))) fail_("UNAUTHORIZED");
 }
 /** POST JSON as text/plain. action: contact, join, or configure. */
 function doPost(event) {
@@ -500,11 +518,11 @@ function doPost(event) {
     )
       fail_("INVALID_INPUT");
     if (body.action === "eventSheetStatus") {
-      requireAdmin_(body.accessToken);
+      requireAdmin_(body.accessToken, true);
       return response_({ ok: true, sheet: eventSheetInfo_(body.eventId) });
     }
     if (body.action === "ensureEventSheet" || body.action === "configureEventSheet") {
-      requireAdmin_(body.accessToken);
+      requireAdmin_(body.accessToken, true);
       if (!validUuid_(body.eventId)) fail_("INVALID_INPUT");
       const item = eventFromSupabase_(body.eventId);
       return response_(

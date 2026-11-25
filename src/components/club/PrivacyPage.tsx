@@ -48,8 +48,8 @@ export function PrivacyPage() {
 
       <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
         {ar
-          ? "هذا الموقع لا يستخدم إعلانات ولا تتبّعًا ولا تحليلات خارجية. لا نبيع بياناتك ولا نشاركها مع أي جهة تسويقية، ولا نحتاج موافقتك على الكوكيز لأن ما نحفظه هو تفضيلاتك أنت فقط."
-          : "This site runs no advertising, no trackers and no third-party analytics. We do not sell or share your data, and we do not ask for cookie consent because everything stored is your own preference."}
+          ? "هذا الموقع لا يستخدم إعلانات ولا تتبّعًا ولا تحليلات خارجية. لا نبيع بياناتك ولا نشاركها مع أي جهة تسويقية، ولا نحتاج موافقتك على الكوكيز لأن ما نحفظه هو تفضيلاتك أنت فقط. الاستثناء الوحيد صفحة فعالية غير معلنة تعدّ الزيارات والضغطات عبر GoatCounter بلا كوكيز ولا أي هوية."
+          : "This site runs no advertising, no trackers and no third-party analytics. We do not sell or share your data, and we do not ask for cookie consent because everything stored is your own preference. The one exception is an unlisted event page that counts visits and taps through GoatCounter, with no cookies and no identifiers."}
       </p>
 
       <h2 className="mt-12 text-2xl font-black">{ar ? "ما الذي يُحفظ" : "What is stored"}</h2>
@@ -84,6 +84,11 @@ export function PrivacyPage() {
         {ar
           ? "طلب الانضمام يُرسل إلى جدول Google Sheets يملكه النادي، ويحتوي ما كتبتَه أنت: الاسم والبريد الجامعي ورقم الطالب والتخصص واللجنة المفضلة ورسالتك. تطّلع عليه إدارة النادي فقط، ولا يُرسل إلى أي مزوّد بريد أو تسويق."
           : "A membership application goes to a Google Sheet owned by the club and contains what you typed: your name, university email, student id, major, preferred committee and message. Only the club's administrators read it, and it is sent to no mail or marketing provider."}
+      </p>
+      <p className="mt-4 leading-relaxed text-muted-foreground">
+        {ar
+          ? "الملاحظات على الموقع تُحفظ على Supabase مع الصفحة التي جئت منها واللغة والمظهر ونوع المتصفح، ومعها اسمك ووسيلة التواصل فقط إن كتبتهما. يقرؤها المحررون فقط. لمنع الرسائل المزعجة يحفظ الخادم بصمة مشفّرة لعنوان IP لمدة ساعة تقريبًا، ولا يحفظ العنوان نفسه."
+          : "Site feedback is stored on Supabase with the page you came from, your language, theme and browser, and your name and contact only if you typed them. Only editors read it. To stop spam, the server keeps a salted hash of your IP address for about an hour, never the address itself."}
       </p>
       <p className="mt-4 leading-relaxed text-muted-foreground">
         {ar

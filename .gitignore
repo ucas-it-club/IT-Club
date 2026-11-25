@@ -53,3 +53,8 @@ docs/SRS_UCAS_IT_Club_Website_v2.docx.md
 output/
 outputs/
 tmp/
+
+# Playwright output
+test-results/
+playwright-report/
+supabase/.temp/

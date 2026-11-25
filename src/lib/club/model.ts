@@ -21,6 +21,7 @@ export const collegeUrl: Record<Lang, string> = {
 
 export type Content = {
   id: string;
+  publicationStatus?: "draft" | "published";
   /** Readable URL name for news, events, partners, and member profiles. */
   slug?: string;
   title: string;
@@ -34,6 +35,8 @@ export type Content = {
   summary?: string;
   summary_en?: string;
   images?: string[];
+  /** News: leads the home page. Loaded only; the admin toggle is issue #29. */
+  featured?: boolean;
   /** Public Google Drive image URLs used by news and events. */
   driveImageUrls?: string[];
   technologies?: string[];
@@ -64,11 +67,56 @@ export type Content = {
   presenterName_en?: string;
   presenterBio?: string;
   presenterBio_en?: string;
+  /** Events: presenters and organizers in display order, from club_event_people. */
+  people?: EventPerson[];
   eventRegistration?: EventRegistration;
   createdAt?: string;
   updatedAt?: string;
   updatedBy?: string;
 };
+
+/**
+ * One presenter or organizer. Name, bio and links are copied from the member when
+ * one is picked, so later profile edits do not change past events.
+ */
+export type EventPerson = {
+  memberId?: string | undefined;
+  role: "presenter" | "organizer";
+  name?: string | undefined;
+  name_en?: string | undefined;
+  bio?: string | undefined;
+  bio_en?: string | undefined;
+  linkedinUrl?: string | undefined;
+  githubUrl?: string | undefined;
+};
+
+/** An event's people in one role. Before club_event_people loads, the old single presenter. */
+export function eventPeople(event: Content, role: EventPerson["role"]): EventPerson[] {
+  const legacy: EventPerson[] =
+    event.presenterName || event.presenterName_en
+      ? [
+          {
+            role: "presenter",
+            name: event.presenterName,
+            name_en: event.presenterName_en,
+            bio: event.presenterBio,
+            bio_en: event.presenterBio_en,
+          },
+        ]
+      : [];
+
+  return (event.people ?? legacy).filter((person) => person.role === role);
+}
+
+/** The visitor's language, else the other one. */
+export function personField(person: EventPerson, key: "name" | "bio", lang: Lang) {
+  const arabic = person[key]?.trim() || "";
+  const english = person[`${key}_en`]?.trim() || "";
+
+  return lang === "en" ? english || arabic : arabic || english;
+}
+
+export const maxEventPeople = 6;
 
 export type EventRegistration = {
   enabled: boolean;
@@ -91,17 +139,13 @@ export const eventRegistrationSchema = z.object({
   attendanceEnabled: z.boolean(),
 });
 
-/** Details shown in the event information and presenter sections. */
+/** Details shown in the event information section. */
 export const eventDetailsSchema = z
   .object({
     eventTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
     durationMinutes: z.coerce.number().int().min(1).max(1440),
     eventType: z.string().trim().min(2).max(100),
     eventType_en: z.string().trim().min(2).max(100),
-    presenterName: z.string().trim().min(2).max(200),
-    presenterName_en: z.string().trim().min(2).max(200),
-    presenterBio: z.string().trim().min(2).max(500),
-    presenterBio_en: z.string().trim().min(2).max(500),
   })
   .strict();
 
@@ -242,58 +286,79 @@ export const joinSchema = z.object({
 const longText = z.string().trim().min(10).max(1000);
 
 /** Committee application. The sheet stores a missing portfolio or leadership answer as an empty cell. */
-export const applicationSchema = z.object({
-  committee: z.enum(["media", "relations", "activities"]),
-  fullName: text,
-  studentId: z
-    .string()
-    .trim()
-    .regex(/^[0-9]{9}$/),
-  major: z.enum(majors),
-  studyYear: z.enum(["1", "2", "3", "4"]),
-  whatsapp: z.string().regex(/^\+[0-9]{8,16}$/),
-  email: z
-    .string()
-    .trim()
-    .email()
-    .max(254)
-    .regex(/@smail\.ucas\.edu\.ps$/),
-  why: longText.optional(),
-  contribution: z.string().trim().min(10).max(1000).optional(),
-  skills: longText.optional(),
-  roles: z.array(z.string().min(1).max(100)).min(1).max(12),
-  experience: z.string().trim().max(1000).optional(),
-  hasExperience: z.enum(["yes", "no"]).optional(),
-  commitment: z.enum(["full", "organised", "difficulty", "unsure"]).optional(),
-  hours: z.enum(["lt2", "2to4", "4to6", "gt6", "variable"]).optional(),
-  lateTask: longText.optional(),
-  outsidePreference: longText.optional(),
-  eventIdea: longText.optional(),
-  workshopPrep: longText.optional(),
-  initiative: longText.optional(),
-  teamIssue: longText.optional(),
-  eventChange: longText.optional(),
-  portfolio: z.union([z.literal(""), z.string().trim().url().startsWith("https://").max(300)]),
-  leadership: z.string().trim().max(1000),
-}).superRefine((value, ctx) => {
-  const required = value.committee === "activities"
-    ? ["why", "contribution", "skills", "commitment", "hours", "lateTask", "outsidePreference", "eventIdea", "workshopPrep", "initiative", "teamIssue", "eventChange"]
-    : ["why", "skills", "experience"];
-  for (const key of required) {
-    const answer = value[key as keyof typeof value];
-    const minLength = key === "experience" ? 1 : 10;
-    if (typeof answer !== "string" || answer.trim().length < minLength) {
-      ctx.addIssue({ code: "custom", path: [key], message: "Required answer" });
+export const applicationSchema = z
+  .object({
+    committee: z.enum(["media", "relations", "activities"]),
+    fullName: text,
+    studentId: z
+      .string()
+      .trim()
+      .regex(/^[0-9]{9}$/),
+    major: z.enum(majors),
+    studyYear: z.enum(["1", "2", "3", "4"]),
+    whatsapp: z.string().regex(/^\+[0-9]{8,16}$/),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email()
+      .max(254)
+      .regex(/@smail\.ucas\.edu\.ps$/),
+    why: longText.optional(),
+    contribution: z.string().trim().min(10).max(1000).optional(),
+    skills: longText.optional(),
+    roles: z.array(z.string().min(1).max(100)).min(1).max(12),
+    experience: z.string().trim().max(1000).optional(),
+    hasExperience: z.enum(["yes", "no"]).optional(),
+    commitment: z.enum(["full", "organised", "difficulty", "unsure"]).optional(),
+    hours: z.enum(["lt2", "2to4", "4to6", "gt6", "variable"]).optional(),
+    lateTask: longText.optional(),
+    outsidePreference: longText.optional(),
+    eventIdea: longText.optional(),
+    workshopPrep: longText.optional(),
+    initiative: longText.optional(),
+    teamIssue: longText.optional(),
+    eventChange: longText.optional(),
+    portfolio: z.union([z.literal(""), z.string().trim().url().startsWith("https://").max(300)]),
+    leadership: z.string().trim().max(1000),
+  })
+  .superRefine((value, ctx) => {
+    const required =
+      value.committee === "activities"
+        ? [
+            "why",
+            "contribution",
+            "skills",
+            "commitment",
+            "hours",
+            "lateTask",
+            "outsidePreference",
+            "eventIdea",
+            "workshopPrep",
+            "initiative",
+            "teamIssue",
+            "eventChange",
+          ]
+        : ["why", "skills", "experience"];
+    for (const key of required) {
+      const answer = value[key as keyof typeof value];
+      // commitment and hours are enum answers ("full", "2to4"): the enum already validated them.
+      const minLength = key === "experience" || key === "commitment" || key === "hours" ? 1 : 10;
+      if (typeof answer !== "string" || answer.trim().length < minLength) {
+        ctx.addIssue({ code: "custom", path: [key], message: "Required answer" });
+      }
     }
-  }
-  if (value.committee === "activities" && !value.hasExperience) {
-    ctx.addIssue({ code: "custom", path: ["hasExperience"], message: "Required answer" });
-  }
-  if (value.committee === "activities" && value.hasExperience === "yes" &&
-      (!value.experience || value.experience.trim().length < 10)) {
-    ctx.addIssue({ code: "custom", path: ["experience"], message: "Required answer" });
-  }
-});
+    if (value.committee === "activities" && !value.hasExperience) {
+      ctx.addIssue({ code: "custom", path: ["hasExperience"], message: "Required answer" });
+    }
+    if (
+      value.committee === "activities" &&
+      value.hasExperience === "yes" &&
+      (!value.experience || value.experience.trim().length < 10)
+    ) {
+      ctx.addIssue({ code: "custom", path: ["experience"], message: "Required answer" });
+    }
+  });
 
 /**
  * A collection with nothing in it stays out of navigation and answers 404,

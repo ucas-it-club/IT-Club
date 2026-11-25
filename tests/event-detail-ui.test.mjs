@@ -22,7 +22,7 @@ test("event details use a dedicated maintainable component", () => {
 test("event layout keeps the image, presenter and information together on the desktop right", () => {
   assert.match(
     detail,
-    /space-y-5 lg:col-start-2 lg:row-start-1[\s\S]*<figure[\s\S]*event-presenter-[\s\S]*event-information-/,
+    /space-y-5 lg:col-start-2 lg:row-start-1[\s\S]*<figure[\s\S]*<EventPeople [\s\S]*event-information-/,
   );
   assert.match(detail, /space-y-8 lg:col-start-1 lg:row-start-1/);
   assert.match(detail, /lg:grid-cols-2/);
@@ -73,12 +73,15 @@ test("content editor behavior is registered by collection", () => {
   assert.match(admin, /contentEditorStrategy\(targetKind\)/);
 });
 
-test("presenter section supports localized name and one-line bio", () => {
-  for (const field of ["presenterName", "presenterName_en", "presenterBio", "presenterBio_en"]) {
-    assert.match(detail, new RegExp(`\\b${field}\\b`));
-  }
+test("presenter section shows every presenter with a language fallback", () => {
+  assert.match(detail, /eventPeople\(event, "presenter"\)/);
+  assert.match(detail, /eventPeople\(event, "organizer"\)/);
+  assert.match(detail, /personField\(person, "name", lang\)/);
+  assert.match(detail, /personField\(single, "bio", lang\)/);
+  assert.match(detail, /<Accordion type="single" collapsible/);
   assert.match(detail, /مقدم الفعالية/);
   assert.match(detail, /Event presenter/);
+  assert.match(detail, /Organized by/);
 });
 
 test("registration uses the shared time-aware availability guard and opens on demand", () => {
