@@ -4,6 +4,9 @@ name: Check
 on:
   pull_request:
     branches: [master]
+    # edited: retargeting a stacked PR to master must re-run the check. Title
+    # and body edits re-run it too; a skipped run would hide an earlier failure.
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [master]
 
