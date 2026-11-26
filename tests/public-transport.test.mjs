@@ -100,13 +100,12 @@ test("public partner reads return newly saved partnerships from the dedicated ta
       {
         id: "partner-1",
         slug: null,
-        data: {
-          title: "شريك تقني",
-          title_en: "Technology partner",
-          description: "وصف الشراكة",
-          description_en: "Partnership description",
-          images: [],
-        },
+        title: "شريك تقني",
+        title_en: "Technology partner",
+        description: "وصف الشراكة",
+        description_en: "Partnership description",
+        images: [],
+        partnership_type: null,
         created_at: "2026-10-08T10:59:23Z",
         updated_at: "2026-10-08T10:59:23Z",
         updated_by: null,
@@ -143,7 +142,7 @@ test("sitemap reads beyond one API page and numbers items oldest-first", async (
     const url = new URL(input);
     calls.push(url);
     assert.ok(init.signal);
-    if (url.pathname.endsWith("club_settings")) return Response.json([{ data: {} }]);
+    if (url.pathname.endsWith("club_settings")) return Response.json([{ team_visible: null }]);
     assert.equal(url.searchParams.get("order"), "updated_at.desc,id.asc");
     const offset = Number(url.searchParams.get("offset"));
     return Response.json(
@@ -179,8 +178,7 @@ test("sitemap omits the complete team section when administrators hide it", asyn
   const response = await sitemap(async (input) => {
     const url = new URL(input);
     calls.push(url.pathname);
-    if (url.pathname.endsWith("club_settings"))
-      return Response.json([{ data: { teamVisible: false } }]);
+    if (url.pathname.endsWith("club_settings")) return Response.json([{ team_visible: false }]);
     return Response.json([]);
   })();
 

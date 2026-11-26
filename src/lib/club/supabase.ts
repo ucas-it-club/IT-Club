@@ -7,6 +7,7 @@ import {
   articleFields,
   articleFromRow,
   articleToRow,
+  toColumns,
 } from "./public-api";
 import { prepareImage } from "./images";
 import {
@@ -167,7 +168,9 @@ export async function saveContent(
 
   const table = contentTables[kind];
   const values: Record<string, unknown> = {
-    ...(kind === "events" || kind === "news" ? articleToRow(kind, content) : { data: content }),
+    ...(kind === "events" || kind === "news"
+      ? articleToRow(kind, content)
+      : toColumns(kind, content)),
     ...(kind === "news" ? { publication_status: publicationStatus ?? "draft" } : {}),
     ...(slug === undefined ? {} : { slug }),
   };
@@ -215,7 +218,10 @@ export async function removeContent(kind: ContentCollection, id: string) {
 }
 
 export async function saveSettings(data: Settings) {
-  const { error } = await supabase().from("club_settings").upsert({ id: "public", data });
+  // Upsert: the row only exists once settings or team visibility were first saved.
+  const { error } = await supabase()
+    .from("club_settings")
+    .upsert({ id: "public", ...toColumns("settings", data) });
   check(error);
   changed();
 }

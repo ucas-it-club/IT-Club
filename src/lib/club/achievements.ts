@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { columnList, fromColumns, toColumns, type Row } from "./public-api";
 
 export const achievementTypes = [
   "project",
@@ -44,22 +45,24 @@ function check(error: { message: string; code?: string } | null) {
 export async function loadAchievements() {
   const result = await supabase()
     .from("club_achievements")
-    .select("id,data,created_at,updated_at")
+    .select<string, Row>(`id,created_at,updated_at,${columnList("achievements")}`)
     .order("created_at", { ascending: false });
   check(result.error);
 
+  // SAFETY: achievement columns are only written by saveAchievement with an
+  // AchievementInput, and the column checks hold the same rules.
   return (result.data || []).map((row) => ({
-    ...(row.data as Omit<Achievement, "id">),
-    id: String(row.id),
-    createdAt: String(row.created_at || ""),
-    updatedAt: String(row.updated_at || ""),
+    ...(fromColumns("achievements", row) as Omit<Achievement, "id">),
+    id: String(row["id"]),
+    createdAt: String(row["created_at"] || ""),
+    updatedAt: String(row["updated_at"] || ""),
   })) as Achievement[];
 }
 
 export async function saveAchievement(value: AchievementInput, id?: string) {
   const query = id
-    ? supabase().from("club_achievements").update({ data: value }).eq("id", id)
-    : supabase().from("club_achievements").insert({ data: value });
+    ? supabase().from("club_achievements").update(toColumns("achievements", value)).eq("id", id)
+    : supabase().from("club_achievements").insert(toColumns("achievements", value));
   const result = await query.select("id").single();
   check(result.error);
   if (!result.data) throw new Error("Achievement was not returned");
