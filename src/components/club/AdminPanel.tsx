@@ -4,7 +4,7 @@ import { EventRegistrationAdmin } from "./EventRegistrationAdmin";
 import { ContentCard } from "./ClubContent";
 import { EventDetail } from "./EventDetail";
 import { NewsDetail } from "./NewsDetail";
-import { sheetLinks } from "@/lib/club/sheets";
+import { sheetLinks, SheetsError, submissionError } from "@/lib/club/sheets";
 import { MediaLibrary } from "./MediaLibrary";
 import { RichTextEditor } from "./RichTextEditor";
 import { ContentEditorImageUpload } from "./ContentEditorImageUpload";
@@ -47,6 +47,7 @@ import {
   committees,
   contentSchema,
   defaultEventRegistration,
+  eventPeople,
   safeUrl,
   type Content,
   type ContentCollection,
@@ -901,6 +902,7 @@ export function ContentEditor({
     e.preventDefault();
 
     if (busy || imagePending) return;
+    const checkedPeople = checkPeople(peopleRows, ar);
     // SAFETY: this form has no file inputs, so every FormData entry value is a string.
     const values = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
     const parsed = contentSchema.safeParse(values);
@@ -935,6 +937,10 @@ export function ContentEditor({
       return;
     }
     Object.assign(value, specific.data);
+    if (targetKind === "events" && typeof checkedPeople === "string") {
+      setError(checkedPeople);
+      return;
+    }
     if (editorStrategy.article) value.driveImageUrls = driveImageUrls;
 
     for (const key of ["websiteUrl", "githubUrl", "linkedinUrl"] as const) {
@@ -967,9 +973,13 @@ export function ContentEditor({
     setError("");
 
     try {
-      const savedId = await saveContent(targetKind, value, item?.id, kind, typedSlug || null);
+      const savedId = await saveContent(targetKind, value, savedItemId, kind, typedSlug || null);
+      setSavedItemId(savedId);
+      // Presenters and organizers save after the event row, which must exist first.
+      if (targetKind === "events" && typeof checkedPeople !== "string")
+        await saveEventPeople(savedId, checkedPeople);
 
-      await targetStrategy.afterSave?.(savedId, value);
+      if (manageEventSheets) await targetStrategy.afterSave?.(savedId, value);
 
       if (item?.id && targetKind !== "news") {
         queryClient.setQueryData<Awaited<ReturnType<typeof loadPublic>>>(clubPublicKey, (old) => {
