@@ -31,8 +31,6 @@ type Row = {
   updated_at: string;
 };
 
-type PublicSettings = { teamVisible?: boolean };
-
 const href = (site: string, lang: "ar" | "en", page: string) => {
   const [first = "", ...rest] = page.split("/").filter(Boolean);
   const path = [segment[first] ?? first, ...rest].filter(Boolean).join("/");
@@ -74,18 +72,18 @@ Deno.serve(async (req) => {
     if (!key) throw new Error("Missing publishable key");
     const headers = { apikey: key };
     const settingsResponse = await fetch(
-      `${Deno.env.get("SUPABASE_URL")}/rest/v1/club_settings?select=data&id=eq.public&limit=1`,
+      `${Deno.env.get("SUPABASE_URL")}/rest/v1/club_settings?select=team_visible&id=eq.public&limit=1`,
       { headers, signal },
     );
     if (!settingsResponse.ok) throw new Error("Settings could not be read");
-    const settingsRows: { data?: PublicSettings }[] = await settingsResponse.json();
-    const teamVisible = settingsRows[0]?.data?.teamVisible !== false;
+    const settingsRows: { team_visible?: boolean | null }[] = await settingsResponse.json();
+    const teamVisible = settingsRows[0]?.team_visible !== false;
     const tables = (
       [
-        ["club_members", "members", "id,data,created_at,updated_at"],
+        ["club_members", "members", "id,created_at,updated_at"],
         ["club_events", "events", "id,date,created_at,updated_at"],
         ["club_news", "news", "id,date,created_at,updated_at"],
-        ["club_partners", "partners", "id,data,created_at,updated_at"],
+        ["club_partners", "partners", "id,created_at,updated_at"],
       ] as const
     ).filter(([, kind]) => kind !== "members" || teamVisible);
     for (const [table, kind, fields] of tables) {

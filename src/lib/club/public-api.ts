@@ -33,7 +33,7 @@ const setupCodes = ["PGRST205", "42P01", "PGRST202"];
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
-type Row = Record<string, JsonValue>;
+export type Row = Record<string, JsonValue>;
 
 /** The server hands in a fetch that caches; the browser uses its own. */
 export type Fetcher = typeof fetch;
@@ -77,13 +77,7 @@ async function request<T>(path: string, init: RequestInit, f: Fetcher): Promise<
   throw new Error(message);
 }
 
-async function rows(
-  table: string,
-  order: string,
-  f: Fetcher,
-  signal: AbortSignal,
-  fields = "id,slug,data,created_at,updated_at,updated_by",
-) {
+async function rows(table: string, order: string, f: Fetcher, signal: AbortSignal, fields: string) {
   const result: Row[] = [];
 
   for (let offset = 0; ; offset += 500) {
@@ -202,6 +196,101 @@ export function articleToRow(kind: Article, value: Omit<Content, "id">) {
 }
 
 /**
+ * The app keys of the tables whose typed columns map one to one (issue #50).
+ * Each column is the key in snake_case. Members' student_id, email,
+ * show_on_team and member_status are left out: visitors cannot read the first
+ * two, and a save must not reset any of them.
+ */
+const columnKeys = {
+  members: [
+    "title",
+    "title_en",
+    "description",
+    "description_en",
+    "images",
+    "role",
+    "role_en",
+    "committee",
+    "isFounder",
+    "gender",
+    "displayOrder",
+    "githubUrl",
+    "linkedinUrl",
+    "profileEnabled",
+  ],
+  partners: [
+    "title",
+    "title_en",
+    "description",
+    "description_en",
+    "images",
+    "partnershipType",
+    "partnershipType_en",
+    "websiteUrl",
+    "githubUrl",
+    "linkedinUrl",
+  ],
+  settings: [
+    "registrationOpen",
+    "teamVisible",
+    "vision",
+    "vision_en",
+    "mission",
+    "mission_en",
+    "goals",
+    "goals_en",
+    "email",
+    "facebook",
+    "instagram",
+    "linkedin",
+    "github",
+  ],
+  achievements: [
+    "title",
+    "title_en",
+    "type",
+    "committee",
+    "date",
+    "summary",
+    "summary_en",
+    "participants",
+    "participants_en",
+    "evidenceUrl",
+    "status",
+    "requirements",
+    "requirements_en",
+  ],
+} as const;
+
+type ColumnKind = keyof typeof columnKeys;
+
+const columnOf = (key: string) => key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+
+/** The comma-separated columns one kind is read from. */
+export const columnList = (kind: ColumnKind) => columnKeys[kind].map(columnOf).join(",");
+
+/** A row as the app's fields. Null columns stay unset, as absent keys did in `data`. */
+export function fromColumns(kind: ColumnKind, row: Row): Record<string, JsonValue> {
+  return Object.fromEntries(
+    columnKeys[kind].flatMap((key) => {
+      const value = row[columnOf(key)];
+      return value === null || value === undefined ? [] : [[key, value]];
+    }),
+  );
+}
+
+/**
+ * The columns a save writes. Every column is sent, absent ones as null, so an
+ * edit clears what the editor removed, as the old whole-`data` write did.
+ */
+export function toColumns(kind: ColumnKind, value: object) {
+  const fields: Record<string, unknown> = { ...value };
+  return Object.fromEntries(
+    columnKeys[kind].map((key) => [columnOf(key), fields[key] ?? (key === "images" ? [] : null)]),
+  );
+}
+
+/**
  * Whether one item exists right now, by id or slug, asked of the database directly.
  *
  * Costs a two-byte response instead of the whole payload, so a link to a
@@ -230,12 +319,12 @@ export async function loadPublic(f: Fetcher = fetch, callerSignal?: AbortSignal)
   const signal = callerSignal ? AbortSignal.any([callerSignal, deadline]) : deadline;
   const meta = "id,slug,created_at,updated_at,updated_by";
   const [members, events, news, partners, settings, people] = await Promise.all([
-    rows(contentTables.members, "updated_at", f, signal),
+    rows(contentTables.members, "updated_at", f, signal, `${meta},${columnList("members")}`),
     rows(contentTables.events, "updated_at", f, signal, `${meta},${articleFields.events}`),
     rows(contentTables.news, "updated_at", f, signal, `${meta},${articleFields.news}`),
-    rows(contentTables.partners, "updated_at", f, signal),
-    request<{ data?: Settings }[]>(
-      "club_settings?select=data&id=eq.public&limit=1",
+    rows(contentTables.partners, "updated_at", f, signal, `${meta},${columnList("partners")}`),
+    request<Row[]>(
+      `club_settings?select=${columnList("settings")}&id=eq.public&limit=1`,
       { method: "GET", signal },
       f,
     ),
@@ -289,9 +378,9 @@ export async function loadPublic(f: Fetcher = fetch, callerSignal?: AbortSignal)
       data[kind].push({
         ...(kind === "events" || kind === "news"
           ? articleFromRow(kind, row)
-          : // SAFETY: content data is only written by saveContent, which validates
-            // the value against contentSchema before insert.
-            (row["data"] as Omit<Content, "id">)),
+          : // SAFETY: these columns are only written by saveContent, which validates
+            // the value against contentSchema, and the column checks hold the same rules.
+            (fromColumns(kind, row) as Omit<Content, "id">)),
         id: String(row["id"]),
         ...(typeof row["slug"] === "string" ? { slug: row["slug"] } : {}),
         createdAt: String(row["created_at"] ?? ""),
@@ -301,7 +390,8 @@ export async function loadPublic(f: Fetcher = fetch, callerSignal?: AbortSignal)
       });
   }
 
-  return { data, settings: settings[0]?.data };
+  // SAFETY: settings columns are only written by saveSettings with a Settings value.
+  return { data, settings: settings[0] && (fromColumns("settings", settings[0]) as Settings) };
 }
 
 /** Records this session's visit and returns the running total. */
