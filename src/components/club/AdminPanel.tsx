@@ -924,6 +924,14 @@ export function ContentEditor({
       images,
     };
 
+    if (
+      editorStrategy.member &&
+      !canManageMember(memberRole, { committee, isFounder: committee === "administrative" })
+    ) {
+      setError(ar ? "ليس لديك صلاحية لإدارة هذه اللجنة." : "You cannot manage this committee.");
+      return;
+    }
+
     const specific = targetStrategy.buildData({
       ar,
       values,
@@ -942,6 +950,7 @@ export function ContentEditor({
       return;
     }
     if (editorStrategy.article) value.driveImageUrls = driveImageUrls;
+    if (targetKind === "news") value.publicationStatus = publicationStatus;
 
     for (const key of ["websiteUrl", "githubUrl", "linkedinUrl"] as const) {
       const url = values[key]?.trim();

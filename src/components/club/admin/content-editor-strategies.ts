@@ -122,16 +122,12 @@ const strategies: Record<ContentCollection, ContentEditorStrategy> = {
         durationMinutes: Number(context.values["durationHours"]) * 60,
         eventType: context.values["eventType"],
         eventType_en: context.values["eventType_en"],
-        presenterName: context.values["presenterName"],
-        presenterName_en: context.values["presenterName_en"],
-        presenterBio: context.values["presenterBio"],
-        presenterBio_en: context.values["presenterBio_en"],
       });
       if (!eventDetails.success) {
         return {
           error: context.ar
-            ? "أكمل معلومات الفعالية والمقدم. يجب أن تكون المدة بين ربع ساعة و24 ساعة."
-            : "Complete the event and presenter details. Duration must be between 0.25 and 24 hours.",
+            ? "أكمل معلومات الفعالية. يجب أن تكون المدة بين ربع ساعة و24 ساعة."
+            : "Complete the event details. Duration must be between 0.25 and 24 hours.",
         };
       }
       return {
